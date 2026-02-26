@@ -278,9 +278,32 @@
 
     .about-grid {
       display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 80px;
+      grid-template-columns: 280px 1fr 1fr;
+      gap: 56px;
       align-items: start;
+    }
+
+    .about-photo {
+      position: sticky;
+      top: 88px;
+    }
+
+    .about-photo img {
+      width: 100%;
+      aspect-ratio: 3 / 4;
+      object-fit: cover;
+      object-position: center top;
+      display: block;
+      filter: grayscale(12%);
+    }
+
+    .about-photo-caption {
+      font-size: 11px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--color-text-tertiary);
+      margin-top: 12px;
+      text-align: center;
     }
 
     .about-text p {
@@ -391,13 +414,32 @@
 
     .project-item {
       display: grid;
-      grid-template-columns: 80px 1fr auto;
+      grid-template-columns: 80px 220px 1fr auto;
       gap: 40px;
       align-items: start;
       padding: 48px 0;
       border-top: 1px solid rgba(255,255,255,0.08);
       transition: opacity 0.2s;
       cursor: default;
+    }
+
+    .project-thumb {
+      overflow: hidden;
+      aspect-ratio: 4 / 3;
+    }
+
+    .project-thumb img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      opacity: 0.75;
+      transition: opacity 0.3s, transform 0.4s;
+    }
+
+    .project-item:hover .project-thumb img {
+      opacity: 0.95;
+      transform: scale(1.03);
     }
 
     .project-item:last-child {
@@ -641,6 +683,11 @@
         gap: 48px;
       }
 
+      .about-photo {
+        position: static;
+        max-width: 280px;
+      }
+
       .expertise-grid {
         grid-template-columns: 1fr;
       }
@@ -648,6 +695,10 @@
       .project-item {
         grid-template-columns: 48px 1fr;
         gap: 24px;
+      }
+
+      .project-thumb {
+        display: none;
       }
 
       .project-meta {
@@ -724,6 +775,10 @@
     <p class="section-label">Profile</p>
     <h2 class="section-title">A dedication to<br>the enduring</h2>
     <div class="about-grid">
+      <div class="about-photo">
+        <img src="images/portrait.jpg" alt="Éric Stein, Architect" />
+        <p class="about-photo-caption">Éric Stein — Associate Director, EVOQ</p>
+      </div>
       <div class="about-text">
         <p>
           Éric Stein is an Associate Director and Senior Heritage Conservation Architect
@@ -837,6 +892,9 @@
 
       <div class="project-item">
         <span class="project-number">01</span>
+        <div class="project-thumb">
+          <img src="images/projects/wellington.jpg" alt="Wellington Building, Ottawa" />
+        </div>
         <div class="project-info">
           <h3>Wellington Building</h3>
           <p>
@@ -855,6 +913,9 @@
 
       <div class="project-item">
         <span class="project-number">02</span>
+        <div class="project-thumb">
+          <img src="images/projects/calgary-city-hall.jpg" alt="Historic City Hall, Calgary" />
+        </div>
         <div class="project-info">
           <h3>Historic City Hall</h3>
           <p>
@@ -872,6 +933,9 @@
 
       <div class="project-item">
         <span class="project-number">03</span>
+        <div class="project-thumb">
+          <img src="images/projects/grand-seminaire.jpg" alt="Grand Séminaire de Montréal" />
+        </div>
         <div class="project-info">
           <h3>Grand Séminaire de Montréal</h3>
           <p>
@@ -889,6 +953,9 @@
 
       <div class="project-item">
         <span class="project-number">04</span>
+        <div class="project-thumb">
+          <img src="images/projects/elgin-courthouse.jpg" alt="Elgin County Courthouse, St. Thomas" />
+        </div>
         <div class="project-info">
           <h3>Elgin County Courthouse</h3>
           <p>
@@ -906,6 +973,9 @@
 
       <div class="project-item">
         <span class="project-number">05</span>
+        <div class="project-thumb">
+          <img src="images/projects/face-school.jpg" alt="F.A.C.E. School Auditorium, Montréal" />
+        </div>
         <div class="project-info">
           <h3>F.A.C.E. School Auditorium</h3>
           <p>
@@ -922,6 +992,9 @@
 
       <div class="project-item">
         <span class="project-number">06</span>
+        <div class="project-thumb">
+          <img src="images/projects/nicolet-cathedral.jpg" alt="Nicolet Cathedral, Nicolet" />
+        </div>
         <div class="project-info">
           <h3>Nicolet Cathedral</h3>
           <p>
@@ -945,21 +1018,50 @@
     <h2 class="section-title">Awards &amp; Affiliations</h2>
     <div class="recognition-grid">
       <div class="recognition-item">
-        <p class="recognition-year">CAHP Award of Excellence</p>
+        <p class="recognition-year">2016 — CAHP Award of Excellence</p>
         <h3>Conservation: Architecture</h3>
         <p>
           Wellington Building rehabilitation, Ottawa. Co-lead with Julia Gersovitz and
-          Neil McNulty. Awarded by the Canadian Association of Heritage Professionals
-          for outstanding heritage conservation practice.
+          Neil McNulty. Presented at the National Trust Conference, Hamilton, October 2016.
+          Jury cited the high quality of design work on one of Canada's most complex
+          parliamentary heritage mandates.
+        </p>
+      </div>
+      <div class="recognition-item">
+        <p class="recognition-year">2016 — CAHP Award of Merit</p>
+        <h3>Preservation of a Heritage Building</h3>
+        <p>
+          F.A.C.E. School Auditorium rehabilitation, Montréal. Recognized for the sensitive
+          balance of conservation objectives and contemporary performing-arts requirements
+          within the 1914 Maxwell Brothers-designed building.
+        </p>
+      </div>
+      <div class="recognition-item">
+        <p class="recognition-year">2017 — North American Copper in Architecture Award</p>
+        <h3>Preservation of a Heritage Building or Complex</h3>
+        <p>
+          Copper Development Association Award of Excellence for the F.A.C.E. School
+          Auditorium, recognizing the exemplary use of copper in a heritage restoration
+          context and the quality of craft in the building's envelope rehabilitation.
+        </p>
+      </div>
+      <div class="recognition-item">
+        <p class="recognition-year">2022 — CAHP Award of Merit</p>
+        <h3>Conservation: Architecture</h3>
+        <p>
+          Calgary Historic City Hall exterior rehabilitation and site restoration — a
+          Richardsonian Romanesque civic landmark designated at national, provincial, and
+          municipal levels. Work included load-bearing stone masonry, wood windows, steel
+          roof, clock tower, and landscaping.
         </p>
       </div>
       <div class="recognition-item">
         <p class="recognition-year">2022</p>
         <h3>Appointed Director, EVOQ Architecture</h3>
         <p>
-          Recognized for significant contributions to EVOQ's development and long-standing
-          involvement in firm management, appointed to ensure the continuity of the firm's
-          tradition of excellence.
+          Recognized for over two decades of contributions to EVOQ's development and
+          long-standing involvement in firm management, appointed Director to ensure
+          continuity of the firm's tradition of excellence in heritage conservation.
         </p>
       </div>
       <div class="recognition-item">
@@ -967,17 +1069,17 @@
         <h3>CAHP Board of Directors</h3>
         <p>
           Member of the Board of Directors of the Canadian Association of Heritage
-          Professionals, contributing to national heritage conservation policy and
-          professional standards.
+          Professionals, contributing to national heritage conservation policy,
+          professional standards, and the awards program.
         </p>
       </div>
       <div class="recognition-item">
         <p class="recognition-year">2017 – Present</p>
-        <h3>Modern Religious Heritage Committee</h3>
+        <h3>Modern Religious Heritage Committee, MCCQ</h3>
         <p>
           Member of the Modern Religious Heritage Committee established by the Ministère
-          de la Culture et des Communications du Québec (MCCQ), contributing to the
-          evaluation and documentation of modernist churches across Québec.
+          de la Culture et des Communications du Québec, contributing to the evaluation
+          and documentation of modernist churches across Québec.
         </p>
       </div>
     </div>
