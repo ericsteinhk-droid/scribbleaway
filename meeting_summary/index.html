@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Générateur de Résumé de Réunion</title>
+  <style>
+    :root {
+      --blue-dark:   #004a7c;
+      --blue-mid:    #0072b5;
+      --blue-light:  #4facde;
+      --accent:      #e8a020;
+      --bg:          #f0f4f8;
+      --card:        #ffffff;
+      --text:        #1a2535;
+      --muted:       #6b7a8d;
+      --border:      #d0dce8;
+      --success:     #2a9d5c;
+      --error:       #c0392b;
+      --radius:      12px;
+      --shadow:      0 4px 24px rgba(0,74,124,0.10);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Header ── */
+    header {
+      background: linear-gradient(135deg, var(--blue-dark) 0%, var(--blue-mid) 60%, var(--blue-light) 100%);
+      color: #fff;
+      padding: 2rem 2rem 2.5rem;
+      text-align: center;
+    }
+    header svg { margin-bottom: 0.75rem; }
+    header h1 { font-size: 1.75rem; font-weight: 700; letter-spacing: -0.5px; }
+    header p  { margin-top: 0.4rem; font-size: 0.95rem; opacity: 0.85; }
+
+    /* ── Main container ── */
+    main {
+      flex: 1;
+      max-width: 780px;
+      width: 100%;
+      margin: -1rem auto 3rem;
+      padding: 0 1rem;
+    }
+
+    /* ── Card ── */
+    .card {
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 2rem;
+      margin-bottom: 1.25rem;
+    }
+    .card h2 {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--blue-dark);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 1.25rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .card h2 span.badge {
+      background: var(--blue-mid);
+      color: #fff;
+      border-radius: 50%;
+      width: 22px; height: 22px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+    }
+
+    /* ── Form elements ── */
+    label {
+      display: block;
+      font-size: 0.87rem;
+      font-weight: 600;
+      color: var(--muted);
+      margin-bottom: 0.35rem;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      padding: 0.65rem 0.9rem;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      font-size: 1rem;
+      color: var(--text);
+      background: #f8fbff;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    input[type="text"]:focus {
+      outline: none;
+      border-color: var(--blue-mid);
+      box-shadow: 0 0 0 3px rgba(0,114,181,0.15);
+    }
+    input[type="text"]::placeholder { color: #b0b8c4; }
+
+    /* ── File drop zone ── */
+    .drop-zone {
+      border: 2.5px dashed var(--border);
+      border-radius: var(--radius);
+      padding: 2.25rem 1rem;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+      background: #f8fbff;
+      position: relative;
+    }
+    .drop-zone.drag-over {
+      border-color: var(--blue-mid);
+      background: #e8f4fd;
+    }
+    .drop-zone input[type="file"] {
+      position: absolute; inset: 0;
+      opacity: 0; cursor: pointer;
+    }
+    .drop-zone .drop-icon { font-size: 2.5rem; margin-bottom: 0.5rem; }
+    .drop-zone .drop-label { font-size: 1rem; font-weight: 600; color: var(--blue-mid); }
+    .drop-zone .drop-sub   { font-size: 0.83rem; color: var(--muted); margin-top: 0.25rem; }
+    .drop-zone .file-name  {
+      margin-top: 0.75rem;
+      font-size: 0.9rem;
+      color: var(--success);
+      font-weight: 600;
+      display: none;
+    }
+
+    /* ── Participants grid ── */
+    .participant-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+    }
+    @media (max-width: 520px) {
+      .participant-grid { grid-template-columns: 1fr; }
+    }
+    .participant-row {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .participant-number {
+      background: var(--blue-mid);
+      color: #fff;
+      border-radius: 50%;
+      min-width: 26px; height: 26px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.75rem;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+    .participant-row input { flex: 1; }
+
+    .add-btn, .remove-btn {
+      background: none;
+      border: 1.5px solid var(--border);
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.82rem;
+      padding: 0.35rem 0.7rem;
+      transition: all 0.2s;
+    }
+    .add-btn    { color: var(--blue-mid); margin-top: 0.75rem; }
+    .add-btn:hover    { border-color: var(--blue-mid); background: #eaf4fd; }
+    .remove-btn { color: var(--error); }
+    .remove-btn:hover { border-color: var(--error); background: #fdf0ee; }
+
+    /* ── Execute button ── */
+    .execute-btn {
+      width: 100%;
+      padding: 1rem;
+      background: linear-gradient(135deg, var(--blue-dark), var(--blue-mid));
+      color: #fff;
+      border: none;
+      border-radius: var(--radius);
+      font-size: 1.1rem;
+      font-weight: 700;
+      cursor: pointer;
+      letter-spacing: 0.03em;
+      transition: opacity 0.2s, transform 0.1s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.6rem;
+    }
+    .execute-btn:hover:not(:disabled)  { opacity: 0.9; transform: translateY(-1px); }
+    .execute-btn:active:not(:disabled) { transform: translateY(0); }
+    .execute-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* ── Progress panel ── */
+    #progress-panel {
+      display: none;
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 2rem;
+      margin-bottom: 1.25rem;
+      text-align: center;
+    }
+    #progress-panel.visible { display: block; }
+
+    .progress-title { font-size: 1rem; font-weight: 700; color: var(--blue-dark); margin-bottom: 1.25rem; }
+    .progress-bar-wrap {
+      background: var(--bg);
+      border-radius: 100px;
+      height: 12px;
+      overflow: hidden;
+      margin-bottom: 0.85rem;
+    }
+    .progress-bar {
+      height: 100%;
+      border-radius: 100px;
+      background: linear-gradient(90deg, var(--blue-mid), var(--blue-light));
+      transition: width 0.6s ease;
+      width: 0%;
+    }
+    .progress-msg { font-size: 0.9rem; color: var(--muted); }
+
+    .steps-list {
+      list-style: none;
+      text-align: left;
+      margin-top: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+    .steps-list li {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      font-size: 0.88rem;
+      color: var(--muted);
+      padding: 0.4rem 0.6rem;
+      border-radius: 6px;
+      transition: background 0.2s, color 0.2s;
+    }
+    .steps-list li.active  { background: #eaf4fd; color: var(--blue-dark); font-weight: 600; }
+    .steps-list li.done    { color: var(--success); }
+    .steps-list li .step-icon { font-size: 1rem; min-width: 1.2rem; text-align: center; }
+
+    /* ── Result / error ── */
+    #result-panel {
+      display: none;
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 2rem;
+      margin-bottom: 1.25rem;
+      text-align: center;
+    }
+    #result-panel.visible { display: block; }
+    #result-panel.success { border-top: 4px solid var(--success); }
+    #result-panel.error   { border-top: 4px solid var(--error); }
+
+    .result-icon { font-size: 3rem; margin-bottom: 0.75rem; }
+    .result-title { font-size: 1.15rem; font-weight: 700; margin-bottom: 0.5rem; }
+    .result-sub   { font-size: 0.9rem; color: var(--muted); margin-bottom: 1.25rem; }
+
+    .download-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.75rem 1.5rem;
+      background: var(--success);
+      color: #fff;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 700;
+      text-decoration: none;
+      cursor: pointer;
+      border: none;
+      transition: opacity 0.2s;
+    }
+    .download-btn:hover { opacity: 0.88; }
+
+    .reset-btn {
+      margin-top: 1rem;
+      background: none;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      padding: 0.55rem 1.2rem;
+      font-size: 0.88rem;
+      cursor: pointer;
+      color: var(--muted);
+      transition: all 0.2s;
+    }
+    .reset-btn:hover { border-color: var(--blue-mid); color: var(--blue-mid); }
+
+    .error-detail {
+      margin-top: 1rem;
+      text-align: left;
+      background: #fdf0ee;
+      border-radius: 8px;
+      padding: 0.9rem;
+      font-size: 0.83rem;
+      color: var(--error);
+      font-family: monospace;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    /* ── Info note ── */
+    .info-note {
+      font-size: 0.82rem;
+      color: var(--muted);
+      background: #eef4fb;
+      border-left: 3px solid var(--blue-light);
+      padding: 0.6rem 0.8rem;
+      border-radius: 0 6px 6px 0;
+      margin-top: 0.75rem;
+    }
+
+    /* ── Spinner ── */
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinner {
+      display: inline-block;
+      width: 18px; height: 18px;
+      border: 3px solid rgba(255,255,255,0.4);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    /* ── Footer ── */
+    footer {
+      text-align: center;
+      padding: 1rem;
+      font-size: 0.78rem;
+      color: var(--muted);
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect width="48" height="48" rx="12" fill="rgba(255,255,255,0.15)"/>
+    <path d="M14 34V22a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v12" stroke="white" stroke-width="2.2" stroke-linecap="round"/>
+    <path d="M10 34h28" stroke="white" stroke-width="2.2" stroke-linecap="round"/>
+    <rect x="20" y="12" width="8" height="8" rx="4" fill="white" opacity="0.9"/>
+    <path d="M24 20v3" stroke="white" stroke-width="2" stroke-linecap="round"/>
+    <path d="M21 27h6M21 30h4" stroke="white" stroke-width="1.8" stroke-linecap="round" opacity="0.7"/>
+  </svg>
+  <h1>Générateur de Résumé de Réunion</h1>
+  <p>Transcription automatique &bull; Détection des locuteurs &bull; Résumé en français</p>
+</header>
+
+<main>
+
+  <!-- ── Step 1: File upload ── -->
+  <div class="card" id="card-file">
+    <h2><span class="badge">1</span> Enregistrement de la réunion</h2>
+    <div class="drop-zone" id="drop-zone">
+      <input type="file" id="file-input" accept=".mp4,video/mp4" />
+      <div class="drop-icon">🎬</div>
+      <div class="drop-label">Glisser-déposer votre fichier MP4</div>
+      <div class="drop-sub">ou cliquer pour parcourir</div>
+      <div class="file-name" id="file-name"></div>
+    </div>
+  </div>
+
+  <!-- ── Step 2: Meeting details ── -->
+  <div class="card" id="card-details">
+    <h2><span class="badge">2</span> Informations sur la réunion</h2>
+    <div style="margin-bottom:1rem;">
+      <label for="meeting-title">Titre de la réunion</label>
+      <input type="text" id="meeting-title" placeholder="Ex. : Réunion de planification Q2 2026" />
+    </div>
+  </div>
+
+  <!-- ── Step 3: Participants ── -->
+  <div class="card" id="card-participants">
+    <h2><span class="badge">3</span> Participants (4 à 6)</h2>
+    <div class="participant-grid" id="participant-grid">
+      <!-- Injected by JS -->
+    </div>
+    <button class="add-btn" id="add-participant-btn" onclick="addParticipant()">+ Ajouter un participant</button>
+    <p class="info-note">
+      Les locuteurs sont assignés aux participants selon l'ordre de première prise de parole.
+      Vous pourrez vérifier et corriger dans le fichier RTF généré.
+    </p>
+  </div>
+
+  <!-- ── Execute button ── -->
+  <button class="execute-btn" id="execute-btn" onclick="execute()">
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+      <path d="M4 10h12M11 5l5 5-5 5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    Générer le résumé
+  </button>
+
+  <!-- ── Progress panel ── -->
+  <div id="progress-panel">
+    <div class="progress-title">Traitement en cours...</div>
+    <div class="progress-bar-wrap">
+      <div class="progress-bar" id="progress-bar"></div>
+    </div>
+    <div class="progress-msg" id="progress-msg">Initialisation...</div>
+    <ul class="steps-list" id="steps-list">
+      <li data-step="extracting_audio">
+        <span class="step-icon">🔊</span>Extraction audio
+      </li>
+      <li data-step="diarizing">
+        <span class="step-icon">🎤</span>Identification des locuteurs (pyannote)
+      </li>
+      <li data-step="transcribing">
+        <span class="step-icon">📝</span>Transcription (Whisper large)
+      </li>
+      <li data-step="merging">
+        <span class="step-icon">🔗</span>Alignement locuteurs / texte
+      </li>
+      <li data-step="generating_summary">
+        <span class="step-icon">🤖</span>Génération du résumé par IA (Claude)
+      </li>
+      <li data-step="creating_rtf">
+        <span class="step-icon">📄</span>Création du fichier RTF
+      </li>
+    </ul>
+  </div>
+
+  <!-- ── Result panel ── -->
+  <div id="result-panel">
+    <div class="result-icon" id="result-icon"></div>
+    <div class="result-title" id="result-title"></div>
+    <div class="result-sub"  id="result-sub"></div>
+    <div id="result-actions"></div>
+  </div>
+
+</main>
+
+<footer>
+  Traitement local &bull; Vos données ne quittent pas votre machine (sauf appels API Whisper/Claude)
+</footer>
+
+<script>
+/* ──────────────────────────────────────────────
+   Configuration
+────────────────────────────────────────────── */
+const SERVER = 'http://localhost:5050';   // Flask server URL
+const POLL_MS = 2500;                     // Status polling interval
+
+/* ──────────────────────────────────────────────
+   Participants (4 default, max 6)
+────────────────────────────────────────────── */
+const MIN_P = 4, MAX_P = 6;
+let participantCount = 0;
+
+function addParticipant(value = '') {
+  if (participantCount >= MAX_P) return;
+  participantCount++;
+  const grid = document.getElementById('participant-grid');
+  const row  = document.createElement('div');
+  row.className = 'participant-row';
+  row.dataset.index = participantCount;
+  row.innerHTML = `
+    <span class="participant-number">${participantCount}</span>
+    <input type="text" class="participant-input"
+           placeholder="Nom du participant ${participantCount}"
+           value="${escapeHtml(value)}" />
+    ${participantCount > MIN_P
+      ? `<button class="remove-btn" onclick="removeParticipant(this)" title="Supprimer">&times;</button>`
+      : ''}
+  `;
+  grid.appendChild(row);
+  updateAddBtn();
+}
+
+function removeParticipant(btn) {
+  const row = btn.closest('.participant-row');
+  row.remove();
+  participantCount--;
+  // Re-number
+  document.querySelectorAll('.participant-row').forEach((r, i) => {
+    r.querySelector('.participant-number').textContent = i + 1;
+    r.dataset.index = i + 1;
+  });
+  updateAddBtn();
+}
+
+function updateAddBtn() {
+  document.getElementById('add-participant-btn').style.display =
+    participantCount >= MAX_P ? 'none' : '';
+}
+
+function getParticipants() {
+  return [...document.querySelectorAll('.participant-input')]
+    .map(i => i.value.trim())
+    .filter(Boolean);
+}
+
+// Init 4 participants
+[1,2,3,4].forEach(() => addParticipant());
+
+/* ──────────────────────────────────────────────
+   File drop zone
+────────────────────────────────────────────── */
+const dropZone  = document.getElementById('drop-zone');
+const fileInput = document.getElementById('file-input');
+const fileLabel = document.getElementById('file-name');
+let selectedFile = null;
+
+dropZone.addEventListener('dragover',  e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('drag-over');
+  const f = e.dataTransfer.files[0];
+  if (f && f.type === 'video/mp4') setFile(f);
+  else alert('Veuillez fournir un fichier MP4.');
+});
+fileInput.addEventListener('change', () => {
+  if (fileInput.files[0]) setFile(fileInput.files[0]);
+});
+
+function setFile(f) {
+  selectedFile = f;
+  fileLabel.textContent = `Fichier sélectionné : ${f.name} (${formatBytes(f.size)})`;
+  fileLabel.style.display = 'block';
+}
+
+/* ──────────────────────────────────────────────
+   Execute
+────────────────────────────────────────────── */
+async function execute() {
+  // Validation
+  if (!selectedFile) {
+    alert('Veuillez sélectionner un fichier MP4.');
+    return;
+  }
+  const title = document.getElementById('meeting-title').value.trim();
+  if (!title) {
+    alert('Veuillez saisir le titre de la réunion.');
+    document.getElementById('meeting-title').focus();
+    return;
+  }
+  const participants = getParticipants();
+  if (participants.length < MIN_P) {
+    alert(`Veuillez saisir au moins ${MIN_P} noms de participants.`);
+    return;
+  }
+
+  // UI state
+  setFormEnabled(false);
+  showProgress();
+
+  // Build FormData
+  const form = new FormData();
+  form.append('file', selectedFile);
+  form.append('title', title);
+  form.append('participants', JSON.stringify(participants));
+
+  try {
+    const res  = await fetch(`${SERVER}/api/process`, { method: 'POST', body: form });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Erreur serveur');
+    pollStatus(data.job_id);
+  } catch (err) {
+    showError(err.message);
+    setFormEnabled(true);
+  }
+}
+
+/* ──────────────────────────────────────────────
+   Polling
+────────────────────────────────────────────── */
+const STEP_ORDER = [
+  'extracting_audio', 'diarizing', 'transcribing',
+  'merging', 'generating_summary', 'creating_rtf'
+];
+
+function pollStatus(jobId) {
+  const interval = setInterval(async () => {
+    try {
+      const res  = await fetch(`${SERVER}/api/status/${jobId}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Erreur statut');
+
+      updateProgress(data);
+
+      if (data.status === 'complete') {
+        clearInterval(interval);
+        triggerDownload(jobId, data);
+      } else if (data.status === 'error') {
+        clearInterval(interval);
+        showError(data.error || 'Une erreur inattendue s\'est produite.');
+        setFormEnabled(true);
+      }
+    } catch (err) {
+      clearInterval(interval);
+      showError('Impossible de joindre le serveur : ' + err.message);
+      setFormEnabled(true);
+    }
+  }, POLL_MS);
+}
+
+/* ──────────────────────────────────────────────
+   Download
+────────────────────────────────────────────── */
+async function triggerDownload(jobId, statusData) {
+  const title = document.getElementById('meeting-title').value.trim();
+  const safeName = title.replace(/[^a-zA-Z0-9\u00C0-\u024F\s_-]/g, '').replace(/\s+/g, '_').substring(0, 60) || 'resume_reunion';
+  const downloadUrl = `${SERVER}/api/download/${jobId}`;
+
+  showSuccess(downloadUrl, safeName + '.rtf');
+}
+
+/* ──────────────────────────────────────────────
+   UI helpers
+────────────────────────────────────────────── */
+function showProgress() {
+  document.getElementById('progress-panel').classList.add('visible');
+  document.getElementById('result-panel').classList.remove('visible', 'success', 'error');
+}
+
+function updateProgress(data) {
+  const pct = data.progress || 0;
+  document.getElementById('progress-bar').style.width = pct + '%';
+  document.getElementById('progress-msg').textContent  = data.message || '';
+
+  // Steps UI
+  const steps = document.querySelectorAll('#steps-list li');
+  const currentIdx = STEP_ORDER.indexOf(data.status);
+  steps.forEach((li, i) => {
+    const stepName = li.dataset.step;
+    const stepIdx  = STEP_ORDER.indexOf(stepName);
+    li.classList.remove('active', 'done');
+    if (stepIdx < currentIdx) {
+      li.classList.add('done');
+      li.querySelector('.step-icon').textContent = '✅';
+    } else if (stepIdx === currentIdx) {
+      li.classList.add('active');
+      li.querySelector('.step-icon').textContent = getStepIcon(stepName);
+    } else {
+      li.querySelector('.step-icon').textContent = getStepIconDefault(stepName);
+    }
+  });
+}
+
+function getStepIcon(step) {
+  const icons = {
+    extracting_audio:   '⏳', diarizing:        '⏳',
+    transcribing:       '⏳', merging:          '⏳',
+    generating_summary: '⏳', creating_rtf:     '⏳'
+  };
+  return icons[step] || '⏳';
+}
+
+function getStepIconDefault(step) {
+  const icons = {
+    extracting_audio:   '🔊', diarizing:        '🎤',
+    transcribing:       '📝', merging:          '🔗',
+    generating_summary: '🤖', creating_rtf:     '📄'
+  };
+  return icons[step] || '○';
+}
+
+function showSuccess(downloadUrl, filename) {
+  const panel = document.getElementById('result-panel');
+  panel.classList.add('visible', 'success');
+  panel.classList.remove('error');
+  document.getElementById('result-icon').textContent = '🎉';
+  document.getElementById('result-title').textContent = 'Résumé généré avec succès !';
+  document.getElementById('result-sub').textContent =
+    'Votre compte-rendu de réunion est prêt. Cliquez ci-dessous pour le télécharger.';
+  document.getElementById('result-actions').innerHTML = `
+    <a href="${escapeHtml(downloadUrl)}" download="${escapeHtml(filename)}" class="download-btn">
+      ⬇ Télécharger le RTF
+    </a>
+    <br/>
+    <button class="reset-btn" onclick="resetForm()">Nouvelle réunion</button>
+  `;
+  // Auto-trigger download
+  const link = document.createElement('a');
+  link.href = downloadUrl;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
+function showError(msg) {
+  document.getElementById('progress-panel').classList.remove('visible');
+  const panel = document.getElementById('result-panel');
+  panel.classList.add('visible', 'error');
+  panel.classList.remove('success');
+  document.getElementById('result-icon').textContent  = '❌';
+  document.getElementById('result-title').textContent = 'Erreur lors du traitement';
+  document.getElementById('result-sub').textContent   = 'Veuillez vérifier la configuration du serveur et réessayer.';
+  document.getElementById('result-actions').innerHTML = `
+    <div class="error-detail">${escapeHtml(msg)}</div>
+    <button class="reset-btn" onclick="resetForm()">Réessayer</button>
+  `;
+}
+
+function resetForm() {
+  document.getElementById('progress-panel').classList.remove('visible');
+  document.getElementById('result-panel').classList.remove('visible', 'success', 'error');
+  setFormEnabled(true);
+  selectedFile = null;
+  fileLabel.style.display = 'none';
+  fileInput.value = '';
+  document.getElementById('progress-bar').style.width = '0%';
+  document.getElementById('progress-msg').textContent = '';
+  document.querySelectorAll('#steps-list li').forEach((li, i) => {
+    li.classList.remove('active', 'done');
+    li.querySelector('.step-icon').textContent = getStepIconDefault(li.dataset.step);
+  });
+}
+
+function setFormEnabled(enabled) {
+  const btn = document.getElementById('execute-btn');
+  btn.disabled = !enabled;
+  btn.innerHTML = enabled
+    ? '<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M4 10h12M11 5l5 5-5 5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Générer le résumé'
+    : '<span class="spinner"></span> Traitement en cours...';
+  document.querySelectorAll('input, .add-btn, .remove-btn').forEach(el => {
+    el.disabled = !enabled;
+  });
+  dropZone.style.pointerEvents = enabled ? '' : 'none';
+}
+
+/* ──────────────────────────────────────────────
+   Utilities
+────────────────────────────────────────────── */
+function formatBytes(b) {
+  if (b < 1024)       return b + ' o';
+  if (b < 1048576)    return (b/1024).toFixed(1) + ' Ko';
+  return (b/1048576).toFixed(1) + ' Mo';
+}
+
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+</script>
+</body>
+</html>

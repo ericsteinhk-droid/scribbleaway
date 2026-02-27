@@ -1,0 +1,33 @@
+# Meeting Summary Generator – Python dependencies
+# Install with:  pip install -r requirements.txt
+#
+# System prerequisite: ffmpeg must be installed and on PATH
+#   Ubuntu/Debian : sudo apt install ffmpeg
+#   macOS (Brew)  : brew install ffmpeg
+#   Windows       : winget install ffmpeg
+
+# ── Web server ────────────────────────────────────────────────────────────────
+flask>=3.0
+flask-cors>=4.0
+
+# ── Audio extraction (Python bindings to ffmpeg) ──────────────────────────────
+ffmpeg-python>=0.2.0
+
+# ── Speaker diarization ───────────────────────────────────────────────────────
+# Requires accepting model terms at:
+#   https://huggingface.co/pyannote/speaker-diarization-3.1
+#   https://huggingface.co/pyannote/segmentation-3.0
+# Then set env var: export HF_TOKEN=hf_...
+pyannote.audio>=3.1.0
+
+# ── Speech-to-text transcription (multilingual – fr + en) ────────────────────
+openai-whisper>=20240927
+
+# ── Anthropic Claude API (summary generation) ────────────────────────────────
+# Set env var: export ANTHROPIC_API_KEY=sk-ant-...
+anthropic>=0.40.0
+
+# ── GPU acceleration (optional – remove if CPU-only install) ──────────────────
+# torch and torchaudio are pulled in by pyannote.audio and whisper automatically.
+# For CUDA support, install the matching torch build first:
+#   pip install torch torchaudio --index-url https://download.pytorch.org/whl/cu121
