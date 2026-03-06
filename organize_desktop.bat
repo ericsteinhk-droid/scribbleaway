@@ -4,18 +4,44 @@ setlocal EnableDelayedExpansion
 :: ============================================================
 ::  organize_desktop.bat
 ::  Organizes files on your Desktop into categorized folders.
-::  Run from anywhere — it always targets %USERPROFILE%\Desktop
+::  Run from anywhere — auto-detects Desktop (incl. OneDrive).
 :: ============================================================
 
-set "DESKTOP=%USERPROFILE%\Desktop"
+:: ------------------------------------------------------------------
+:: Auto-detect the real Desktop path via registry (works with OneDrive
+:: folder redirection, which moves Desktop to OneDrive\Desktop).
+:: ------------------------------------------------------------------
+set "DESKTOP="
+for /f "tokens=3*" %%A in (
+    'reg query "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders" /v Desktop 2^>nul'
+) do set "DESKTOP=%%A %%B"
+:: Strip trailing space that the "tokens=3*" trick can leave
+if defined DESKTOP set "DESKTOP=%DESKTOP: =%"
+:: Fallback if registry query failed
+if not defined DESKTOP set "DESKTOP=%USERPROFILE%\Desktop"
+
 set "MOVED=0"
-set "SKIPPED=0"
 
 echo.
 echo  Desktop Organizer
 echo  ==================
 echo  Target: %DESKTOP%
 echo.
+
+:: Count files (not folders, not .lnk shortcuts) so the user knows what to expect
+set "_total=0"
+for %%f in ("%DESKTOP%\*") do (
+    if not "%%~xf"==".lnk" set /a _total+=1
+)
+echo  Non-shortcut files found: %_total%
+echo.
+
+if %_total%==0 (
+    echo  Nothing to organize. Your Desktop may only contain folders and shortcuts,
+    echo  or the path above may be wrong.
+    echo.
+    goto :end
+)
 
 :: Pause for confirmation
 set /p "CONFIRM=Organize files on your Desktop? (Y/N): "
@@ -65,9 +91,11 @@ goto :skip_functions
 
 :: Images — older than 90 days go to "Old Photos", recent ones go to "Images"
 ::
-:: Step 1: use forfiles to find images older than 90 days and write their
-::         quoted paths to a temp file, then move each via :MoveFile.
+:: Step 1: forfiles finds images older than 90 days; paths are written to a
+::         temp file and then processed one-by-one through :MoveFile so that
+::         conflict handling and the MOVED counter work correctly.
 set "_tmp=%TEMP%\old_imgs_%RANDOM%.txt"
+if exist "%_tmp%" del "%_tmp%"
 for %%e in (jpg jpeg png gif bmp webp tiff tif svg ico heic raw) do (
     forfiles /p "%DESKTOP%" /m "*.%%e" /d -90 /c "cmd /c echo @path" 2>nul >> "%_tmp%"
 )
@@ -154,7 +182,10 @@ for %%f in (
 echo.
 echo  Done!
 echo  ------
-echo  Files moved  : %MOVED%
+echo  Files found    : %_total%
+echo  Files moved    : %MOVED%
+set /a _skipped=%_total%-%MOVED%
+echo  Left in place  : %_skipped% (unrecognized extensions or folders)
 echo.
 
 :end
