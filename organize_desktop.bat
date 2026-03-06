@@ -9,14 +9,12 @@ setlocal EnableDelayedExpansion
 
 :: ------------------------------------------------------------------
 :: Auto-detect the real Desktop path via registry (works with OneDrive
-:: folder redirection, which moves Desktop to OneDrive\Desktop).
+:: folder redirection and paths that contain spaces).
 :: ------------------------------------------------------------------
 set "DESKTOP="
-for /f "tokens=3*" %%A in (
-    'reg query "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders" /v Desktop 2^>nul'
-) do set "DESKTOP=%%A %%B"
-:: Strip trailing space that the "tokens=3*" trick can leave
-if defined DESKTOP set "DESKTOP=%DESKTOP: =%"
+for /f "tokens=2*" %%A in (
+    'reg query "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders" /v Desktop 2^>nul ^| findstr "REG_SZ"'
+) do set "DESKTOP=%%B"
 :: Fallback if registry query failed
 if not defined DESKTOP set "DESKTOP=%USERPROFILE%\Desktop"
 
