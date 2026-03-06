@@ -60,9 +60,25 @@ goto :skip_functions
 
 :: ------------------------------------------------------------
 :: Category definitions  (add/remove extensions as you like)
+:: Note: .lnk shortcuts are never matched and are always left in place.
 :: ------------------------------------------------------------
 
-:: Images
+:: Images — older than 90 days go to "Old Photos", recent ones go to "Images"
+::
+:: Step 1: use forfiles to find images older than 90 days and write their
+::         quoted paths to a temp file, then move each via :MoveFile.
+set "_tmp=%TEMP%\old_imgs_%RANDOM%.txt"
+for %%e in (jpg jpeg png gif bmp webp tiff tif svg ico heic raw) do (
+    forfiles /p "%DESKTOP%" /m "*.%%e" /d -90 /c "cmd /c echo @path" 2>nul >> "%_tmp%"
+)
+if exist "%_tmp%" (
+    for /f "usebackq delims=" %%f in ("%_tmp%") do (
+        if exist %%f call :MoveFile %%f "%DESKTOP%\Old Photos"
+    )
+    del "%_tmp%"
+)
+
+:: Step 2: move any remaining (recent) images to "Images"
 for %%f in (
     "%DESKTOP%\*.jpg"  "%DESKTOP%\*.jpeg" "%DESKTOP%\*.png"
     "%DESKTOP%\*.gif"  "%DESKTOP%\*.bmp"  "%DESKTOP%\*.webp"
