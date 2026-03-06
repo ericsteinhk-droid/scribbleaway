@@ -18,12 +18,13 @@ for /f "tokens=2*" %%A in (
 :: Fallback if registry query failed
 if not defined DESKTOP set "DESKTOP=%USERPROFILE%\Desktop"
 
+set "AUTOCLEAN=%DESKTOP%\AutoClean"
 set "MOVED=0"
 
 echo.
 echo  Desktop Organizer
 echo  ==================
-echo  Target: %DESKTOP%
+echo  Target: %AUTOCLEAN%
 echo.
 
 :: Count files (not folders, not .lnk shortcuts) so the user knows what to expect
@@ -99,7 +100,7 @@ for %%e in (jpg jpeg png gif bmp webp tiff tif svg ico heic raw) do (
 )
 if exist "%_tmp%" (
     for /f "usebackq delims=" %%f in ("%_tmp%") do (
-        if exist %%f call :MoveFile %%f "%DESKTOP%\Old Photos"
+        if exist %%f call :MoveFile %%f "%AUTOCLEAN%\Old Photos"
     )
     del "%_tmp%"
 )
@@ -111,7 +112,7 @@ for %%f in (
     "%DESKTOP%\*.tiff" "%DESKTOP%\*.tif"  "%DESKTOP%\*.svg"
     "%DESKTOP%\*.ico"  "%DESKTOP%\*.heic" "%DESKTOP%\*.raw"
 ) do (
-    if exist "%%~f" call :MoveFile "%%~f" "%DESKTOP%\Images"
+    if exist "%%~f" call :MoveFile "%%~f" "%AUTOCLEAN%\Images"
 )
 
 :: Documents
@@ -122,7 +123,7 @@ for %%f in (
     "%DESKTOP%\*.odp"  "%DESKTOP%\*.txt"  "%DESKTOP%\*.rtf"
     "%DESKTOP%\*.csv"  "%DESKTOP%\*.md"   "%DESKTOP%\*.epub"
 ) do (
-    if exist "%%~f" call :MoveFile "%%~f" "%DESKTOP%\Documents"
+    if exist "%%~f" call :MoveFile "%%~f" "%AUTOCLEAN%\Documents"
 )
 
 :: Videos
@@ -132,7 +133,7 @@ for %%f in (
     "%DESKTOP%\*.webm" "%DESKTOP%\*.m4v"  "%DESKTOP%\*.mpg"
     "%DESKTOP%\*.mpeg"
 ) do (
-    if exist "%%~f" call :MoveFile "%%~f" "%DESKTOP%\Videos"
+    if exist "%%~f" call :MoveFile "%%~f" "%AUTOCLEAN%\Videos"
 )
 
 :: Music
@@ -141,7 +142,7 @@ for %%f in (
     "%DESKTOP%\*.aac"  "%DESKTOP%\*.ogg"  "%DESKTOP%\*.wma"
     "%DESKTOP%\*.m4a"  "%DESKTOP%\*.aiff"
 ) do (
-    if exist "%%~f" call :MoveFile "%%~f" "%DESKTOP%\Music"
+    if exist "%%~f" call :MoveFile "%%~f" "%AUTOCLEAN%\Music"
 )
 
 :: Archives
@@ -150,7 +151,7 @@ for %%f in (
     "%DESKTOP%\*.tar"  "%DESKTOP%\*.gz"   "%DESKTOP%\*.bz2"
     "%DESKTOP%\*.xz"   "%DESKTOP%\*.iso"
 ) do (
-    if exist "%%~f" call :MoveFile "%%~f" "%DESKTOP%\Archives"
+    if exist "%%~f" call :MoveFile "%%~f" "%AUTOCLEAN%\Archives"
 )
 
 :: Code & Scripts
@@ -163,7 +164,7 @@ for %%f in (
     "%DESKTOP%\*.rs"   "%DESKTOP%\*.php"  "%DESKTOP%\*.rb"
     "%DESKTOP%\*.sql"  "%DESKTOP%\*.yaml" "%DESKTOP%\*.yml"
 ) do (
-    if exist "%%~f" call :MoveFile "%%~f" "%DESKTOP%\Code"
+    if exist "%%~f" call :MoveFile "%%~f" "%AUTOCLEAN%\Code"
 )
 
 :: Executables & Installers
@@ -171,7 +172,7 @@ for %%f in (
     "%DESKTOP%\*.exe"  "%DESKTOP%\*.msi"  "%DESKTOP%\*.apk"
     "%DESKTOP%\*.dmg"  "%DESKTOP%\*.deb"  "%DESKTOP%\*.rpm"
 ) do (
-    if exist "%%~f" call :MoveFile "%%~f" "%DESKTOP%\Programs"
+    if exist "%%~f" call :MoveFile "%%~f" "%AUTOCLEAN%\Programs"
 )
 
 :: ------------------------------------------------------------
