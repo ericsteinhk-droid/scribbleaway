@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ODC Creator — Contestation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:       #16181d;
+    --surface:  #1f2229;
+    --raised:   #272c35;
+    --border:   #343840;
+    --teal:     #00b5ab;
+    --teal-dim: rgba(0,181,171,0.12);
+    --teal-glow:rgba(0,181,171,0.25);
+    --text:     #e8eaee;
+    --muted:    #7a7e8a;
+    --danger:   #e05c5c;
+    --warn:     #f0a500;
+    --ok:       #4caf7e;
+    --radius:   8px;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    line-height: 1.55;
+    min-height: 100vh;
+  }
+
+  /* ── HEADER ─────────────────────────────────────── */
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 28px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    position: sticky;
+    top: 0;
+    z-index: 50;
+  }
+  .logo-mark {
+    width: 34px; height: 34px;
+    background: var(--teal);
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 500; font-size: 13px;
+    color: #fff; letter-spacing: -0.5px;
+    flex-shrink: 0;
+  }
+  header h1 { font-size: 15px; font-weight: 600; color: var(--text); letter-spacing: 0.01em; }
+  header p  { font-size: 12px; color: var(--muted); margin-top: 1px; }
+  .header-tag {
+    margin-left: auto;
+    background: var(--teal-dim);
+    color: var(--teal);
+    border: 1px solid var(--teal-glow);
+    border-radius: 20px;
+    padding: 3px 11px;
+    font-size: 11px; font-weight: 600;
+    letter-spacing: 0.06em; text-transform: uppercase;
+  }
+
+  /* ── LAYOUT ──────────────────────────────────────── */
+  .container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 28px 24px;
+    display: grid;
+    grid-template-columns: 1fr 420px;
+    gap: 20px;
+    align-items: start;
+  }
+  .form-col { display: flex; flex-direction: column; gap: 16px; }
+  .preview-col {
+    position: sticky;
+    top: 74px;
+    display: flex; flex-direction: column; gap: 12px;
+  }
+
+  /* ── CARDS ───────────────────────────────────────── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .card-header {
+    display: flex; align-items: center; gap: 10px;
+    padding: 11px 16px;
+    background: var(--raised);
+    border-bottom: 1px solid var(--border);
+  }
+  .step-badge {
+    width: 22px; height: 22px;
+    background: var(--teal);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 600; color: #fff;
+    flex-shrink: 0;
+  }
+  .card-header h2 { font-size: 13px; font-weight: 600; color: var(--text); }
+  .card-header .hint { font-size: 11px; color: var(--muted); margin-left: auto; }
+  .card-body { padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; }
+
+  /* ── FORM ELEMENTS ───────────────────────────────── */
+  .field { display: flex; flex-direction: column; gap: 5px; }
+  label { font-size: 12px; font-weight: 500; color: var(--muted); letter-spacing: 0.02em; }
+  .input-row { display: flex; align-items: center; gap: 8px; }
+  .prefix {
+    background: var(--raised);
+    border: 1px solid var(--border);
+    border-right: none;
+    border-radius: var(--radius) 0 0 var(--radius);
+    padding: 7px 10px;
+    font-size: 12px; color: var(--muted);
+    white-space: nowrap;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  input, textarea, select {
+    background: var(--raised);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    padding: 7px 11px;
+    outline: none;
+    transition: border-color .15s, box-shadow .15s;
+    width: 100%;
+  }
+  input:focus, textarea:focus, select:focus {
+    border-color: var(--teal);
+    box-shadow: 0 0 0 3px var(--teal-dim);
+  }
+  .prefix + input { border-left: none; border-radius: 0 var(--radius) var(--radius) 0; }
+  input[type="number"] { -moz-appearance: textfield; }
+  input[type="number"]::-webkit-inner-spin-button,
+  input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; }
+
+  .input-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .input-3col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+
+  /* ── AMOUNT DISPLAY ──────────────────────────────── */
+  .amount-calc {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr auto 1fr;
+    align-items: center;
+    gap: 6px;
+    background: var(--raised);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 9px 12px;
+  }
+  .amount-calc .op { color: var(--muted); font-size: 14px; text-align: center; }
+  .amount-part { display: flex; flex-direction: column; gap: 2px; }
+  .amount-part .alabel { font-size: 10px; color: var(--muted); }
+  .amount-part .aval {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px; font-weight: 500; color: var(--teal);
+  }
+  .amount-part.total .aval { color: var(--ok); }
+
+  /* ── DYNAMIC LIST ITEMS ──────────────────────────── */
+  .list-item {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 10px 12px;
+    display: flex; flex-direction: column; gap: 8px;
+    position: relative;
+  }
+  .list-item-header { display: flex; align-items: center; gap: 8px; }
+  .item-badge {
+    background: var(--teal-dim);
+    color: var(--teal);
+    border: 1px solid var(--teal-glow);
+    border-radius: 4px;
+    padding: 2px 7px;
+    font-size: 11px; font-weight: 600;
+    font-family: 'JetBrains Mono', monospace;
+    flex-shrink: 0;
+  }
+  .item-badge.type-N { background: rgba(240,165,0,0.12); color: var(--warn); border-color: rgba(240,165,0,0.3); }
+  .item-num { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--text); }
+  .remove-btn {
+    margin-left: auto;
+    background: none; border: none; cursor: pointer;
+    color: var(--muted); font-size: 16px; line-height: 1;
+    padding: 2px 4px; border-radius: 4px;
+    transition: color .15s, background .15s;
+  }
+  .remove-btn:hover { color: var(--danger); background: rgba(224,92,92,0.1); }
+
+  /* ── ADD BUTTON ──────────────────────────────────── */
+  .add-btn {
+    display: flex; align-items: center; gap: 8px;
+    background: none;
+    border: 1px dashed var(--border);
+    border-radius: var(--radius);
+    color: var(--muted);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px; font-weight: 500;
+    padding: 8px 14px;
+    cursor: pointer;
+    transition: border-color .15s, color .15s, background .15s;
+    width: 100%;
+  }
+  .add-btn:hover { border-color: var(--teal); color: var(--teal); background: var(--teal-dim); }
+  .add-btn span { font-size: 16px; line-height: 1; }
+
+  /* ── RESULT BLOCK ────────────────────────────────── */
+  .result-block {
+    background: rgba(76,175,126,0.06);
+    border: 1px solid rgba(76,175,126,0.25);
+    border-radius: var(--radius);
+    padding: 12px 14px;
+  }
+  .result-block .result-label {
+    font-size: 11px; font-weight: 600; color: var(--ok);
+    letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 8px;
+  }
+  .result-row {
+    display: flex; justify-content: space-between; align-items: baseline;
+    padding: 4px 0; border-bottom: 1px solid rgba(76,175,126,0.1);
+  }
+  .result-row:last-child { border-bottom: none; }
+  .result-row .rkey { font-size: 12px; color: var(--muted); }
+  .result-row .rval {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px; font-weight: 500; color: var(--ok);
+  }
+  .result-row.highlight .rval { font-size: 15px; color: #fff; }
+  .result-warn { color: var(--danger); font-size: 12px; margin-top: 6px; }
+
+  /* ── PREVIEW CARD ────────────────────────────────── */
+  .preview-header {
+    display: flex; align-items: center; gap: 10px;
+    padding: 11px 16px;
+    background: var(--raised);
+    border-bottom: 1px solid var(--border);
+    border-radius: var(--radius) var(--radius) 0 0;
+  }
+  .preview-header h2 { font-size: 13px; font-weight: 600; }
+  .preview-dot {
+    width: 8px; height: 8px;
+    background: var(--teal);
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%,100% { opacity:1; } 50% { opacity:0.4; }
+  }
+
+  .preview-output {
+    background: #0e1013;
+    border: none;
+    border-radius: 0 0 var(--radius) var(--radius);
+    color: #c9d4e8;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px;
+    line-height: 1.7;
+    padding: 16px;
+    white-space: pre-wrap;
+    word-break: break-word;
+    min-height: 200px;
+    resize: none;
+    outline: none;
+    width: 100%;
+  }
+
+  .copy-btn {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    background: var(--teal);
+    color: #fff;
+    border: none; border-radius: var(--radius);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px; font-weight: 600;
+    padding: 10px 20px;
+    cursor: pointer;
+    transition: opacity .15s, transform .1s;
+    width: 100%;
+    letter-spacing: 0.01em;
+  }
+  .copy-btn:hover { opacity: 0.88; }
+  .copy-btn:active { transform: scale(0.98); }
+  .copy-btn.copied { background: var(--ok); }
+
+  /* ── DEDUCTION TYPE SELECT ───────────────────────── */
+  .type-toggle {
+    display: flex; gap: 6px;
+  }
+  .type-btn {
+    flex: 1;
+    background: var(--raised);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--muted);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px; font-weight: 500;
+    padding: 5px 0;
+    cursor: pointer;
+    transition: all .15s;
+    text-align: center;
+  }
+  .type-btn.active-U { background: var(--teal-dim); border-color: var(--teal); color: var(--teal); }
+  .type-btn.active-N { background: rgba(240,165,0,0.1); border-color: rgba(240,165,0,0.4); color: var(--warn); }
+
+  /* ── SCROLLBAR ───────────────────────────────────── */
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
+
+  /* ── SECTION DIVIDER ─────────────────────────────── */
+  .section-sep {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 2px 0;
+  }
+
+  /* ── RESPONSIVE ─────────────────────────────────── */
+  @media (max-width: 860px) {
+    .container { grid-template-columns: 1fr; }
+    .preview-col { position: static; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo-mark">ODC</div>
+  <div>
+    <h1>ODC Creator — Contestation</h1>
+    <p>Projet RGO · EVOQ Architecture</p>
+  </div>
+  <span class="header-tag">Outil interne</span>
+</header>
+
+<div class="container">
+
+  <!-- ═══ FORM COLUMN ═══════════════════════════════ -->
+  <div class="form-col">
+
+    <!-- SECTION 1 : EN-TÊTE -->
+    <div class="card">
+      <div class="card-header">
+        <div class="step-badge">1</div>
+        <h2>Identification de l'ODC</h2>
+      </div>
+      <div class="card-body">
+        <div class="field">
+          <label>Numéro de l'ODC(N) à créer</label>
+          <div class="input-row">
+            <div class="prefix">ODC(N)-RGO-</div>
+            <input type="text" id="odcN" placeholder="517" oninput="update()">
+          </div>
+        </div>
+        <div class="field">
+          <label>Nature des travaux</label>
+          <input type="text" id="nature" placeholder="ex : des travaux en hygiène" oninput="update()">
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION 2 : ODC(U) CONTESTÉS -->
+    <div class="card">
+      <div class="card-header">
+        <div class="step-badge">2</div>
+        <h2>ODC(U) contestés</h2>
+        <span class="hint">Au moins un requis</span>
+      </div>
+      <div class="card-body">
+        <div id="odcuList" style="display:flex;flex-direction:column;gap:10px;"></div>
+        <button class="add-btn" onclick="addOdcU()"><span>＋</span> Ajouter un ODC(U)</button>
+      </div>
+    </div>
+
+    <!-- SECTION 3 : MONTANT NÉGOCIÉ — CALCULÉ -->
+    <div class="card" style="border-color: rgba(0,181,171,0.25);">
+      <div class="card-header" style="background: rgba(0,181,171,0.07);">
+        <div class="step-badge" style="background: var(--muted);">3</div>
+        <h2>Montant négocié total</h2>
+        <span class="hint" style="color:var(--teal);">⟵ Calculé automatiquement</span>
+      </div>
+      <div class="card-body">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:2px;">
+          Déductions (§4) + Montant ODC(N) (§5)
+        </div>
+        <div class="amount-calc" id="negoCalc">
+          <div class="amount-part">
+            <span class="alabel">Base</span>
+            <span class="aval" id="nc-base">—</span>
+          </div>
+          <div class="op">+</div>
+          <div class="amount-part">
+            <span class="alabel">11.25 %</span>
+            <span class="aval" id="nc-frais">—</span>
+          </div>
+          <div class="op">=</div>
+          <div class="amount-part total">
+            <span class="alabel">Total</span>
+            <span class="aval" id="nc-total">—</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION 4 : DÉDUCTIONS -->
+    <div class="card">
+      <div class="card-header">
+        <div class="step-badge">4</div>
+        <h2>Déductions (MOINS)</h2>
+        <span class="hint">ODC(U) originaux + ODC(N) antérieurs</span>
+      </div>
+      <div class="card-body">
+        <div id="deductList" style="display:flex;flex-direction:column;gap:10px;"></div>
+        <button class="add-btn" onclick="addDeduction()"><span>＋</span> Ajouter une déduction</button>
+      </div>
+    </div>
+
+    <!-- SECTION 5 : MONTANT ODC(N) — SAISIE USAGER -->
+    <div class="card">
+      <div class="card-header">
+        <div class="step-badge">5</div>
+        <h2>Montant de l'ODC(N) résultant</h2>
+        <span class="hint">Montant négocié pour cet ODC(N)</span>
+      </div>
+      <div class="card-body">
+        <div class="field">
+          <label>Montant de base de l'ODC(N) ($)</label>
+          <input type="number" id="finalBase" placeholder="37 549.86" step="0.01" oninput="update()">
+        </div>
+        <div class="amount-calc" id="resCalc">
+          <div class="amount-part">
+            <span class="alabel">Base</span>
+            <span class="aval" id="res-base">—</span>
+          </div>
+          <div class="op">+</div>
+          <div class="amount-part">
+            <span class="alabel">11.25 %</span>
+            <span class="aval" id="res-frais">—</span>
+          </div>
+          <div class="op">=</div>
+          <div class="amount-part total">
+            <span class="alabel">Total ODC(N)</span>
+            <span class="aval" id="res-total">—</span>
+          </div>
+        </div>
+        <div class="result-warn" id="res-warn" style="display:none"></div>
+      </div>
+    </div>
+
+  </div><!-- /form-col -->
+
+  <!-- ═══ PREVIEW COLUMN ════════════════════════════ -->
+  <div class="preview-col">
+    <div class="card" style="border-radius: var(--radius);">
+      <div class="preview-header">
+        <div class="preview-dot"></div>
+        <h2>Aperçu du texte</h2>
+      </div>
+      <textarea class="preview-output" id="previewOutput" readonly></textarea>
+    </div>
+    <button class="copy-btn" id="copyBtn" onclick="copyText()">
+      📋 Copier le texte
+    </button>
+    <div style="font-size:11px;color:var(--muted);text-align:center;">
+      Collez directement dans le formulaire ODC
+    </div>
+  </div>
+
+</div><!-- /container -->
+
+<script>
+// ──────────────────────────────────────────────────────────────────────────────
+// STATE
+// ──────────────────────────────────────────────────────────────────────────────
+let odcuItems    = [];  // { id, num, ddc }
+let deductItems  = [];  // { id, type, num, ddc, base }
+let nextId = 0;
+
+// ──────────────────────────────────────────────────────────────────────────────
+// NUMBER FORMATTING
+// ──────────────────────────────────────────────────────────────────────────────
+function fmt(n) {
+  if (isNaN(n) || n === null || n === undefined) return '—';
+  const fixed = Math.abs(n).toFixed(2);
+  const [int, dec] = fixed.split('.');
+  const intFmt = int.replace(/\B(?=(\d{3})+(?!\d))/g, '\u202F'); // thin space
+  return (n < 0 ? '-' : '') + intFmt + '.' + dec;
+}
+
+function fmtLine(base, frais, total) {
+  return `${fmt(base)}$ + 11.25% ${fmt(frais)}$ = ${fmt(total)}$`;
+}
+
+function calcFrais(base) { return Math.round(base * 1125) / 10000; }
+// Use round-half-up to 2 decimals
+function calcTotal(base) {
+  const frais = calcFrais(base);
+  return Math.round((base + frais) * 100) / 100;
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// ODC(U) LIST
+// ──────────────────────────────────────────────────────────────────────────────
+function addOdcU() {
+  const id = nextId++;
+  odcuItems.push({ id, num: '', ddc: '' });
+  renderOdcuList();
+  update();
+}
+
+function removeOdcU(id) {
+  odcuItems = odcuItems.filter(x => x.id !== id);
+  renderOdcuList();
+  update();
+}
+
+function renderOdcuList() {
+  const container = document.getElementById('odcuList');
+  container.innerHTML = '';
+  odcuItems.forEach((item, idx) => {
+    const div = document.createElement('div');
+    div.className = 'list-item';
+    div.innerHTML = `
+      <div class="list-item-header">
+        <span class="item-badge">ODC(U) ${idx + 1}</span>
+        <button class="remove-btn" onclick="removeOdcU(${item.id})" title="Supprimer">✕</button>
+      </div>
+      <div class="input-2col">
+        <div class="field">
+          <label>Numéro ODC(U)</label>
+          <div class="input-row">
+            <div class="prefix">RGO-</div>
+            <input type="text" placeholder="348" value="${item.num}"
+              oninput="odcuItems.find(x=>x.id===${item.id}).num=this.value; update()">
+          </div>
+        </div>
+        <div class="field">
+          <label>Référence(s) DDC</label>
+          <input type="text" placeholder="DDC-H-065, DDC-A-109" value="${item.ddc}"
+            oninput="odcuItems.find(x=>x.id===${item.id}).ddc=this.value; update()">
+        </div>
+      </div>
+    `;
+    container.appendChild(div);
+  });
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// DEDUCTION LIST
+// ──────────────────────────────────────────────────────────────────────────────
+function addDeduction() {
+  const id = nextId++;
+  deductItems.push({ id, type: 'U', num: '', ddc: '', base: '' });
+  renderDeductList();
+  update();
+}
+
+function removeDeduction(id) {
+  deductItems = deductItems.filter(x => x.id !== id);
+  renderDeductList();
+  update();
+}
+
+function setDeductType(id, type) {
+  const item = deductItems.find(x => x.id === id);
+  if (item) { item.type = type; }
+  renderDeductList();
+  update();
+}
+
+function renderDeductList() {
+  const container = document.getElementById('deductList');
+  container.innerHTML = '';
+  deductItems.forEach((item, idx) => {
+    const base = parseFloat(item.base) || 0;
+    const frais = calcFrais(base);
+    const total = base > 0 ? calcTotal(base) : 0;
+
+    const div = document.createElement('div');
+    div.className = 'list-item';
+    div.innerHTML = `
+      <div class="list-item-header">
+        <span class="item-badge ${item.type === 'N' ? 'type-N' : ''}">Déduction ${idx + 1}</span>
+        <span class="item-num">${item.num ? 'RGO-' + item.num : ''}</span>
+        <button class="remove-btn" onclick="removeDeduction(${item.id})" title="Supprimer">✕</button>
+      </div>
+      <div class="type-toggle">
+        <button class="type-btn ${item.type === 'U' ? 'active-U' : ''}"
+          onclick="setDeductType(${item.id}, 'U')">ODC Unilatéral (U)</button>
+        <button class="type-btn ${item.type === 'N' ? 'active-N' : ''}"
+          onclick="setDeductType(${item.id}, 'N')">ODC Négocié (N)</button>
+      </div>
+      <div class="input-2col">
+        <div class="field">
+          <label>Numéro ${item.type === 'U' ? 'ODC(U)' : 'ODC(N)'}</label>
+          <div class="input-row">
+            <div class="prefix">RGO-</div>
+            <input type="text" placeholder="348" value="${item.num}"
+              oninput="deductItems.find(x=>x.id===${item.id}).num=this.value; update(); renderDeductList()">
+          </div>
+        </div>
+        <div class="field">
+          <label>DDC lié ${item.type === 'U' ? '(optionnel)' : '(recommandé)'}</label>
+          <input type="text" placeholder="${item.type === 'N' ? 'DDC-H-019' : ''}" value="${item.ddc}"
+            oninput="deductItems.find(x=>x.id===${item.id}).ddc=this.value; update()">
+        </div>
+      </div>
+      <div class="field">
+        <label>Montant de base ($)</label>
+        <input type="number" placeholder="21 500.00" step="0.01" value="${item.base}"
+          oninput="deductItems.find(x=>x.id===${item.id}).base=this.value; update()">
+      </div>
+      ${base > 0 ? `
+      <div class="amount-calc" style="margin-top:2px;">
+        <div class="amount-part"><span class="alabel">Base</span><span class="aval">${fmt(base)}</span></div>
+        <div class="op">+</div>
+        <div class="amount-part"><span class="alabel">11.25%</span><span class="aval">${fmt(frais)}</span></div>
+        <div class="op">=</div>
+        <div class="amount-part total"><span class="alabel">Total</span><span class="aval">${fmt(total)}</span></div>
+      </div>` : ''}
+    `;
+    container.appendChild(div);
+  });
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// TEXT GENERATION
+// ──────────────────────────────────────────────────────────────────────────────
+function generateText() {
+  const odcN     = (document.getElementById('odcN').value || '').trim();
+  const nature   = (document.getElementById('nature').value || '').trim();
+  const finalBase = parseFloat(document.getElementById('finalBase').value) || 0;
+  const totalDeducts = deductItems.reduce((s, d) => s + (parseFloat(d.base) || 0), 0);
+  const negoBase = finalBase + totalDeducts;
+
+  if (!odcN && odcuItems.length === 0 && finalBase === 0 && totalDeducts === 0) return '';
+
+  const lines = [];
+
+  // ── HEADER ──────────────────────────────────────
+  if (odcuItems.length === 0) {
+    lines.push("Contestation de l'ODC(U)-RGO-[?]");
+  } else if (odcuItems.length === 1) {
+    lines.push(`Contestation de l'ODC(U)-RGO-${odcuItems[0].num || '?'}`);
+  } else {
+    const parts = odcuItems.map(u => `l'ODC(U)-RGO-${u.num || '?'}`);
+    const last = parts.pop();
+    lines.push(`Contestation de ${parts.join(', ')} et ${last}`);
+  }
+
+  lines.push('');
+
+  // ── DESCRIPTION ─────────────────────────────────
+  const natureTxt = nature || '[nature des travaux]';
+  const allDdcRefs = odcuItems.map(u => u.ddc).filter(Boolean);
+  const ddcDesc = allDdcRefs.length > 0 ? ` (${allDdcRefs.join(', ')})` : '';
+  lines.push(`Ordre de changement négocié intégrant la contestation reçue pour ${natureTxt}.${ddcDesc}`);
+  lines.push('');
+  lines.push('Le montant du présent ODC est calculé comme suit :');
+  lines.push('');
+
+  // ── NEGOTIATED TOTAL LINE ────────────────────────
+  const hasOdcNDeducts = deductItems.some(d => d.type === 'N');
+  let negoPrefix;
+  if (odcuItems.length === 0) {
+    negoPrefix = "Montant négocié jusqu'à maintenant en lien avec l'ODC(U)-RGO-[?]";
+  } else if (hasOdcNDeducts) {
+    if (odcuItems.length === 1) {
+      const u = odcuItems[0];
+      const allDdc = odcuItems.flatMap(x => x.ddc ? x.ddc.split(',').map(s => s.trim()) : [])
+        .concat(deductItems.filter(d => d.type === 'N' && d.ddc).map(d => d.ddc));
+      const ddcJoined = allDdc.length > 0 ? ` (${[...new Set(allDdc)].join(', ')})` : '';
+      negoPrefix = `Montant total négocié jusqu'à maintenant pour l'ODC(U)-RGO-${u.num || '?'}${ddcJoined}`;
+    } else {
+      const parts = odcuItems.map(u =>
+        `l'ODC(U)-RGO-${u.num || '?'}${u.ddc ? ' (' + u.ddc + ')' : ''}`
+      );
+      const last = parts.pop();
+      negoPrefix = `Montant total négocié jusqu'à maintenant pour ${parts.join(', ')} et ${last}`;
+    }
+  } else {
+    if (odcuItems.length === 1) {
+      const u = odcuItems[0];
+      const ddcPart = u.ddc ? ` (${u.ddc})` : '';
+      negoPrefix = `Montant négocié jusqu'à maintenant en lien avec l'ODC(U)-RGO-${u.num || '?'}${ddcPart}`;
+    } else {
+      const parts = odcuItems.map(u =>
+        `l'ODC(U)-RGO-${u.num || '?'}${u.ddc ? ' (' + u.ddc + ')' : ''}`
+      );
+      const last = parts.pop();
+      negoPrefix = `Montant négocié jusqu'à maintenant en lien avec ${parts.join(', ')} et ${last}`;
+    }
+  }
+
+  const negoFrais = calcFrais(negoBase);
+  const negoTotal = calcTotal(negoBase);
+  lines.push(`${negoPrefix} : ${fmtLine(negoBase, negoFrais, negoTotal)}`);
+
+  // ── DEDUCTION LINES ──────────────────────────────
+  deductItems.forEach(d => {
+    const base = parseFloat(d.base) || 0;
+    const frais = calcFrais(base);
+    const total = calcTotal(base);
+    let label;
+    if (d.type === 'U') {
+      label = `Moins le montant de l'ODC(U)-RGO-${d.num || '?'}`;
+    } else {
+      const ddcPart = d.ddc ? ` (${d.ddc})` : '';
+      label = `Moins le montant de l'ODC(N)-RGO-${d.num || '?'}${ddcPart}`;
+    }
+    lines.push(`${label} : ${fmtLine(base, frais, total)}`);
+  });
+
+  lines.push('');
+
+  // ── FINAL LINE ───────────────────────────────────
+  const finalFrais = calcFrais(finalBase);
+  const finalTotal = calcTotal(finalBase);
+  lines.push(`Montant de l'ODC(N)-RGO-${odcN || '?'} : ${fmtLine(finalBase, finalFrais, finalTotal)}`);
+
+  return lines.join('\n');
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// UPDATE (called on every input)
+// ──────────────────────────────────────────────────────────────────────────────
+function update() {
+  const finalBase    = parseFloat(document.getElementById('finalBase').value) || 0;
+  const totalDeducts = deductItems.reduce((s, d) => s + (parseFloat(d.base) || 0), 0);
+  const negoBase     = finalBase + totalDeducts;
+
+  // §3 — Negotiated total (calculated)
+  const negoFrais = calcFrais(negoBase);
+  const negoTotal = calcTotal(negoBase);
+  const hasData = negoBase > 0;
+  document.getElementById('nc-base').textContent  = hasData ? fmt(negoBase) + ' $' : '—';
+  document.getElementById('nc-frais').textContent = hasData ? fmt(negoFrais) + ' $' : '—';
+  document.getElementById('nc-total').textContent = hasData ? fmt(negoTotal) + ' $' : '—';
+
+  // §5 — ODC(N) result display
+  const finalFrais = calcFrais(finalBase);
+  const finalTotal = calcTotal(finalBase);
+  document.getElementById('res-base').textContent  = finalBase > 0 ? fmt(finalBase) + ' $' : '—';
+  document.getElementById('res-frais').textContent = finalBase > 0 ? fmt(finalFrais) + ' $' : '—';
+  document.getElementById('res-total').textContent = finalBase > 0 ? fmt(finalTotal) + ' $' : '—';
+
+  const warn = document.getElementById('res-warn');
+  if (finalBase < 0) {
+    warn.style.display = 'block';
+    warn.textContent = '⚠ Le montant final est négatif — vérifier la saisie.';
+  } else {
+    warn.style.display = 'none';
+  }
+
+  // Preview
+  document.getElementById('previewOutput').value = generateText();
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// COPY
+// ──────────────────────────────────────────────────────────────────────────────
+function copyText() {
+  const text = document.getElementById('previewOutput').value;
+  if (!text) return;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById('copyBtn');
+    btn.textContent = '✓ Copié !';
+    btn.classList.add('copied');
+    setTimeout(() => {
+      btn.textContent = '📋 Copier le texte';
+      btn.classList.remove('copied');
+    }, 2000);
+  });
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// INIT — prefill one ODC(U) and one deduction to guide the user
+// ──────────────────────────────────────────────────────────────────────────────
+addOdcU();
+addDeduction();
+
+</script>
+</body>
+</html>
