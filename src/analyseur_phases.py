@@ -83,16 +83,19 @@ def parse_file(filepath: str) -> dict:
         raise RuntimeError(f"Impossible de lire {os.path.basename(filepath)}: {e}")
 
     phase_hdr = re.compile(r'Phase Number:\s*(\d+\.\d+)\s*(.*)')
+    # Groupe 1 = numéro de projet, utilisé pour la déduplication
     entry_pat  = re.compile(
-        r'^[A-Z0-9]{3}-\d{3}\s+(?:B\s+)?(E[A-Z]{3,6})\s+'
+        r'^([A-Z0-9]{3}-\d{3})\s+(?:B\s+)?(E[A-Z]{3,6})\s+'
         r'([\w\-][\w\-\s]*,\s*[\w\-\s]+?)\s{4,}'
         r'(\d{4}-\d{2}-\d{2}|\d{1,2}/\d{1,2}/\d{4})'
     )
 
-    result       = defaultdict(lambda: defaultdict(lambda: defaultdict(float)))
-    emp_names    = {}
-    phase_descs  = {}
+    result        = defaultdict(lambda: defaultdict(lambda: defaultdict(float)))
+    emp_names     = {}
+    phase_descs   = {}
     current_phase = None
+    # Déduplication : (projet, code, phase, date, heures)
+    seen: set = set()
 
     for _, row in df.iterrows():
         cell = str(row[0]).strip() if pd.notna(row[0]) else ''
@@ -109,11 +112,16 @@ def parse_file(filepath: str) -> dict:
         if not m or current_phase is None:
             continue
 
-        code, name, ds = m.group(1), m.group(2).strip(), m.group(3)
+        proj, code, name, ds = m.group(1), m.group(2), m.group(3).strip(), m.group(4)
         try:
             h = float(row[3]) if pd.notna(row[3]) else 0.0
         except (ValueError, TypeError):
             h = 0.0
+
+        dedup_key = (proj, code, current_phase, ds, h)
+        if dedup_key in seen:
+            continue
+        seen.add(dedup_key)
 
         dt = _parse_date(ds)
         if not dt:

@@ -75,24 +75,33 @@ def parse_entries_by_week(filepath: str) -> dict:
     # Formats observés :
     #   2025 : "104-000   B      EBOUC  Boutin, Charen    10/27/2025"
     #   2026 : "103-000       EBOUC  Boutin, Charen    2026-04-09"
+    # Capture aussi le numéro de projet (groupe 1) pour la déduplication
     entry_pat = re.compile(
-        r'^[A-Z0-9]{3}-\d{3}\s+(?:B\s+)?(E[A-Z]{3,6})\s+'
+        r'^([A-Z0-9]{3}-\d{3})\s+(?:B\s+)?(E[A-Z]{3,6})\s+'
         r'([\w\-][\w\-\s]*,\s*[\w\-\s]+?)\s{4,}'
         r'(\d{4}-\d{2}-\d{2}|\d{1,2}/\d{1,2}/\d{4})'
     )
 
     weeks_data: dict = defaultdict(dict)   # week_key → code → {name, hours}
+    # Clé de déduplication : (projet, code, date, heures)
+    # Évite le double-comptage quand plusieurs rapports couvrent la même période.
+    seen: set = set()
 
     for _, row in df.iterrows():
         cell = str(row[0]).strip() if pd.notna(row[0]) else ''
         m = entry_pat.match(cell)
         if not m:
             continue
-        code, name, date_str = m.group(1), m.group(2).strip(), m.group(3)
+        proj, code, name, date_str = m.group(1), m.group(2), m.group(3).strip(), m.group(4)
         try:
             hours = float(row[3]) if pd.notna(row[3]) else 0.0
         except (ValueError, TypeError):
             hours = 0.0
+
+        dedup_key = (proj, code, date_str, hours)
+        if dedup_key in seen:
+            continue
+        seen.add(dedup_key)
 
         dt = _parse_date(date_str)
         if dt is None:
