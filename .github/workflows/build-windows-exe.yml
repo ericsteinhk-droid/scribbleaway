@@ -9,7 +9,7 @@ on:
       - '*.spec'
       - 'requirements.txt'
       - '.github/workflows/build-windows-exe.yml'
-  workflow_dispatch:   # allow manual trigger from GitHub UI
+  workflow_dispatch:
 
 jobs:
   build:
@@ -31,37 +31,54 @@ jobs:
           python -m pip install --upgrade pip
           pip install pandas openpyxl matplotlib pyinstaller
 
-      - name: Build AnalyseurHeures.exe
+      - name: Build AnalyseurHeures (onedir)
         run: pyinstaller analyseur_heures1.spec --distpath dist --workpath build_tmp/heures --clean
 
-      - name: Build AnalyseurPhases.exe
+      - name: Build AnalyseurPhases (onedir)
         run: pyinstaller analyseur_phases.spec --distpath dist --workpath build_tmp/phases --clean
 
       - name: List built files
-        run: dir dist
+        run: |
+          dir dist
+          dir dist\AnalyseurHeures
+          dir dist\AnalyseurPhases
 
-      - name: Upload AnalyseurHeures.exe
+      - name: Zip AnalyseurHeures folder
+        run: Compress-Archive -Path dist\AnalyseurHeures -DestinationPath dist\AnalyseurHeures.zip
+        shell: pwsh
+
+      - name: Zip AnalyseurPhases folder
+        run: Compress-Archive -Path dist\AnalyseurPhases -DestinationPath dist\AnalyseurPhases.zip
+        shell: pwsh
+
+      - name: Zip both apps together
+        run: |
+          New-Item -ItemType Directory -Path dist\EVOQ-Analyseurs | Out-Null
+          Copy-Item dist\AnalyseurHeures dist\EVOQ-Analyseurs\AnalyseurHeures -Recurse
+          Copy-Item dist\AnalyseurPhases dist\EVOQ-Analyseurs\AnalyseurPhases -Recurse
+          Compress-Archive -Path dist\EVOQ-Analyseurs -DestinationPath dist\EVOQ-Analyseurs-Windows.zip
+        shell: pwsh
+
+      - name: Upload AnalyseurHeures
         uses: actions/upload-artifact@v4
         with:
           name: AnalyseurHeures
-          path: dist/AnalyseurHeures.exe
+          path: dist/AnalyseurHeures.zip
           if-no-files-found: error
           retention-days: 30
 
-      - name: Upload AnalyseurPhases.exe
+      - name: Upload AnalyseurPhases
         uses: actions/upload-artifact@v4
         with:
           name: AnalyseurPhases
-          path: dist/AnalyseurPhases.exe
+          path: dist/AnalyseurPhases.zip
           if-no-files-found: error
           retention-days: 30
 
-      - name: Upload both executables as combined archive
+      - name: Upload both apps combined
         uses: actions/upload-artifact@v4
         with:
           name: EVOQ-Analyseurs-Windows
-          path: |
-            dist/AnalyseurHeures.exe
-            dist/AnalyseurPhases.exe
+          path: dist/EVOQ-Analyseurs-Windows.zip
           if-no-files-found: error
           retention-days: 30

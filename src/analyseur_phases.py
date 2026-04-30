@@ -70,7 +70,7 @@ def _parse_date(s: str):
         return None
 
 
-def parse_file(filepath: str) -> dict:
+def parse_file(filepath: str, seen: set = None) -> dict:
     """
     Lit un rapport XLSX et retourne :
       {week_key: {emp_code: {phase_num: hours, '_name': str}}}
@@ -95,7 +95,8 @@ def parse_file(filepath: str) -> dict:
     phase_descs   = {}
     current_phase = None
     # Déduplication : (projet, code, phase, date, heures)
-    seen: set = set()
+    if seen is None:
+        seen = set()
 
     for _, row in df.iterrows():
         cell = str(row[0]).strip() if pd.notna(row[0]) else ''

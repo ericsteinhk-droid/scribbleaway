@@ -57,7 +57,7 @@ def _parse_date(date_str: str):
         return None
 
 
-def parse_entries_by_week(filepath: str) -> dict:
+def parse_entries_by_week(filepath: str, seen: set = None) -> dict:
     """
     Parse un rapport XLSX et regroupe les heures par SEMAINE ISO réelle.
 
@@ -72,23 +72,28 @@ def parse_entries_by_week(filepath: str) -> dict:
     except Exception as e:
         raise RuntimeError(f"Impossible de lire {os.path.basename(filepath)}: {e}")
 
-    # Formats observés :
-    #   2025 : "104-000   B      EBOUC  Boutin, Charen    10/27/2025"
-    #   2026 : "103-000       EBOUC  Boutin, Charen    2026-04-09"
-    # Capture aussi le numéro de projet (groupe 1) pour la déduplication
+    # Clé de déduplication : (projet, code, phase, date, heures)
+    # La phase est incluse pour ne pas écraser des entrées légitimes où un employé
+    # a le même nombre d'heures sur la même date mais dans des phases différentes.
+    # Le `seen` partagé entre fichiers évite le double-comptage inter-rapports.
+    phase_hdr = re.compile(r'Phase Number:\s*(\d+\.\d+)')
     entry_pat = re.compile(
         r'^([A-Z0-9]{3}-\d{3})\s+(?:B\s+)?(E[A-Z]{3,6})\s+'
         r'([\w\-][\w\-\s]*,\s*[\w\-\s]+?)\s{4,}'
         r'(\d{4}-\d{2}-\d{2}|\d{1,2}/\d{1,2}/\d{4})'
     )
 
-    weeks_data: dict = defaultdict(dict)   # week_key → code → {name, hours}
-    # Clé de déduplication : (projet, code, date, heures)
-    # Évite le double-comptage quand plusieurs rapports couvrent la même période.
-    seen: set = set()
+    weeks_data: dict = defaultdict(dict)
+    if seen is None:
+        seen = set()
+    current_phase = '__'
 
     for _, row in df.iterrows():
         cell = str(row[0]).strip() if pd.notna(row[0]) else ''
+        ph = phase_hdr.search(cell)
+        if ph:
+            current_phase = ph.group(1)
+            continue
         m = entry_pat.match(cell)
         if not m:
             continue
@@ -98,7 +103,7 @@ def parse_entries_by_week(filepath: str) -> dict:
         except (ValueError, TypeError):
             hours = 0.0
 
-        dedup_key = (proj, code, date_str, hours)
+        dedup_key = (proj, code, current_phase, date_str, hours)
         if dedup_key in seen:
             continue
         seen.add(dedup_key)
@@ -107,8 +112,8 @@ def parse_entries_by_week(filepath: str) -> dict:
         if dt is None:
             continue
 
-        iso       = dt.isocalendar()
-        week_key  = f'{iso[0]}-W{iso[1]:02d}'   # ex. "2026-W15"
+        iso      = dt.isocalendar()
+        week_key = f'{iso[0]}-W{iso[1]:02d}'
 
         if code not in weeks_data[week_key]:
             weeks_data[week_key][code] = {'name': name, 'hours': 0.0}
@@ -137,9 +142,10 @@ def process_files(filepaths: list, min_avg_hours: float = 3.0) -> tuple:
     all_weeks: dict = defaultdict(dict)
     errors: list    = []
 
+    seen_global: set = set()  # partagé entre tous les fichiers
     for fp in filepaths:
         try:
-            file_weeks = parse_entries_by_week(fp)
+            file_weeks = parse_entries_by_week(fp, seen=seen_global)
         except RuntimeError as e:
             errors.append(str(e))
             continue
