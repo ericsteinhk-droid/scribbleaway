@@ -24,18 +24,11 @@ a = Analysis(
         'tkinter.messagebox',
     ],
     excludes=[
-        # testing / docs
-        'unittest', 'doctest', 'pydoc',
-        # network / crypto (unused)
-        'http', 'urllib', 'email', 'ssl', '_ssl', 'socket',
-        'ftplib', 'smtplib', 'imaplib', 'poplib',
-        # DB / serialisation (unused)
-        'sqlite3', '_sqlite3', 'dbm',
-        # GUI toolkits other than Tk
+        # alternate GUI toolkits (definitely not installed)
         'PyQt5', 'PyQt6', 'wx', 'gi',
-        # heavy scientific unused
-        'scipy', 'sklearn', 'cv2', 'PIL.ImageQt',
-        # IPython / notebook
+        # heavy scientific libs not used by this app
+        'scipy', 'sklearn', 'cv2',
+        # Jupyter / IPython
         'IPython', 'notebook', 'ipykernel',
     ],
     hookspath=[],
