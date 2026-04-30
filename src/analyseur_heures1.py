@@ -17,7 +17,7 @@ import re
 import sys
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
-from datetime import datetime
+from datetime import datetime, timedelta
 from collections import defaultdict
 
 import pandas as pd
@@ -129,6 +129,27 @@ def _week_label(week_key: str) -> str:
     return monday.strftime('%d-%m-%y')
 
 
+def _expand_week_range(sorted_keys: list) -> list:
+    """Return every ISO week key between the first and last entry.
+
+    Without this, weeks with no hours (vacations, holidays) are absent from
+    sorted_keys and the chart draws a straight line across the gap instead of
+    showing a visible drop to zero.
+    """
+    if not sorted_keys:
+        return []
+    yr0, wn0 = int(sorted_keys[0][:4]),  int(sorted_keys[0][6:])
+    yr1, wn1 = int(sorted_keys[-1][:4]), int(sorted_keys[-1][6:])
+    current  = datetime.fromisocalendar(yr0, wn0, 1)
+    end      = datetime.fromisocalendar(yr1, wn1, 1)
+    result   = []
+    while current <= end:
+        iso = current.isocalendar()
+        result.append(f'{iso[0]}-W{iso[1]:02d}')
+        current += timedelta(weeks=1)
+    return result
+
+
 def process_files(filepaths: list, min_avg_hours: float = 3.0) -> tuple:
     """
     Traite tous les fichiers et construit la matrice heures × semaines ISO.
@@ -155,8 +176,10 @@ def process_files(filepaths: list, min_avg_hours: float = 3.0) -> tuple:
                     all_weeks[week_key][code] = {'name': info['name'], 'hours': 0.0}
                 all_weeks[week_key][code]['hours'] += info['hours']
 
-    # Tri chronologique des semaines ISO
-    sorted_keys   = sorted(all_weeks.keys())
+    # Toutes les semaines ISO consécutives entre la première et la dernière.
+    # Les semaines sans données (congés, Noël…) apparaissent à zéro plutôt
+    # qu'être sautées, ce qui évite de relier les points à travers la pause.
+    sorted_keys   = _expand_week_range(sorted(all_weeks.keys()))
     week_labels   = [_week_label(k) for k in sorted_keys]
 
     # Collecte de tous les employés (nom le plus récent retenu)

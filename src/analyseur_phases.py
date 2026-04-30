@@ -9,7 +9,7 @@ Dépendances : pandas, openpyxl, matplotlib
 
 import os, re, sys, tkinter as tk
 from tkinter import ttk, filedialog, messagebox
-from datetime import datetime
+from datetime import datetime, timedelta
 from collections import defaultdict
 
 import pandas as pd
@@ -47,6 +47,27 @@ FALLBACK_COLORS = [
     '#f39c12','#1abc9c','#d35400','#2980b9','#8e44ad',
     '#16a085','#c0392b','#27ae60','#2c3e50','#f1c40f',
 ]
+
+
+def _expand_week_range(sorted_keys: list) -> list:
+    """Return every ISO week key between the first and last entry.
+
+    Without this, weeks with no hours (vacations, holidays) are absent from
+    sorted_weeks and the chart draws a straight line across the gap instead of
+    showing a visible drop to zero.
+    """
+    if not sorted_keys:
+        return []
+    yr0, wn0 = int(sorted_keys[0][:4]),  int(sorted_keys[0][6:])
+    yr1, wn1 = int(sorted_keys[-1][:4]), int(sorted_keys[-1][6:])
+    current  = datetime.fromisocalendar(yr0, wn0, 1)
+    end      = datetime.fromisocalendar(yr1, wn1, 1)
+    result   = []
+    while current <= end:
+        iso = current.isocalendar()
+        result.append(f'{iso[0]}-W{iso[1]:02d}')
+        current += timedelta(weeks=1)
+    return result
 
 
 def phase_color(pnum: str, index: int = 0) -> str:
@@ -155,9 +176,10 @@ def process_files(filepaths: list, min_avg: float = 3.0) -> tuple:
     phase_descs = {}
     errors      = []
 
+    seen_global: set = set()  # partagé entre tous les fichiers
     for fp in filepaths:
         try:
-            week_data, names, descs = parse_file(fp)
+            week_data, names, descs = parse_file(fp, seen=seen_global)
         except RuntimeError as e:
             errors.append(str(e))
             continue
@@ -168,7 +190,10 @@ def process_files(filepaths: list, min_avg: float = 3.0) -> tuple:
                 for pnum, h in phases.items():
                     merged[wk][code][pnum] += h
 
-    sorted_weeks = sorted(merged.keys())
+    # Toutes les semaines ISO consécutives entre la première et la dernière.
+    # Les semaines sans données (congés, Noël…) apparaissent à zéro plutôt
+    # qu'être sautées, ce qui évite de relier les points à travers la pause.
+    sorted_weeks = _expand_week_range(sorted(merged.keys()))
     week_labels  = []
     for wk in sorted_weeks:
         yr, wn = int(wk[:4]), int(wk[6:])
