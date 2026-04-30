@@ -8,22 +8,36 @@ a = Analysis(
     binaries=[],
     datas=[],
     hiddenimports=[
+        # matplotlib TkAgg backend
         'matplotlib.backends.backend_tkagg',
         'matplotlib.backends._backend_tk',
         'matplotlib.figure',
         'matplotlib.pyplot',
         'matplotlib.patches',
         'matplotlib.lines',
+        # pandas / openpyxl
         'openpyxl',
         'openpyxl.styles',
         'openpyxl.utils',
         'openpyxl.reader.excel',
         'pandas',
         'pandas._libs.tslibs.base',
+        # tkinter
         'tkinter',
         'tkinter.ttk',
         'tkinter.filedialog',
         'tkinter.messagebox',
+        # stdlib pulled in transitively (pathlib -> urllib.parse at import time)
+        # PyInstaller static analysis misses these; force-include to avoid
+        # "No module named urllib" crash from pyi_rth_inspect at startup.
+        'urllib',
+        'urllib.parse',
+        'urllib.request',
+        'urllib.error',
+        'urllib.response',
+        'zipfile',
+        'pathlib',
+        'inspect',
     ],
     excludes=[
         # alternate GUI toolkits (definitely not installed)
