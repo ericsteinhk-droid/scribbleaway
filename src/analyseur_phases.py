@@ -570,8 +570,20 @@ class PhaseAnalyzerApp(tk.Tk):
                 phase_label(p, self.phase_descs.get(p, ''))
                 for p in emp_phases], colors=colors, alpha=0.88)
 
+        # ── Semaines de congés / vacances : fond gris clair ─────────────────────
+        # Un total nul indique une semaine absente du rapport (pont, Noël, etc.).
+        # Ces semaines ont été insérées par _expand_week_range avec 0 h partout.
+        legend_extra  = []
+        vacation_seen = False
+        for i, total in enumerate(totals):
+            if total == 0:
+                ax.axvspan(i - 0.5, i + 0.5, color='#e0e0e0', alpha=0.65, zorder=0)
+                if not vacation_seen:
+                    legend_extra.append(mpatches.Patch(
+                        facecolor='#e0e0e0', alpha=0.65, label='Congés / vacances'))
+                    vacation_seen = True
+
         # Ligne de plafond hebdomadaire
-        legend_extra = []
         if ceil > 0:
             ax.axhline(y=ceil, color='#c0392b', linewidth=1.8,
                        linestyle='-', zorder=5)
@@ -609,9 +621,12 @@ class PhaseAnalyzerApp(tk.Tk):
                             fontstyle='italic')
 
         # Axe X
+        n      = len(self.sorted_weeks)
+        window = min(5, n)
         ax.set_xticks(xs)
         ax.set_xticklabels(self.week_labels, rotation=45, ha='right', fontsize=8)
-        ax.set_xlim(-0.5, len(xs) - 0.5)
+        # Initial view: last 5 weeks.  Full range used for export PNG.
+        ax.set_xlim(max(-0.5, n - window - 0.5), n - 0.5)
 
         # Axe Y
         max_y = max(totals) if totals else 10
@@ -646,6 +661,21 @@ class PhaseAnalyzerApp(tk.Tk):
         tb_frame = tk.Frame(parent, bg=WHITE)
         tb_frame.pack(fill='x')
         NavigationToolbar2Tk(canvas, tb_frame)
+
+        # ── Scrollbar horizontal ──────────────────────────────────────────────
+        scroll_frame = tk.Frame(parent, bg=WHITE)
+        scroll_frame.pack(fill='x', padx=8, pady=(0, 2))
+        tk.Label(scroll_frame, text='◀  Historique  ▶',
+                 bg=WHITE, fg='#999', font=('Helvetica', 7)
+                 ).pack(side='left', padx=4)
+        def _on_hscroll(val):
+            v = float(val)
+            ax.set_xlim(v - 0.5, v + window - 0.5)
+            canvas.draw_idle()
+        hscroll = ttk.Scale(scroll_frame, from_=0, to=max(0, n - window),
+                            orient='horizontal', command=_on_hscroll)
+        hscroll.set(max(0, n - window))   # start at the most recent weeks
+        hscroll.pack(side='left', fill='x', expand=True, padx=4)
 
         plt.close(fig)
 
@@ -702,6 +732,15 @@ class PhaseAnalyzerApp(tk.Tk):
                                      for p in emp_phases],
                              colors=colors, alpha=0.88)
             legend_extra = []
+            # Vacation shading (full range shown in export)
+            vacation_seen_exp = False
+            for i, tv in enumerate(totals):
+                if tv == 0:
+                    ax.axvspan(i - 0.5, i + 0.5, color='#e0e0e0', alpha=0.65, zorder=0)
+                    if not vacation_seen_exp:
+                        legend_extra.append(mpatches.Patch(
+                            facecolor='#e0e0e0', alpha=0.65, label='Congés / vacances'))
+                        vacation_seen_exp = True
             if ceil > 0:
                 ax.axhline(y=ceil, color='#c0392b', linewidth=1.8, linestyle='-', zorder=5)
                 legend_extra.append(Line2D([0],[0],color='#c0392b',linewidth=1.8,

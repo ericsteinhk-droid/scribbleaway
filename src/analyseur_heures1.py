@@ -452,6 +452,10 @@ class HoursAnalyzerApp(tk.Tk):
             ll.set_picker(True); ll.set_pickradius(8)
         fig.canvas.mpl_connect('pick_event', on_pick)
         plt.xticks(rotation=45, ha='right', fontsize=8)
+        n      = len(self.weeks)
+        window = min(5, n)
+        # Initial view: last 5 weeks.  Full range preserved for toolbar save/export.
+        ax.set_xlim(max(-0.5, n - window - 0.5), n - 0.5)
         plt.tight_layout()
         canvas = FigureCanvasTkAgg(fig, master=self.chart_frame)
         canvas.draw()
@@ -460,8 +464,22 @@ class HoursAnalyzerApp(tk.Tk):
         toolbar_frame.pack(fill='x')
         from matplotlib.backends.backend_tkagg import NavigationToolbar2Tk
         NavigationToolbar2Tk(canvas, toolbar_frame)
+        # ── Scrollbar horizontal ──────────────────────────────────────────────
+        scroll_frame = tk.Frame(self.chart_frame, bg=WHITE)
+        scroll_frame.pack(fill='x', padx=8, pady=(0, 2))
+        tk.Label(scroll_frame, text='◀  Historique  ▶',
+                 bg=WHITE, fg='#999', font=('Helvetica', 7)
+                 ).pack(side='left', padx=4)
+        def _on_hscroll(val):
+            v = float(val)
+            ax.set_xlim(v - 0.5, v + window - 0.5)
+            canvas.draw_idle()
+        hscroll = ttk.Scale(scroll_frame, from_=0, to=max(0, n - window),
+                            orient='horizontal', command=_on_hscroll)
+        hscroll.set(max(0, n - window))   # start at the most recent weeks
+        hscroll.pack(side='left', fill='x', expand=True, padx=4)
         tk.Label(self.chart_frame,
-                 text='💡  Cliquez sur un nom dans la légende pour masquer/afficher.',
+                 text='💡  Glissez la barre pour naviguer · cliquez un nom pour masquer/afficher.',
                  bg=WHITE, fg='#888', font=('Helvetica', 8, 'italic')
                  ).pack(pady=2)
 
