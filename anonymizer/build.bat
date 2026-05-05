@@ -30,7 +30,7 @@ echo.
 
 pyinstaller ^
     --onefile ^
-    --windowed ^
+    --console ^
     --name "OfficeAnonymizer" ^
     --collect-all spacy ^
     --collect-all en_core_web_sm ^
