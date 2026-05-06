@@ -11,6 +11,7 @@ Usage:
     python anonymize.py data.xlsx --dates --no-nlp
     python anonymize.py *.docx *.xlsx --save-mapping
     python anonymize.py report.docx --output-dir ./clean/
+    python anonymize.py report.docx --no-gui   # suppress the open-file dialog
 
 Supported PII types (always on):
     EMAIL, PHONE, SSN, CREDIT_CARD, IP_ADDRESS, URL
@@ -227,6 +228,91 @@ class Anonymizer:
 
 
 # ---------------------------------------------------------------------------
+# GUI — open-file dialog
+# ---------------------------------------------------------------------------
+
+def _open_file(path: Path) -> None:
+    import os
+    import platform
+    import subprocess
+
+    system = platform.system()
+    try:
+        if system == "Windows":
+            os.startfile(str(path))
+        elif system == "Darwin":
+            subprocess.Popen(["open", str(path)])
+        else:
+            subprocess.Popen(["xdg-open", str(path)])
+    except Exception as exc:
+        print(f"[error] Could not open {path.name}: {exc}")
+
+
+def show_open_buttons(files: List[Path]) -> None:
+    try:
+        import tkinter as tk
+    except ImportError:
+        print("[gui] tkinter not available — skipping open dialog.")
+        return
+
+    BG         = "#f5f5f5"
+    BTN_BG     = "#FFE600"   # bright yellow highlight
+    BTN_HOVER  = "#FDD835"
+    BTN_FG     = "#111111"
+
+    root = tk.Tk()
+    root.title("Anonymization Complete")
+    root.resizable(False, False)
+    root.configure(bg=BG, padx=28, pady=20)
+
+    tk.Label(
+        root,
+        text="Anonymization complete.\nClick a file below to open it:",
+        bg=BG,
+        fg="#333333",
+        font=("Helvetica", 11),
+        justify="center",
+    ).pack(pady=(0, 14))
+
+    for path in files:
+        btn = tk.Button(
+            root,
+            text=path.name,
+            font=("Helvetica", 13, "bold"),
+            bg=BTN_BG,
+            fg=BTN_FG,
+            activebackground=BTN_HOVER,
+            activeforeground=BTN_FG,
+            relief="raised",
+            bd=2,
+            padx=18,
+            pady=10,
+            cursor="hand2",
+            anchor="center",
+            command=lambda p=path: _open_file(p),
+        )
+        btn.pack(fill="x", pady=5)
+        btn.bind("<Enter>", lambda e, b=btn: b.configure(bg=BTN_HOVER))
+        btn.bind("<Leave>", lambda e, b=btn: b.configure(bg=BTN_BG))
+
+    tk.Button(
+        root,
+        text="Close",
+        command=root.destroy,
+        font=("Helvetica", 10),
+        bg="#dddddd",
+        fg="#444444",
+        activebackground="#cccccc",
+        relief="flat",
+        padx=12,
+        pady=6,
+        cursor="hand2",
+    ).pack(pady=(16, 0))
+
+    root.mainloop()
+
+
+# ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
 
@@ -269,6 +355,8 @@ def main():
                         help="Also anonymize dates (off by default)")
     parser.add_argument("--no-nlp", action="store_true",
                         help="Skip spaCy NER; use regex patterns only")
+    parser.add_argument("--no-gui", action="store_true",
+                        help="Do not show the open-file dialog after processing")
     args = parser.parse_args()
 
     if args.output_dir:
@@ -300,6 +388,9 @@ def main():
     total = len(args.files)
     ok = len(processed)
     print(f"\nDone: {ok}/{total} file(s) anonymized" + (f", {len(errors)} error(s)" if errors else "."))
+
+    if processed and not args.no_gui:
+        show_open_buttons(processed)
 
     if errors:
         sys.exit(1)
