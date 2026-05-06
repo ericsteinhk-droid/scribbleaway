@@ -320,12 +320,40 @@ class WordSearchApp(tk.Tk):
         btn.pack(side="left", padx=(4, 2), pady=2)
 
         _lfont = ("Segoe UI", 9)
-        tk.Label(row, text=path,    font=_lfont, bg=bg, width=_COL_PATH,  anchor="w",
+        tk.Label(row, text=path,    font=_lfont, bg=bg, width=_COL_PATH, anchor="w",
                  wraplength=260).pack(side="left", padx=2, pady=2)
-        tk.Label(row, text=keyword, font=_lfont, bg=bg, width=_COL_KW,   anchor="w").pack(
+        tk.Label(row, text=keyword, font=_lfont, bg=bg, width=_COL_KW,  anchor="w").pack(
                  side="left", padx=2, pady=2)
-        tk.Label(row, text=excerpt, font=_lfont, bg=bg, width=_COL_EXCPT, anchor="w",
-                 wraplength=340, justify="left").pack(side="left", padx=2, pady=2)
+        self._make_excerpt_widget(row, excerpt, keyword, bg).pack(side="left", padx=2, pady=2)
+
+    def _make_excerpt_widget(self, parent, excerpt: str, keyword: str, bg: str) -> tk.Text:
+        """Return a read-only Text widget with the keyword rendered in bold."""
+        widget = tk.Text(
+            parent,
+            font=("Segoe UI", 9),
+            bg=bg,
+            relief="flat",
+            bd=0,
+            highlightthickness=0,
+            wrap="word",
+            height=2,
+            width=_COL_EXCPT,
+            cursor="arrow",
+        )
+        widget.tag_configure("bold", font=("Segoe UI", 9, "bold"))
+
+        # Split on every occurrence of the keyword (case-insensitive) and insert
+        # plain segments normally, keyword segments in bold.
+        pattern = f"({re.escape(keyword)})"
+        parts = re.split(pattern, excerpt, flags=re.IGNORECASE)
+        for part in parts:
+            if re.fullmatch(re.escape(keyword), part, flags=re.IGNORECASE):
+                widget.insert("end", part, "bold")
+            else:
+                widget.insert("end", part)
+
+        widget.config(state="disabled")
+        return widget
 
     def _open_in_word(self, path: str):
         if os.path.exists(path):
