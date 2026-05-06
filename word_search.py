@@ -24,17 +24,25 @@ except ImportError:
 
 
 # ---------------------------------------------------------------------------
+# Column layout (character widths for Labels; used by header + rows)
+# ---------------------------------------------------------------------------
+_COL_OPEN   = 26   # "Open in Word" button  (filename)
+_COL_PATH   = 36   # full path
+_COL_KW     = 18   # matched keyword
+_COL_EXCPT  = 48   # excerpt
+
+
+# ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
 def _sentences_around(text: str, keyword: str, case_sensitive: bool, context: int = 120) -> str:
-    """Return a short excerpt that contains *keyword* inside *text*."""
     flags = 0 if case_sensitive else re.IGNORECASE
     match = re.search(re.escape(keyword), text, flags=flags)
     if not match:
         return ""
     start = max(0, match.start() - context)
-    end = min(len(text), match.end() + context)
+    end   = min(len(text), match.end() + context)
     excerpt = text[start:end].replace("\n", " ").strip()
     if start > 0:
         excerpt = "…" + excerpt
@@ -43,11 +51,7 @@ def _sentences_around(text: str, keyword: str, case_sensitive: bool, context: in
     return excerpt
 
 
-def _extract_text(path: str):
-    """
-    Return full text of a .docx file as a single string.
-    Raises on unreadable / password-protected files.
-    """
+def _extract_text(path: str) -> str:
     doc = Document(path)
     parts = []
     for para in doc.paragraphs:
@@ -60,7 +64,6 @@ def _extract_text(path: str):
 
 
 def _collect_docx(folder: str, recursive: bool):
-    """Yield absolute paths to every .docx under *folder*."""
     if recursive:
         for root, _dirs, files in os.walk(folder):
             for f in files:
@@ -73,7 +76,57 @@ def _collect_docx(folder: str, recursive: bool):
 
 
 # ---------------------------------------------------------------------------
-# Search worker (runs in background thread)
+# Scrollable frame widget
+# ---------------------------------------------------------------------------
+
+class _ScrollableFrame(tk.Frame):
+    """Vertically (and horizontally) scrollable container for arbitrary widgets."""
+
+    def __init__(self, master, **kw):
+        super().__init__(master, **kw)
+
+        self._canvas = tk.Canvas(self, bg="#ffffff", highlightthickness=0)
+        vsb = ttk.Scrollbar(self, orient="vertical",   command=self._canvas.yview)
+        hsb = ttk.Scrollbar(self, orient="horizontal", command=self._canvas.xview)
+        self._canvas.configure(yscrollcommand=vsb.set, xscrollcommand=hsb.set)
+
+        self._canvas.grid(row=0, column=0, sticky="nsew")
+        vsb.grid(row=0, column=1, sticky="ns")
+        hsb.grid(row=1, column=0, sticky="ew")
+        self.rowconfigure(0, weight=1)
+        self.columnconfigure(0, weight=1)
+
+        self.inner = tk.Frame(self._canvas, bg="#ffffff")
+        self._win_id = self._canvas.create_window((0, 0), window=self.inner, anchor="nw")
+
+        self.inner.bind("<Configure>", self._on_inner_configure)
+        self._canvas.bind("<Configure>", self._on_canvas_configure)
+        # Mouse-wheel scrolling — only active when pointer is over this widget
+        self._canvas.bind("<Enter>", self._bind_mousewheel)
+        self._canvas.bind("<Leave>", self._unbind_mousewheel)
+
+    def _on_inner_configure(self, _e):
+        self._canvas.configure(scrollregion=self._canvas.bbox("all"))
+
+    def _on_canvas_configure(self, event):
+        self._canvas.itemconfig(self._win_id, width=event.width)
+
+    def _bind_mousewheel(self, _e):
+        self._canvas.bind_all("<MouseWheel>", self._on_mousewheel)
+
+    def _unbind_mousewheel(self, _e):
+        self._canvas.unbind_all("<MouseWheel>")
+
+    def _on_mousewheel(self, event):
+        self._canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
+
+    def clear(self):
+        for child in self.inner.winfo_children():
+            child.destroy()
+
+
+# ---------------------------------------------------------------------------
+# Search worker (background thread)
 # ---------------------------------------------------------------------------
 
 def search_worker(
@@ -84,14 +137,6 @@ def search_worker(
     case_sensitive: bool,
     result_queue: queue.Queue,
 ):
-    """
-    Scans .docx files and puts result dicts onto *result_queue*.
-    Special sentinel messages:
-      {"type": "progress", "current": n, "total": n, "filename": str}
-      {"type": "match", ...row data...}
-      {"type": "error", "filename": str, "path": str, "reason": str}
-      {"type": "done", "matches": int, "files_with_matches": set}
-    """
     paths = list(_collect_docx(folder, recursive))
     total = len(paths)
     match_count = 0
@@ -103,17 +148,12 @@ def search_worker(
 
         try:
             text = _extract_text(path)
-        except (PackageNotFoundError, Exception) as exc:
+        except Exception as exc:
             result_queue.put({"type": "error", "filename": filename, "path": path, "reason": str(exc)})
             continue
 
         flags = 0 if case_sensitive else re.IGNORECASE
-
-        matched_keywords = []
-        for kw in keywords:
-            if re.search(re.escape(kw), text, flags):
-                matched_keywords.append(kw)
-
+        matched_keywords = [kw for kw in keywords if re.search(re.escape(kw), text, flags)]
         hit = (len(matched_keywords) == len(keywords)) if match_all else bool(matched_keywords)
 
         if hit:
@@ -140,13 +180,14 @@ class WordSearchApp(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title("Word Search — .docx Files")
-        self.minsize(900, 600)
+        self.minsize(960, 620)
         self.configure(bg="#f0f0f0")
 
-        self._result_queue = queue.Queue()
+        self._result_queue  = queue.Queue()
         self._search_thread = None
-        self._all_rows = []        # list of (filename, path, keyword, excerpt)
-        self._error_rows = []      # list of (filename, path, reason)
+        self._all_rows      = []   # (filename, path, keyword, excerpt)
+        self._error_rows    = []   # (filename, path, reason)
+        self._row_count     = 0    # for alternating row colours
 
         self._build_ui()
         self.after(100, self._poll_queue)
@@ -158,24 +199,22 @@ class WordSearchApp(tk.Tk):
     def _build_ui(self):
         pad = {"padx": 8, "pady": 4}
 
-        # ---- Top panel: folder + options ----
-        top = tk.LabelFrame(self, text="Search Settings", bg="#f0f0f0", font=("Segoe UI", 9, "bold"))
+        # ---- Settings panel ----
+        top = tk.LabelFrame(self, text="Search Settings", bg="#f0f0f0",
+                            font=("Segoe UI", 9, "bold"))
         top.pack(fill="x", padx=10, pady=(10, 4))
 
-        # Folder row
         tk.Label(top, text="Folder:", bg="#f0f0f0").grid(row=0, column=0, sticky="e", **pad)
         self._folder_var = tk.StringVar()
         tk.Entry(top, textvariable=self._folder_var, width=60).grid(row=0, column=1, sticky="ew", **pad)
         tk.Button(top, text="Browse…", command=self._browse_folder).grid(row=0, column=2, **pad)
 
-        # Keywords row
         tk.Label(top, text="Keywords:", bg="#f0f0f0").grid(row=1, column=0, sticky="e", **pad)
         self._keywords_var = tk.StringVar()
-        kw_entry = tk.Entry(top, textvariable=self._keywords_var, width=60)
-        kw_entry.grid(row=1, column=1, sticky="ew", **pad)
-        tk.Label(top, text="(comma-separated)", bg="#f0f0f0", fg="#666").grid(row=1, column=2, sticky="w", **pad)
+        tk.Entry(top, textvariable=self._keywords_var, width=60).grid(row=1, column=1, sticky="ew", **pad)
+        tk.Label(top, text="(comma-separated)", bg="#f0f0f0", fg="#666").grid(
+            row=1, column=2, sticky="w", **pad)
 
-        # Options row
         opts = tk.Frame(top, bg="#f0f0f0")
         opts.grid(row=2, column=0, columnspan=3, sticky="w", padx=8, pady=4)
 
@@ -189,7 +228,7 @@ class WordSearchApp(tk.Tk):
 
         self._case_var = tk.BooleanVar(value=False)
         tk.Checkbutton(opts, text="Case-sensitive", variable=self._case_var,
-                       bg="#f0f0f0").pack(side="left", padx=(0, 16))
+                       bg="#f0f0f0").pack(side="left")
 
         top.columnconfigure(1, weight=1)
 
@@ -222,45 +261,80 @@ class WordSearchApp(tk.Tk):
 
         # ---- Progress bar ----
         self._progress_var = tk.DoubleVar(value=0)
-        self._progress = ttk.Progressbar(self, variable=self._progress_var, maximum=100)
-        self._progress.pack(fill="x", padx=10, pady=(2, 4))
+        ttk.Progressbar(self, variable=self._progress_var, maximum=100).pack(
+            fill="x", padx=10, pady=(2, 4))
 
-        # ---- Results table ----
+        # ---- Results section ----
         results_frame = tk.LabelFrame(self, text="Results", bg="#f0f0f0",
                                       font=("Segoe UI", 9, "bold"))
         results_frame.pack(fill="both", expand=True, padx=10, pady=(0, 10))
-
-        cols = ("filename", "path", "keyword", "excerpt")
-        self._tree = ttk.Treeview(results_frame, columns=cols, show="headings", selectmode="extended")
-        self._tree.heading("filename", text="File Name")
-        self._tree.heading("path", text="Full Path")
-        self._tree.heading("keyword", text="Matched Keyword")
-        self._tree.heading("excerpt", text="Excerpt")
-
-        self._tree.column("filename", width=180, minwidth=100)
-        self._tree.column("path", width=260, minwidth=120)
-        self._tree.column("keyword", width=120, minwidth=80)
-        self._tree.column("excerpt", width=340, minwidth=140)
-
-        vsb = ttk.Scrollbar(results_frame, orient="vertical", command=self._tree.yview)
-        hsb = ttk.Scrollbar(results_frame, orient="horizontal", command=self._tree.xview)
-        self._tree.configure(yscrollcommand=vsb.set, xscrollcommand=hsb.set)
-
-        self._tree.grid(row=0, column=0, sticky="nsew")
-        vsb.grid(row=0, column=1, sticky="ns")
-        hsb.grid(row=1, column=0, sticky="ew")
-        results_frame.rowconfigure(0, weight=1)
+        results_frame.rowconfigure(1, weight=1)
         results_frame.columnconfigure(0, weight=1)
 
-        # Alternating row colors
-        self._tree.tag_configure("odd", background="#ffffff")
-        self._tree.tag_configure("even", background="#f5f8fc")
+        # Column header row
+        header = tk.Frame(results_frame, bg="#c8d4e8")
+        header.grid(row=0, column=0, sticky="ew")
 
-        # Double-click to open file location
-        self._tree.bind("<Double-1>", self._open_file_location)
+        _hfont = ("Segoe UI", 9, "bold")
+        tk.Label(header, text="Open in Word", font=_hfont, bg="#c8d4e8",
+                 width=_COL_OPEN, anchor="w").pack(side="left", padx=(6, 2), pady=3)
+        tk.Label(header, text="Full Path", font=_hfont, bg="#c8d4e8",
+                 width=_COL_PATH, anchor="w").pack(side="left", padx=2, pady=3)
+        tk.Label(header, text="Matched Keyword", font=_hfont, bg="#c8d4e8",
+                 width=_COL_KW, anchor="w").pack(side="left", padx=2, pady=3)
+        tk.Label(header, text="Excerpt", font=_hfont, bg="#c8d4e8",
+                 width=_COL_EXCPT, anchor="w").pack(side="left", padx=2, pady=3)
+
+        # Scrollable body
+        self._results_sf = _ScrollableFrame(results_frame, bg="#ffffff")
+        self._results_sf.grid(row=1, column=0, sticky="nsew")
 
     # ------------------------------------------------------------------
-    # UI actions
+    # Row builder
+    # ------------------------------------------------------------------
+
+    def _add_result_row(self, filename: str, path: str, keyword: str, excerpt: str):
+        self._row_count += 1
+        bg = "#ffffff" if self._row_count % 2 == 1 else "#f0f4fa"
+
+        row = tk.Frame(self._results_sf.inner, bg=bg)
+        row.pack(fill="x")
+
+        # --- Bold, highlighted "Open in Word" button with the filename ---
+        btn = tk.Button(
+            row,
+            text=filename,
+            font=("Segoe UI", 9, "bold"),
+            bg="#FFE066",          # vivid yellow highlight
+            fg="#1a237e",          # dark-navy text
+            activebackground="#FFD600",
+            activeforeground="#1a237e",
+            relief="flat",
+            bd=0,
+            cursor="hand2",
+            anchor="w",
+            width=_COL_OPEN,
+            padx=4,
+            command=lambda p=path: self._open_in_word(p),
+        )
+        btn.pack(side="left", padx=(4, 2), pady=2)
+
+        _lfont = ("Segoe UI", 9)
+        tk.Label(row, text=path,    font=_lfont, bg=bg, width=_COL_PATH,  anchor="w",
+                 wraplength=260).pack(side="left", padx=2, pady=2)
+        tk.Label(row, text=keyword, font=_lfont, bg=bg, width=_COL_KW,   anchor="w").pack(
+                 side="left", padx=2, pady=2)
+        tk.Label(row, text=excerpt, font=_lfont, bg=bg, width=_COL_EXCPT, anchor="w",
+                 wraplength=340, justify="left").pack(side="left", padx=2, pady=2)
+
+    def _open_in_word(self, path: str):
+        if os.path.exists(path):
+            os.startfile(path)   # Windows: opens with the default .docx handler (Word)
+        else:
+            messagebox.showwarning("File not found", f"Cannot open:\n{path}")
+
+    # ------------------------------------------------------------------
+    # Search control
     # ------------------------------------------------------------------
 
     def _browse_folder(self):
@@ -288,11 +362,11 @@ class WordSearchApp(tk.Tk):
             messagebox.showinfo("Busy", "A search is already running. Please wait.")
             return
 
-        # Reset state
+        # Reset
         self._all_rows.clear()
         self._error_rows.clear()
-        for item in self._tree.get_children():
-            self._tree.delete(item)
+        self._row_count = 0
+        self._results_sf.clear()
         self._progress_var.set(0)
         self._export_btn.config(state="disabled")
         self._errors_btn.config(state="disabled")
@@ -301,23 +375,20 @@ class WordSearchApp(tk.Tk):
 
         self._search_thread = threading.Thread(
             target=search_worker,
-            args=(
-                folder,
-                self._recursive_var.get(),
-                keywords,
-                self._match_all_var.get(),
-                self._case_var.get(),
-                self._result_queue,
-            ),
+            args=(folder, self._recursive_var.get(), keywords,
+                  self._match_all_var.get(), self._case_var.get(), self._result_queue),
             daemon=True,
         )
         self._search_thread.start()
 
+    # ------------------------------------------------------------------
+    # Queue polling (runs on the main thread every 50 ms)
+    # ------------------------------------------------------------------
+
     def _poll_queue(self):
-        """Drain the result queue and update the UI — called every 50 ms."""
         try:
             while True:
-                msg = self._result_queue.get_nowait()
+                msg   = self._result_queue.get_nowait()
                 mtype = msg["type"]
 
                 if mtype == "progress":
@@ -328,14 +399,11 @@ class WordSearchApp(tk.Tk):
                     )
 
                 elif mtype == "match":
-                    self._all_rows.append((
+                    self._all_rows.append(
+                        (msg["filename"], msg["path"], msg["keyword"], msg["excerpt"])
+                    )
+                    self._add_result_row(
                         msg["filename"], msg["path"], msg["keyword"], msg["excerpt"]
-                    ))
-                    tag = "even" if len(self._all_rows) % 2 == 0 else "odd"
-                    self._tree.insert(
-                        "", "end",
-                        values=(msg["filename"], msg["path"], msg["keyword"], msg["excerpt"]),
-                        tags=(tag,),
                     )
 
                 elif mtype == "error":
@@ -343,7 +411,7 @@ class WordSearchApp(tk.Tk):
 
                 elif mtype == "done":
                     n_matches = msg["matches"]
-                    n_files = len(msg["files_with_matches"])
+                    n_files   = len(msg["files_with_matches"])
                     self._status_var.set(
                         f"Done. Found {n_matches} match{'es' if n_matches != 1 else ''}"
                         f" across {n_files} file{'s' if n_files != 1 else ''}."
@@ -360,14 +428,9 @@ class WordSearchApp(tk.Tk):
 
         self.after(50, self._poll_queue)
 
-    def _open_file_location(self, _event):
-        """Double-click: reveal file in Explorer (Windows only)."""
-        selection = self._tree.selection()
-        if not selection:
-            return
-        path = self._tree.item(selection[0], "values")[1]
-        if os.path.exists(path):
-            os.startfile(os.path.dirname(path))
+    # ------------------------------------------------------------------
+    # Export / error popup
+    # ------------------------------------------------------------------
 
     def _export_csv(self):
         if not self._all_rows:
@@ -399,11 +462,11 @@ class WordSearchApp(tk.Tk):
         cols = ("filename", "path", "reason")
         tree = ttk.Treeview(win, columns=cols, show="headings")
         tree.heading("filename", text="File Name")
-        tree.heading("path", text="Full Path")
-        tree.heading("reason", text="Reason Skipped")
+        tree.heading("path",     text="Full Path")
+        tree.heading("reason",   text="Reason Skipped")
         tree.column("filename", width=160)
-        tree.column("path", width=280)
-        tree.column("reason", width=240)
+        tree.column("path",     width=280)
+        tree.column("reason",   width=240)
 
         vsb = ttk.Scrollbar(win, orient="vertical", command=tree.yview)
         tree.configure(yscrollcommand=vsb.set)
