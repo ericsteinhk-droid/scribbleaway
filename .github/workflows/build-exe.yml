@@ -1,0 +1,30 @@
+name: Build WordSearch.exe
+
+on:
+  workflow_dispatch:   # manual trigger from the GitHub UI / mobile app
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Build executable
+        run: pyinstaller word_search.spec
+
+      - name: Upload WordSearch.exe as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: WordSearch-exe
+          path: dist\WordSearch.exe
+          retention-days: 30
