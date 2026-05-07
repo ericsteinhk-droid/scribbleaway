@@ -36,13 +36,24 @@ _COL_EXCPT  = 48   # excerpt
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _sentences_around(text: str, keyword: str, case_sensitive: bool, context: int = 120) -> str:
+def _sentences_around(text: str, keyword: str, case_sensitive: bool, context: int = 90) -> str:
+    """Return an excerpt with *keyword* centred — equal context on each side."""
     flags = 0 if case_sensitive else re.IGNORECASE
     match = re.search(re.escape(keyword), text, flags=flags)
     if not match:
         return ""
-    start = max(0, match.start() - context)
-    end   = min(len(text), match.end() + context)
+
+    kw_start, kw_end = match.start(), match.end()
+
+    start = max(0, kw_start - context)
+    end   = min(len(text), kw_end + context)
+
+    # Redistribute spare chars if clamped at either boundary
+    if start == 0 and kw_start < context:
+        end = min(len(text), end + (context - kw_start))
+    if end == len(text) and (len(text) - kw_end) < context:
+        start = max(0, start - (context - (len(text) - kw_end)))
+
     excerpt = text[start:end].replace("\n", " ").strip()
     if start > 0:
         excerpt = "…" + excerpt
@@ -264,10 +275,19 @@ class WordSearchApp(tk.Tk):
         ttk.Progressbar(self, variable=self._progress_var, maximum=100).pack(
             fill="x", padx=10, pady=(2, 4))
 
+        # ---- Copyright footer (packed before results so it anchors to bottom) ----
+        tk.Label(
+            self,
+            text="© Eric Stein, EVOQ Architecture  ·  v5.1  ·  May 2026",
+            font=("Segoe UI", 7),
+            fg="#b0b0b0",
+            bg="#f0f0f0",
+        ).pack(side="bottom", pady=(0, 3))
+
         # ---- Results section ----
         results_frame = tk.LabelFrame(self, text="Results", bg="#f0f0f0",
                                       font=("Segoe UI", 9, "bold"))
-        results_frame.pack(fill="both", expand=True, padx=10, pady=(0, 10))
+        results_frame.pack(fill="both", expand=True, padx=10, pady=(0, 4))
         results_frame.rowconfigure(1, weight=1)
         results_frame.columnconfigure(0, weight=1)
 
