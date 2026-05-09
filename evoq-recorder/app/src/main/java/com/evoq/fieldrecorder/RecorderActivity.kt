@@ -201,7 +201,7 @@ class RecorderActivity : AppCompatActivity() {
 
         try {
             mediaRecorder?.stop()
-        } catch (_: Exception) {}
+        } catch (ignored: Exception) {}
         mediaRecorder?.release()
         mediaRecorder = null
 

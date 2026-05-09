@@ -12,7 +12,7 @@
         <item name="toolbarStyle">@style/EvoqToolbar</item>
     </style>
 
-    <style name="EvoqToolbar" parent="Widget.AppCompat.Toolbar">
+    <style name="EvoqToolbar" parent="Widget.MaterialComponents.Toolbar">
         <item name="android:background">@color/evoq_black</item>
         <item name="titleTextColor">@color/evoq_white</item>
         <item name="subtitleTextColor">@color/evoq_gold</item>
