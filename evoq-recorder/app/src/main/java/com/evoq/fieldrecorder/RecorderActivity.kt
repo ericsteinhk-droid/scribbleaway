@@ -3,8 +3,6 @@ package com.evoq.fieldrecorder
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.media.MediaRecorder
-import android.os.Build
 import android.os.Bundle
 import android.os.SystemClock
 import android.speech.RecognitionListener
@@ -16,7 +14,6 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.evoq.fieldrecorder.databinding.ActivityRecorderBinding
-import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -31,11 +28,8 @@ class RecorderActivity : AppCompatActivity() {
     private lateinit var binding: ActivityRecorderBinding
     private var language = "en-CA"
     private var isRecording = false
-    private var mediaRecorder: MediaRecorder? = null
-    private var audioFile: File? = null
     private var speechRecognizer: SpeechRecognizer? = null
     private val transcriptBuilder = StringBuilder()
-    private var recordingStartTime = 0L
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -45,8 +39,7 @@ class RecorderActivity : AppCompatActivity() {
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
 
         language = intent.getStringExtra(EXTRA_LANGUAGE) ?: "en-CA"
-        val langLabel = if (language.startsWith("fr")) "Français" else "English"
-        supportActionBar?.title = langLabel
+        supportActionBar?.title = if (language.startsWith("fr")) "Français" else "English"
 
         binding.btnRecord.setOnClickListener {
             if (isRecording) stopRecording() else checkPermissionAndRecord()
@@ -80,9 +73,13 @@ class RecorderActivity : AppCompatActivity() {
     }
 
     private fun startRecording() {
+        if (!SpeechRecognizer.isRecognitionAvailable(this)) {
+            Toast.makeText(this, getString(R.string.speech_not_available), Toast.LENGTH_LONG).show()
+            return
+        }
+
         isRecording = true
         transcriptBuilder.clear()
-        recordingStartTime = SystemClock.elapsedRealtime()
 
         binding.btnRecord.text = getString(R.string.stop_recording)
         binding.btnRecord.setBackgroundColor(getColor(R.color.recording_red))
@@ -90,82 +87,37 @@ class RecorderActivity : AppCompatActivity() {
         binding.chronometer.base = SystemClock.elapsedRealtime()
         binding.chronometer.start()
 
-        val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
-        audioFile = File(cacheDir, "evoq_recording_$timestamp.m4a")
-
-        @Suppress("DEPRECATION")
-        mediaRecorder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            MediaRecorder(this)
-        } else {
-            MediaRecorder()
-        }
-        mediaRecorder?.apply {
-            setAudioSource(MediaRecorder.AudioSource.MIC)
-            setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
-            setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
-            setAudioSamplingRate(44100)
-            setAudioEncodingBitRate(128000)
-            setOutputFile(audioFile?.absolutePath)
-            prepare()
-            start()
-        }
-
-        startLiveTranscription()
+        startListening()
     }
 
-    private fun startLiveTranscription() {
-        if (!SpeechRecognizer.isRecognitionAvailable(this)) return
-
-        speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this)
-        speechRecognizer?.setRecognitionListener(object : RecognitionListener {
-            override fun onReadyForSpeech(params: Bundle?) {}
-            override fun onBeginningOfSpeech() {}
-            override fun onRmsChanged(rmsdB: Float) {}
-            override fun onBufferReceived(buffer: ByteArray?) {}
-            override fun onEndOfSpeech() {}
-            override fun onError(error: Int) {
-                if (isRecording) restartTranscription()
-            }
-            override fun onResults(results: Bundle?) {
-                val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
-                if (!matches.isNullOrEmpty()) {
-                    transcriptBuilder.append(matches[0]).append(" ")
-                    binding.tvTranscript.text = transcriptBuilder.toString().trim()
-                }
-                if (isRecording) restartTranscription()
-            }
-            override fun onPartialResults(partialResults: Bundle?) {
-                val partial = partialResults
-                    ?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
-                    ?.firstOrNull() ?: return
-                binding.tvTranscript.text =
-                    (transcriptBuilder.toString() + partial).trim()
-            }
-            override fun onEvent(eventType: Int, params: Bundle?) {}
-        })
-        launchRecognizerIntent()
-    }
-
-    private fun restartTranscription() {
+    private fun startListening() {
         speechRecognizer?.destroy()
         speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this)
         speechRecognizer?.setRecognitionListener(object : RecognitionListener {
-            override fun onReadyForSpeech(params: Bundle?) {}
+            override fun onReadyForSpeech(params: Bundle?) {
+                binding.tvStatus.text = getString(R.string.recording)
+            }
             override fun onBeginningOfSpeech() {}
             override fun onRmsChanged(rmsdB: Float) {}
             override fun onBufferReceived(buffer: ByteArray?) {}
             override fun onEndOfSpeech() {}
+
             override fun onError(error: Int) {
-                if (isRecording) restartTranscription()
+                // Silently restart on recoverable errors while recording
+                if (isRecording && error != SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS) {
+                    startListening()
+                }
             }
+
             override fun onResults(results: Bundle?) {
                 val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
                 if (!matches.isNullOrEmpty()) {
                     transcriptBuilder.append(matches[0]).append(" ")
                     binding.tvTranscript.text = transcriptBuilder.toString().trim()
                 }
-                if (isRecording) restartTranscription()
+                if (isRecording) startListening()
             }
+
             override fun onPartialResults(partialResults: Bundle?) {
                 val partial = partialResults
                     ?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
@@ -173,18 +125,15 @@ class RecorderActivity : AppCompatActivity() {
                 binding.tvTranscript.text =
                     (transcriptBuilder.toString() + partial).trim()
             }
+
             override fun onEvent(eventType: Int, params: Bundle?) {}
         })
-        launchRecognizerIntent()
-    }
 
-    private fun launchRecognizerIntent() {
         val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
             putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
             putExtra(RecognizerIntent.EXTRA_LANGUAGE, language)
             putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
-            putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 2000L)
-            putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 2000L)
+            putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
         }
         speechRecognizer?.startListening(intent)
     }
@@ -196,28 +145,24 @@ class RecorderActivity : AppCompatActivity() {
         binding.btnRecord.setBackgroundColor(getColor(R.color.evoq_gold))
         binding.tvStatus.text = getString(R.string.processing)
 
+        speechRecognizer?.stopListening()
         speechRecognizer?.destroy()
         speechRecognizer = null
-
-        try {
-            mediaRecorder?.stop()
-        } catch (ignored: Exception) {}
-        mediaRecorder?.release()
-        mediaRecorder = null
 
         val transcript = transcriptBuilder.toString().trim()
         if (transcript.isEmpty()) {
             binding.tvStatus.text = getString(R.string.no_transcript)
             binding.btnRecord.text = getString(R.string.start_recording)
+            Toast.makeText(this, getString(R.string.no_transcript), Toast.LENGTH_LONG).show()
             return
         }
 
-        val intent = Intent(this, ReportActivity::class.java).apply {
+        startActivity(Intent(this, ReportActivity::class.java).apply {
             putExtra(ReportActivity.EXTRA_TRANSCRIPT, transcript)
             putExtra(ReportActivity.EXTRA_LANGUAGE, language)
-            putExtra(ReportActivity.EXTRA_RECORDING_DATE, SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date()))
-        }
-        startActivity(intent)
+            putExtra(ReportActivity.EXTRA_RECORDING_DATE,
+                SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date()))
+        })
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
@@ -233,6 +178,5 @@ class RecorderActivity : AppCompatActivity() {
         super.onDestroy()
         isRecording = false
         speechRecognizer?.destroy()
-        mediaRecorder?.release()
     }
 }
