@@ -1,0 +1,79 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --bg-primary: #0b0f1a;
+  --bg-secondary: #131929;
+  --bg-card: #1a2235;
+  --border: #1e2d45;
+  --text-primary: #e2e8f0;
+  --text-muted: #64748b;
+  --amber: #f59e0b;
+  --purple: #a78bfa;
+  --blue: #38bdf8;
+  --red: #f87171;
+  --green: #4ade80;
+  --gray: #475569;
+}
+
+html, body, #root {
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-primary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+@media print {
+  body {
+    background: white;
+    color: black;
+  }
+
+  .report-content {
+    color: black;
+  }
+
+  .report-content h1,
+  .report-content h2 {
+    color: black;
+  }
+
+  .report-content p,
+  .report-content li,
+  .report-content td,
+  .report-content th {
+    color: black;
+  }
+
+  nav,
+  aside,
+  .task-drawer {
+    display: none !important;
+  }
+}
