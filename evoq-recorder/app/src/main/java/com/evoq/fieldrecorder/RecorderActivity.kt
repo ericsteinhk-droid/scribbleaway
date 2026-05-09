@@ -4,11 +4,14 @@ import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.os.SystemClock
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 import android.view.MenuItem
+import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
@@ -23,13 +26,26 @@ class RecorderActivity : AppCompatActivity() {
     companion object {
         const val EXTRA_LANGUAGE = "extra_language"
         private const val REQUEST_AUDIO_PERMISSION = 101
+        private const val SILENCE_PARAGRAPH_MS = 4000L
     }
 
     private lateinit var binding: ActivityRecorderBinding
     private var language = "en-CA"
     private var isRecording = false
+    private var isPaused = false
     private var speechRecognizer: SpeechRecognizer? = null
     private val transcriptBuilder = StringBuilder()
+
+    private val handler = Handler(Looper.getMainLooper())
+    private val silenceRunnable = Runnable {
+        if (isRecording && !isPaused && transcriptBuilder.isNotEmpty()) {
+            val current = transcriptBuilder.toString()
+            if (!current.endsWith("\n\n")) {
+                transcriptBuilder.append("\n\n")
+                binding.tvTranscript.text = transcriptBuilder.toString().trimEnd()
+            }
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -41,9 +57,9 @@ class RecorderActivity : AppCompatActivity() {
         language = intent.getStringExtra(EXTRA_LANGUAGE) ?: "en-CA"
         supportActionBar?.title = if (language.startsWith("fr")) "Français" else "English"
 
-        binding.btnRecord.setOnClickListener {
-            if (isRecording) stopRecording() else checkPermissionAndRecord()
-        }
+        binding.btnRecord.setOnClickListener { checkPermissionAndRecord() }
+        binding.btnPause.setOnClickListener { togglePause() }
+        binding.btnStop.setOnClickListener { stopRecording() }
     }
 
     private fun checkPermissionAndRecord() {
@@ -77,12 +93,12 @@ class RecorderActivity : AppCompatActivity() {
             Toast.makeText(this, getString(R.string.speech_not_available), Toast.LENGTH_LONG).show()
             return
         }
-
         isRecording = true
+        isPaused = false
         transcriptBuilder.clear()
 
-        binding.btnRecord.text = getString(R.string.stop_recording)
-        binding.btnRecord.setBackgroundColor(getColor(R.color.recording_red))
+        showRecordingButtons()
+        binding.btnPause.text = getString(R.string.pause)
         binding.tvStatus.text = getString(R.string.recording)
         binding.chronometer.base = SystemClock.elapsedRealtime()
         binding.chronometer.start()
@@ -90,32 +106,60 @@ class RecorderActivity : AppCompatActivity() {
         startListening()
     }
 
+    private fun togglePause() {
+        if (isPaused) {
+            isPaused = false
+            binding.btnPause.text = getString(R.string.pause)
+            binding.tvStatus.text = getString(R.string.recording)
+            binding.chronometer.base =
+                SystemClock.elapsedRealtime() - (binding.chronometer.base.let { 0L })
+            binding.chronometer.start()
+            startListening()
+        } else {
+            isPaused = true
+            handler.removeCallbacks(silenceRunnable)
+            binding.btnPause.text = getString(R.string.resume)
+            binding.tvStatus.text = getString(R.string.paused)
+            binding.chronometer.stop()
+            speechRecognizer?.stopListening()
+            speechRecognizer?.destroy()
+            speechRecognizer = null
+
+            // Insert paragraph break at pause point
+            if (transcriptBuilder.isNotEmpty() && !transcriptBuilder.endsWith("\n\n")) {
+                transcriptBuilder.append("\n\n")
+                binding.tvTranscript.text = transcriptBuilder.toString().trimEnd()
+            }
+        }
+    }
+
     private fun startListening() {
         speechRecognizer?.destroy()
         speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this)
         speechRecognizer?.setRecognitionListener(object : RecognitionListener {
-            override fun onReadyForSpeech(params: Bundle?) {
-                binding.tvStatus.text = getString(R.string.recording)
-            }
+            override fun onReadyForSpeech(params: Bundle?) {}
             override fun onBeginningOfSpeech() {}
             override fun onRmsChanged(rmsdB: Float) {}
             override fun onBufferReceived(buffer: ByteArray?) {}
             override fun onEndOfSpeech() {}
 
             override fun onError(error: Int) {
-                // Silently restart on recoverable errors while recording
-                if (isRecording && error != SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS) {
+                if (isRecording && !isPaused
+                    && error != SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS
+                ) {
                     startListening()
                 }
             }
 
             override fun onResults(results: Bundle?) {
-                val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
-                if (!matches.isNullOrEmpty()) {
-                    transcriptBuilder.append(matches[0]).append(" ")
-                    binding.tvTranscript.text = transcriptBuilder.toString().trim()
-                }
-                if (isRecording) startListening()
+                val match = results
+                    ?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
+                    ?.firstOrNull() ?: return
+                transcriptBuilder.append(match).append(" ")
+                binding.tvTranscript.text = transcriptBuilder.toString().trimEnd()
+                // Reset 4-second silence timer after each recognised segment
+                resetSilenceTimer()
+                if (isRecording && !isPaused) startListening()
             }
 
             override fun onPartialResults(partialResults: Bundle?) {
@@ -123,7 +167,9 @@ class RecorderActivity : AppCompatActivity() {
                     ?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
                     ?.firstOrNull() ?: return
                 binding.tvTranscript.text =
-                    (transcriptBuilder.toString() + partial).trim()
+                    (transcriptBuilder.toString() + partial).trimEnd()
+                // Speech is ongoing — cancel the silence timer
+                handler.removeCallbacks(silenceRunnable)
             }
 
             override fun onEvent(eventType: Int, params: Bundle?) {}
@@ -138,12 +184,18 @@ class RecorderActivity : AppCompatActivity() {
         speechRecognizer?.startListening(intent)
     }
 
+    private fun resetSilenceTimer() {
+        handler.removeCallbacks(silenceRunnable)
+        handler.postDelayed(silenceRunnable, SILENCE_PARAGRAPH_MS)
+    }
+
     private fun stopRecording() {
         isRecording = false
+        isPaused = false
+        handler.removeCallbacks(silenceRunnable)
         binding.chronometer.stop()
-        binding.btnRecord.text = getString(R.string.start_recording)
-        binding.btnRecord.setBackgroundColor(getColor(R.color.evoq_gold))
         binding.tvStatus.text = getString(R.string.processing)
+        showStartButton()
 
         speechRecognizer?.stopListening()
         speechRecognizer?.destroy()
@@ -152,7 +204,6 @@ class RecorderActivity : AppCompatActivity() {
         val transcript = transcriptBuilder.toString().trim()
         if (transcript.isEmpty()) {
             binding.tvStatus.text = getString(R.string.no_transcript)
-            binding.btnRecord.text = getString(R.string.start_recording)
             Toast.makeText(this, getString(R.string.no_transcript), Toast.LENGTH_LONG).show()
             return
         }
@@ -163,6 +214,16 @@ class RecorderActivity : AppCompatActivity() {
             putExtra(ReportActivity.EXTRA_RECORDING_DATE,
                 SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date()))
         })
+    }
+
+    private fun showRecordingButtons() {
+        binding.btnRecord.visibility = View.GONE
+        binding.layoutRecordingControls.visibility = View.VISIBLE
+    }
+
+    private fun showStartButton() {
+        binding.layoutRecordingControls.visibility = View.GONE
+        binding.btnRecord.visibility = View.VISIBLE
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
@@ -176,7 +237,7 @@ class RecorderActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        isRecording = false
+        handler.removeCallbacks(silenceRunnable)
         speechRecognizer?.destroy()
     }
 }

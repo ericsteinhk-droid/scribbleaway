@@ -98,16 +98,38 @@
 
     </ScrollView>
 
-    <Button
-        android:id="@+id/btnShare"
+    <!-- Action buttons -->
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="56dp"
-        android:text="@string/share_report"
-        android:textColor="@color/evoq_black"
-        android:textSize="15sp"
-        android:textAllCaps="false"
-        android:background="@color/evoq_gold"
-        android:layout_margin="16dp"
-        android:enabled="false" />
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_margin="16dp">
+
+        <Button
+            android:id="@+id/btnDownloadDocx"
+            android:layout_width="0dp"
+            android:layout_height="52dp"
+            android:layout_weight="1"
+            android:text="@string/download_docx"
+            android:textColor="@color/evoq_white"
+            android:textSize="13sp"
+            android:textAllCaps="false"
+            android:background="@color/evoq_dark_grey"
+            android:layout_marginEnd="8dp"
+            android:enabled="false" />
+
+        <Button
+            android:id="@+id/btnShare"
+            android:layout_width="0dp"
+            android:layout_height="52dp"
+            android:layout_weight="1"
+            android:text="@string/share_report"
+            android:textColor="@color/evoq_black"
+            android:textSize="13sp"
+            android:textAllCaps="false"
+            android:background="@color/evoq_gold"
+            android:enabled="false" />
+
+    </LinearLayout>
 
 </LinearLayout>

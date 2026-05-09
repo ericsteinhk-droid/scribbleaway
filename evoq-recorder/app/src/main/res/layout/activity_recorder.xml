@@ -69,6 +69,7 @@
 
     </LinearLayout>
 
+    <!-- Shown when not recording -->
     <Button
         android:id="@+id/btnRecord"
         android:layout_width="match_parent"
@@ -79,5 +80,39 @@
         android:textAllCaps="false"
         android:background="@color/evoq_gold"
         android:layout_margin="16dp" />
+
+    <!-- Shown while recording or paused -->
+    <LinearLayout
+        android:id="@+id/layoutRecordingControls"
+        android:layout_width="match_parent"
+        android:layout_height="64dp"
+        android:orientation="horizontal"
+        android:layout_margin="16dp"
+        android:visibility="gone">
+
+        <Button
+            android:id="@+id/btnPause"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:text="@string/pause"
+            android:textColor="@color/evoq_black"
+            android:textSize="15sp"
+            android:textAllCaps="false"
+            android:background="@color/evoq_gold"
+            android:layout_marginEnd="8dp" />
+
+        <Button
+            android:id="@+id/btnStop"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:text="@string/stop_and_generate"
+            android:textColor="@color/evoq_white"
+            android:textSize="15sp"
+            android:textAllCaps="false"
+            android:background="@color/recording_red" />
+
+    </LinearLayout>
 
 </LinearLayout>
