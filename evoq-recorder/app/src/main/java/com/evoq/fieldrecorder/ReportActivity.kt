@@ -34,6 +34,8 @@ class ReportActivity : AppCompatActivity() {
         const val EXTRA_TRANSCRIPT = "extra_transcript"
         const val EXTRA_LANGUAGE = "extra_language"
         const val EXTRA_RECORDING_DATE = "extra_recording_date"
+        const val DOCX_MIME =
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
     }
 
     private lateinit var binding: ActivityReportBinding
@@ -291,8 +293,4 @@ Formatting instructions (IMPORTANT — follow exactly):
         return super.onOptionsItemSelected(item)
     }
 
-    private companion object {
-        const val DOCX_MIME =
-            "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-    }
 }
