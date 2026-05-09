@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/evoq_black">
+
+    <androidx.appcompat.widget.Toolbar
+        android:id="@+id/toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        android:background="@color/evoq_black"
+        android:elevation="4dp" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:padding="32dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="EVOQ"
+            android:textColor="@color/evoq_gold"
+            android:textSize="48sp"
+            android:textStyle="bold"
+            android:letterSpacing="0.2"
+            android:layout_marginBottom="4dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Architecture"
+            android:textColor="@color/evoq_white"
+            android:textSize="18sp"
+            android:letterSpacing="0.15"
+            android:layout_marginBottom="8dp" />
+
+        <View
+            android:layout_width="60dp"
+            android:layout_height="1dp"
+            android:background="@color/evoq_gold"
+            android:layout_marginBottom="40dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/select_language"
+            android:textColor="@color/evoq_white"
+            android:textSize="16sp"
+            android:layout_marginBottom="32dp" />
+
+        <Button
+            android:id="@+id/btnEnglish"
+            android:layout_width="240dp"
+            android:layout_height="56dp"
+            android:text="English"
+            android:textColor="@color/evoq_black"
+            android:textSize="16sp"
+            android:textAllCaps="false"
+            android:background="@color/evoq_gold"
+            android:layout_marginBottom="16dp" />
+
+        <Button
+            android:id="@+id/btnFrench"
+            android:layout_width="240dp"
+            android:layout_height="56dp"
+            android:text="Français"
+            android:textColor="@color/evoq_black"
+            android:textSize="16sp"
+            android:textAllCaps="false"
+            android:background="@color/evoq_gold" />
+
+    </LinearLayout>
+
+</LinearLayout>

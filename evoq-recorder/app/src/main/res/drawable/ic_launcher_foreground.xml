@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Microphone icon in EVOQ gold -->
+    <path
+        android:fillColor="#C9A96E"
+        android:pathData="M54,20 C49,20 45,24 45,29 L45,54 C45,59 49,63 54,63 C59,63 63,59 63,54 L63,29 C63,24 59,20 54,20 Z" />
+    <path
+        android:fillColor="#C9A96E"
+        android:pathData="M38,50 C38,62 45,71 54,73 C63,71 70,62 70,50 L66,50 C66,60 61,67 54,69 C47,67 42,60 42,50 Z" />
+    <path
+        android:fillColor="#C9A96E"
+        android:pathData="M52,75 L52,85 L42,85 L42,88 L66,88 L66,85 L56,85 L56,75 Z" />
+</vector>

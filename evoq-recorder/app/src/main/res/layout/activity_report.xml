@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/evoq_black">
+
+    <androidx.appcompat.widget.Toolbar
+        android:id="@+id/toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        android:background="@color/evoq_black"
+        android:elevation="4dp" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="12dp"
+        android:gravity="center_vertical">
+
+        <Spinner
+            android:id="@+id/spinnerSort"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:backgroundTint="@color/evoq_gold"
+            android:popupBackground="@color/evoq_dark_grey" />
+
+        <Button
+            android:id="@+id/btnRegenerate"
+            android:layout_width="wrap_content"
+            android:layout_height="36dp"
+            android:text="@string/regenerate"
+            android:textColor="@color/evoq_black"
+            android:textSize="12sp"
+            android:textAllCaps="false"
+            android:background="@color/evoq_gold"
+            android:layout_marginStart="8dp"
+            android:paddingHorizontal="12dp" />
+
+    </LinearLayout>
+
+    <ProgressBar
+        android:id="@+id/progressBar"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:indeterminateTint="@color/evoq_gold"
+        android:visibility="gone"
+        android:layout_marginTop="16dp" />
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:padding="16dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/tvReport"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="@color/evoq_white"
+                android:textSize="14sp"
+                android:lineSpacingMultiplier="1.5"
+                android:fontFamily="monospace" />
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="@color/evoq_dark_grey"
+                android:layout_marginVertical="16dp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/raw_transcript_label"
+                android:textColor="@color/evoq_gold"
+                android:textSize="11sp"
+                android:textAllCaps="true"
+                android:letterSpacing="0.1"
+                android:layout_marginBottom="8dp" />
+
+            <TextView
+                android:id="@+id/tvTranscriptPreview"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="@color/evoq_grey"
+                android:textSize="12sp"
+                android:lineSpacingMultiplier="1.4" />
+
+        </LinearLayout>
+
+    </ScrollView>
+
+    <Button
+        android:id="@+id/btnShare"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:text="@string/share_report"
+        android:textColor="@color/evoq_black"
+        android:textSize="15sp"
+        android:textAllCaps="false"
+        android:background="@color/evoq_gold"
+        android:layout_margin="16dp"
+        android:enabled="false" />
+
+</LinearLayout>

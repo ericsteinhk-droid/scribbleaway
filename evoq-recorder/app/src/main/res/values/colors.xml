@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="evoq_black">#0D0D0D</color>
+    <color name="evoq_dark_grey">#1A1A1A</color>
+    <color name="evoq_grey">#666666</color>
+    <color name="evoq_white">#F0F0F0</color>
+    <color name="evoq_gold">#C9A96E</color>
+    <color name="recording_red">#C0392B</color>
+</resources>
