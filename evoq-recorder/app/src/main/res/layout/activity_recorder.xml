@@ -74,7 +74,6 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="@string/context_hint"
                 android:textColor="@color/evoq_grey"
                 android:textSize="12sp"
                 android:lineSpacingMultiplier="1.4" />
