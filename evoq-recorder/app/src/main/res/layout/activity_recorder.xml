@@ -31,7 +31,7 @@
         android:layout_height="0dp"
         android:layout_weight="1"
         android:orientation="vertical"
-        android:padding="24dp">
+        android:padding="16dp">
 
         <TextView
             android:id="@+id/tvStatus"
@@ -41,7 +41,7 @@
             android:textColor="@color/evoq_gold"
             android:textSize="14sp"
             android:layout_gravity="center_horizontal"
-            android:layout_marginBottom="8dp" />
+            android:layout_marginBottom="6dp" />
 
         <Chronometer
             android:id="@+id/chronometer"
@@ -50,7 +50,36 @@
             android:textColor="@color/evoq_white"
             android:textSize="36sp"
             android:layout_gravity="center_horizontal"
-            android:layout_marginBottom="24dp" />
+            android:layout_marginBottom="12dp" />
+
+        <!-- Context reminder — visible only before recording starts -->
+        <LinearLayout
+            android:id="@+id/cardContextHint"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:background="@color/evoq_dark_grey"
+            android:padding="12dp"
+            android:layout_marginBottom="12dp">
+
+            <TextView
+                android:layout_width="20dp"
+                android:layout_height="wrap_content"
+                android:text="💡"
+                android:textSize="14sp"
+                android:layout_marginEnd="8dp" />
+
+            <TextView
+                android:id="@+id/tvContextHint"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/context_hint"
+                android:textColor="@color/evoq_grey"
+                android:textSize="12sp"
+                android:lineSpacingMultiplier="1.4" />
+
+        </LinearLayout>
 
         <TextView
             android:layout_width="wrap_content"

@@ -140,30 +140,60 @@ class ReportActivity : AppCompatActivity() {
         val systemPrompt = if (isFrench) """Tu es un assistant spécialisé pour EVOQ Architecture.
 Tu reçois une transcription audio d'inspection de chantier et tu génères un rapport de chantier professionnel.
 
-Instructions de formatage (IMPORTANT — respecter exactement) :
-- Ligne 1 : "EVOQ Architecture"
-- Ligne 2 : "Rapport de chantier"
-- Ligne 3 : "Date : $date"
-- Ligne 4 : vide
-- Organise les observations $sortInstruction
-- Chaque section : titre de section seul sur sa ligne, puis observations précédées de "•"
-- Corrige les erreurs de transcription évidentes
-- Utilise un langage professionnel d'architecture
-- Termine par "Remarques générales" si nécessaire
+Structure du rapport (respecter exactement) :
+
+1. EN-TÊTE (3 lignes) :
+   EVOQ Architecture
+   Rapport de chantier
+   Date : $date
+
+2. LIGNE VIDE
+
+3. PARAGRAPHE DE MISE EN CONTEXTE (obligatoire) :
+   Rédige un paragraphe de 2 à 4 phrases résumant le contexte de la visite tel qu'énoncé dans la transcription.
+   Inclure si mentionné : raison / objectif de la visite, intervenants présents, portée de l'inspection,
+   limites d'observation (zones inaccessibles, conditions, etc.).
+   Si aucun contexte explicite n'est fourni, indiquer : "Inspection générale du bâtiment."
+
+4. LIGNE VIDE
+
+5. OBSERVATIONS classées $sortInstruction :
+   Chaque section : titre de section seul sur sa ligne, puis observations précédées de "•"
+
+6. "Remarques générales" en fin de rapport si nécessaire
+
+Règles :
+- Corriger les erreurs évidentes de transcription vocale
+- Langage professionnel d'architecture
 - NE PAS utiliser de markdown (pas de **, pas de #)"""
         else """You are a specialized assistant for EVOQ Architecture.
 You receive an audio transcription from a construction site inspection and generate a professional field report.
 
-Formatting instructions (IMPORTANT — follow exactly):
-- Line 1: "EVOQ Architecture"
-- Line 2: "Field Report"
-- Line 3: "Date: $date"
-- Line 4: blank
-- Organize observations $sortInstruction
-- Each section: section title alone on its line, then observations prefixed with "•"
-- Correct obvious transcription errors
+Report structure (follow exactly):
+
+1. HEADER (3 lines):
+   EVOQ Architecture
+   Field Report
+   Date: $date
+
+2. BLANK LINE
+
+3. CONTEXT PARAGRAPH (mandatory):
+   Write a 2–4 sentence paragraph summarising the context of the visit as stated in the transcription.
+   Include if mentioned: reason / purpose of the visit, persons present, scope of inspection,
+   limits of observation (areas not accessed, conditions restricting visibility, etc.).
+   If no explicit context is provided, write: "General building inspection."
+
+4. BLANK LINE
+
+5. OBSERVATIONS organised $sortInstruction:
+   Each section: section title alone on its line, then observations prefixed with "•"
+
+6. "General Notes" at end if needed
+
+Rules:
+- Correct obvious voice-recognition transcription errors
 - Use professional architectural language
-- End with "General Notes" if needed
 - Do NOT use markdown (no **, no #)"""
 
         val userMessage = if (isFrench) "Transcription :\n\n$transcript"

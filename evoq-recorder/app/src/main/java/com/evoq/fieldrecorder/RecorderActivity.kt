@@ -56,6 +56,9 @@ class RecorderActivity : AppCompatActivity() {
 
         language = intent.getStringExtra(EXTRA_LANGUAGE) ?: "en-CA"
         supportActionBar?.title = if (language.startsWith("fr")) "Français" else "English"
+        binding.tvContextHint.text = getString(
+            if (language.startsWith("fr")) R.string.context_hint_fr else R.string.context_hint_en
+        )
 
         binding.btnRecord.setOnClickListener { checkPermissionAndRecord() }
         binding.btnPause.setOnClickListener { togglePause() }
@@ -98,6 +101,7 @@ class RecorderActivity : AppCompatActivity() {
         transcriptBuilder.clear()
 
         showRecordingButtons()
+        binding.cardContextHint.visibility = View.GONE
         binding.btnPause.text = getString(R.string.pause)
         binding.tvStatus.text = getString(R.string.recording)
         binding.chronometer.base = SystemClock.elapsedRealtime()
@@ -196,6 +200,7 @@ class RecorderActivity : AppCompatActivity() {
         binding.chronometer.stop()
         binding.tvStatus.text = getString(R.string.processing)
         showStartButton()
+        binding.cardContextHint.visibility = View.VISIBLE
 
         speechRecognizer?.stopListening()
         speechRecognizer?.destroy()

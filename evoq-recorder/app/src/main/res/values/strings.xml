@@ -26,4 +26,6 @@
     <string name="save">Save</string>
     <string name="permission_denied">Microphone permission is required to record audio.</string>
     <string name="speech_not_available">Speech recognition not available. Please install Google app.</string>
+    <string name="context_hint_en">Before recording, briefly state in plain language:\n• Reason for the visit (inspection type, mandate, client request…)\n• Persons present\n• Scope and any limits of observation (areas not accessed, obstructed elements, etc.)\n\nThen proceed with your observations floor by floor or zone by zone.</string>
+    <string name="context_hint_fr">Avant d\'enregistrer, décrivez brièvement en langage simple :\n• Raison de la visite (type d\'inspection, mandat, demande du client…)\n• Personnes présentes\n• Portée et limites d\'observation (zones inaccessibles, éléments masqués, etc.)\n\nProcédez ensuite à vos observations étage par étage ou zone par zone.</string>
 </resources>
