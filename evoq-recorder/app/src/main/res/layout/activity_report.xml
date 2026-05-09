@@ -10,7 +10,21 @@
         android:layout_width="match_parent"
         android:layout_height="?attr/actionBarSize"
         android:background="@color/evoq_black"
-        android:elevation="4dp" />
+        android:elevation="4dp">
+
+        <ImageView
+            android:layout_width="80dp"
+            android:layout_height="28dp"
+            android:layout_gravity="center"
+            android:src="@drawable/evoq_logo"
+            android:scaleType="fitCenter"
+            android:adjustViewBounds="true"
+            android:background="#FFFFFF"
+            android:paddingHorizontal="6dp"
+            android:paddingVertical="3dp"
+            android:contentDescription="EVOQ" />
+
+    </androidx.appcompat.widget.Toolbar>
 
     <LinearLayout
         android:layout_width="match_parent"

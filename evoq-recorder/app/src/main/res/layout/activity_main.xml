@@ -10,7 +10,7 @@
         android:layout_width="match_parent"
         android:layout_height="?attr/actionBarSize"
         android:background="@color/evoq_black"
-        android:elevation="4dp" />
+        android:elevation="0dp" />
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -18,56 +18,70 @@
         android:layout_weight="1"
         android:orientation="vertical"
         android:gravity="center"
-        android:padding="32dp">
+        android:paddingHorizontal="32dp"
+        android:paddingBottom="40dp">
 
+        <!-- Logo card: white background so the gradient logo looks correct -->
+        <androidx.cardview.widget.CardView
+            xmlns:app="http://schemas.android.com/apk/res-auto"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:cardBackgroundColor="#FFFFFF"
+            app:cardCornerRadius="8dp"
+            app:cardElevation="0dp"
+            android:layout_marginBottom="40dp">
+
+            <ImageView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:src="@drawable/evoq_logo"
+                android:adjustViewBounds="true"
+                android:scaleType="fitCenter"
+                android:paddingHorizontal="24dp"
+                android:paddingVertical="20dp"
+                android:contentDescription="EVOQ Architecture" />
+
+        </androidx.cardview.widget.CardView>
+
+        <!-- Subtitle -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="EVOQ"
-            android:textColor="@color/evoq_gold"
-            android:textSize="48sp"
-            android:textStyle="bold"
-            android:letterSpacing="0.2"
-            android:layout_marginBottom="4dp" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Architecture"
+            android:text="Field Recorder"
             android:textColor="@color/evoq_white"
-            android:textSize="18sp"
-            android:letterSpacing="0.15"
+            android:textSize="15sp"
+            android:letterSpacing="0.12"
             android:layout_marginBottom="8dp" />
 
         <View
-            android:layout_width="60dp"
+            android:layout_width="40dp"
             android:layout_height="1dp"
             android:background="@color/evoq_gold"
-            android:layout_marginBottom="40dp" />
+            android:layout_marginBottom="36dp" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/select_language"
-            android:textColor="@color/evoq_white"
-            android:textSize="16sp"
-            android:layout_marginBottom="32dp" />
+            android:textColor="@color/evoq_grey"
+            android:textSize="13sp"
+            android:layout_marginBottom="20dp" />
 
         <Button
             android:id="@+id/btnEnglish"
-            android:layout_width="240dp"
-            android:layout_height="56dp"
+            android:layout_width="220dp"
+            android:layout_height="52dp"
             android:text="English"
             android:textColor="@color/evoq_black"
             android:textSize="16sp"
             android:textAllCaps="false"
             android:background="@color/evoq_gold"
-            android:layout_marginBottom="16dp" />
+            android:layout_marginBottom="12dp" />
 
         <Button
             android:id="@+id/btnFrench"
-            android:layout_width="240dp"
-            android:layout_height="56dp"
+            android:layout_width="220dp"
+            android:layout_height="52dp"
             android:text="Français"
             android:textColor="@color/evoq_black"
             android:textSize="16sp"
