@@ -21,7 +21,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-class RecorderActivity : AppCompatActivity() {
+class RecorderActivity : BaseActivity() {
 
     companion object {
         const val EXTRA_LANGUAGE = "extra_language"
@@ -55,7 +55,7 @@ class RecorderActivity : AppCompatActivity() {
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
 
         language = intent.getStringExtra(EXTRA_LANGUAGE) ?: "en-CA"
-        supportActionBar?.title = if (language.startsWith("fr")) "Français" else "English"
+        supportActionBar?.title = getString(R.string.recorder_title)
         binding.tvContextHint.text = getString(
             if (language.startsWith("fr")) R.string.context_hint_fr else R.string.context_hint_en
         )

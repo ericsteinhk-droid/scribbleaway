@@ -28,7 +28,7 @@ import org.json.JSONObject
 import java.io.File
 import java.util.concurrent.TimeUnit
 
-class ReportActivity : AppCompatActivity() {
+class ReportActivity : BaseActivity() {
 
     companion object {
         const val EXTRA_TRANSCRIPT = "extra_transcript"
@@ -60,11 +60,9 @@ class ReportActivity : AppCompatActivity() {
         transcript = intent.getStringExtra(EXTRA_TRANSCRIPT) ?: ""
         language = intent.getStringExtra(EXTRA_LANGUAGE) ?: "en-CA"
         recordingDate = intent.getStringExtra(EXTRA_RECORDING_DATE) ?: ""
+        supportActionBar?.title = getString(R.string.report_title)
 
-        val isFrench = language.startsWith("fr")
-        supportActionBar?.title = if (isFrench) "Rapport de chantier" else "Field Report"
-
-        setupSortSpinner(isFrench)
+        setupSortSpinner()
         binding.btnShare.setOnClickListener { shareReport() }
         binding.btnRegenerate.setOnClickListener { generateReport() }
         binding.btnDownloadDocx.setOnClickListener { downloadDocx() }
@@ -72,9 +70,8 @@ class ReportActivity : AppCompatActivity() {
         generateReport()
     }
 
-    private fun setupSortSpinner(isFrench: Boolean) {
-        val options = if (isFrench) arrayOf("Trier par étage", "Trier par zone")
-                      else arrayOf("Sort by Floor", "Sort by Zone")
+    private fun setupSortSpinner() {
+        val options = arrayOf(getString(R.string.sort_by_floor), getString(R.string.sort_by_zone))
         val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, options)
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         binding.spinnerSort.adapter = adapter
@@ -308,11 +305,9 @@ Rules:
     }
 
     private fun showNoApiKey() {
-        val isFrench = language.startsWith("fr")
-        binding.tvReport.text = if (isFrench)
-            "Aucune clé API configurée.\n\nAllez dans Paramètres et entrez votre clé API Claude."
-        else
-            "No API key configured.\n\nGo to Settings and enter your Claude API key."
+        binding.tvReport.text = getString(
+            if (language.startsWith("fr")) R.string.no_api_key_fr else R.string.no_api_key_en
+        )
         binding.tvReport.visibility = View.VISIBLE
         binding.progressBar.visibility = View.GONE
         binding.btnRegenerate.isEnabled = true

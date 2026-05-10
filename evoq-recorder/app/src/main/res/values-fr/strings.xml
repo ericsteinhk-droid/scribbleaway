@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">EVOQ Enregistreur</string>
+    <string name="field_recorder_subtitle">Enregistreur de chantier</string>
+    <string name="select_language">Sélectionnez la langue d\'enregistrement</string>
+    <string name="recorder_title">Enregistrement</string>
+    <string name="report_title">Rapport de chantier</string>
+    <string name="ready_to_record">Prêt à enregistrer</string>
+    <string name="recording">● Enregistrement…</string>
+    <string name="paused">⏸ En pause</string>
+    <string name="processing">Traitement…</string>
+    <string name="start_recording">Démarrer l\'enregistrement</string>
+    <string name="stop_recording">Arrêter</string>
+    <string name="stop_and_generate">Arrêter et générer</string>
+    <string name="pause">Pause</string>
+    <string name="resume">Reprendre</string>
+    <string name="live_transcript">Transcription en direct</string>
+    <string name="transcript_hint">Les mots prononcés apparaîtront ici…</string>
+    <string name="no_transcript">Aucune parole détectée. Veuillez réessayer.</string>
+    <string name="share_report">Partager</string>
+    <string name="download_docx">Télécharger DOCX</string>
+    <string name="docx_saved">Enregistré dans Téléchargements : %1$s</string>
+    <string name="regenerate">Régénérer</string>
+    <string name="raw_transcript_label">Transcription brute</string>
+    <string name="sort_by_floor">Trier par étage</string>
+    <string name="sort_by_zone">Trier par zone</string>
+    <string name="settings">Paramètres</string>
+    <string name="claude_api_key_label">Clé API Claude (Anthropic)</string>
+    <string name="api_key_hint">Obtenez votre clé sur console.anthropic.com</string>
+    <string name="api_key_saved">Clé API enregistrée</string>
+    <string name="save">Enregistrer</string>
+    <string name="permission_denied">L\'autorisation du microphone est requise pour enregistrer l\'audio.</string>
+    <string name="speech_not_available">Reconnaissance vocale non disponible. Veuillez installer l\'application Google.</string>
+    <string name="context_hint_en">Before recording, briefly state in plain language:\n• Reason for the visit (inspection type, mandate, client request…)\n• Persons present\n• Scope and any limits of observation (areas not accessed, obstructed elements, etc.)\n\nThen proceed with your observations floor by floor or zone by zone.</string>
+    <string name="context_hint_fr">Avant d\'enregistrer, décrivez brièvement en langage simple :\n• Raison de la visite (type d\'inspection, mandat, demande du client…)\n• Personnes présentes\n• Portée et limites d\'observation (zones inaccessibles, éléments masqués, etc.)\n\nProcédez ensuite à vos observations étage par étage ou zone par zone.</string>
+    <string name="no_api_key_en">No API key configured.\n\nGo to Settings and enter your Claude API key.</string>
+    <string name="no_api_key_fr">Aucune clé API configurée.\n\nAllez dans Paramètres et entrez votre clé API Claude.</string>
+</resources>

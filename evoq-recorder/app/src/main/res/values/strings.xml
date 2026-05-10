@@ -1,7 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">EVOQ Field Recorder</string>
+    <string name="field_recorder_subtitle">Field Recorder</string>
     <string name="select_language">Select recording language</string>
+    <string name="recorder_title">Recording</string>
+    <string name="report_title">Field Report</string>
     <string name="ready_to_record">Ready to record</string>
     <string name="recording">● Recording…</string>
     <string name="paused">⏸ Paused</string>
@@ -19,6 +22,8 @@
     <string name="docx_saved">Saved to Downloads: %1$s</string>
     <string name="regenerate">Regenerate</string>
     <string name="raw_transcript_label">Raw Transcript</string>
+    <string name="sort_by_floor">Sort by Floor</string>
+    <string name="sort_by_zone">Sort by Zone</string>
     <string name="settings">Settings</string>
     <string name="claude_api_key_label">Claude API Key (Anthropic)</string>
     <string name="api_key_hint">Get your key at console.anthropic.com</string>
@@ -28,4 +33,6 @@
     <string name="speech_not_available">Speech recognition not available. Please install Google app.</string>
     <string name="context_hint_en">Before recording, briefly state in plain language:\n• Reason for the visit (inspection type, mandate, client request…)\n• Persons present\n• Scope and any limits of observation (areas not accessed, obstructed elements, etc.)\n\nThen proceed with your observations floor by floor or zone by zone.</string>
     <string name="context_hint_fr">Avant d\'enregistrer, décrivez brièvement en langage simple :\n• Raison de la visite (type d\'inspection, mandat, demande du client…)\n• Personnes présentes\n• Portée et limites d\'observation (zones inaccessibles, éléments masqués, etc.)\n\nProcédez ensuite à vos observations étage par étage ou zone par zone.</string>
+    <string name="no_api_key_en">No API key configured.\n\nGo to Settings and enter your Claude API key.</string>
+    <string name="no_api_key_fr">Aucune clé API configurée.\n\nAllez dans Paramètres et entrez votre clé API Claude.</string>
 </resources>

@@ -4,10 +4,9 @@ import android.content.Intent
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
-import androidx.appcompat.app.AppCompatActivity
 import com.evoq.fieldrecorder.databinding.ActivityMainBinding
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : BaseActivity() {
 
     private lateinit var binding: ActivityMainBinding
 
@@ -17,18 +16,15 @@ class MainActivity : AppCompatActivity() {
         setContentView(binding.root)
         setSupportActionBar(binding.toolbar)
 
-        binding.btnEnglish.setOnClickListener {
-            startRecorder("en-CA")
-        }
-
-        binding.btnFrench.setOnClickListener {
-            startRecorder("fr-CA")
-        }
+        binding.btnEnglish.setOnClickListener { selectLanguage("en", "en-CA") }
+        binding.btnFrench.setOnClickListener  { selectLanguage("fr", "fr-CA") }
     }
 
-    private fun startRecorder(languageCode: String) {
+    private fun selectLanguage(appLang: String, speechLang: String) {
+        getSharedPreferences("evoq_prefs", MODE_PRIVATE)
+            .edit().putString("app_language", appLang).apply()
         val intent = Intent(this, RecorderActivity::class.java)
-        intent.putExtra(RecorderActivity.EXTRA_LANGUAGE, languageCode)
+        intent.putExtra(RecorderActivity.EXTRA_LANGUAGE, speechLang)
         startActivity(intent)
     }
 
