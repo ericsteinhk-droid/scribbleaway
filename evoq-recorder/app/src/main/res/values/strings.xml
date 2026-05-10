@@ -28,6 +28,10 @@
     <string name="claude_api_key_label">Claude API Key (Anthropic)</string>
     <string name="api_key_hint">Get your key at console.anthropic.com</string>
     <string name="api_key_saved">API key saved</string>
+    <string name="api_key_saved_title">API Key Saved ✓</string>
+    <string name="api_key_saved_message">Your Claude API key has been saved. The app is ready to generate field reports.</string>
+    <string name="go_home">Go to Home</string>
+    <string name="stay_here">Stay Here</string>
     <string name="save">Save</string>
     <string name="permission_denied">Microphone permission is required to record audio.</string>
     <string name="speech_not_available">Speech recognition not available. Please install Google app.</string>

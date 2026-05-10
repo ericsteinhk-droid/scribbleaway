@@ -9,7 +9,8 @@
         <item name="android:windowBackground">@color/evoq_black</item>
         <item name="android:statusBarColor">@color/evoq_black</item>
         <item name="android:windowLightStatusBar">true</item>
-        <item name="android:navigationBarColor">@color/evoq_black</item>
+        <item name="android:navigationBarColor">@color/evoq_dark_grey</item>
+        <item name="android:windowLightNavigationBar">true</item>
         <item name="toolbarStyle">@style/EvoqToolbar</item>
     </style>
 

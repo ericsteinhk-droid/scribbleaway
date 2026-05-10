@@ -28,6 +28,10 @@
     <string name="claude_api_key_label">Clé API Claude (Anthropic)</string>
     <string name="api_key_hint">Obtenez votre clé sur console.anthropic.com</string>
     <string name="api_key_saved">Clé API enregistrée</string>
+    <string name="api_key_saved_title">Clé API enregistrée ✓</string>
+    <string name="api_key_saved_message">Votre clé API Claude a été enregistrée. L\'application est prête à générer des rapports de chantier.</string>
+    <string name="go_home">Retour à l\'accueil</string>
+    <string name="stay_here">Rester ici</string>
     <string name="save">Enregistrer</string>
     <string name="permission_denied">L\'autorisation du microphone est requise pour enregistrer l\'audio.</string>
     <string name="speech_not_available">Reconnaissance vocale non disponible. Veuillez installer l\'application Google.</string>
