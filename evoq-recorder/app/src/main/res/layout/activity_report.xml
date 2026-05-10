@@ -10,27 +10,31 @@
         android:layout_width="match_parent"
         android:layout_height="?attr/actionBarSize"
         android:background="@color/evoq_black"
-        android:elevation="4dp">
+        android:elevation="2dp">
 
         <ImageView
-            android:layout_width="80dp"
-            android:layout_height="28dp"
+            android:layout_width="90dp"
+            android:layout_height="30dp"
             android:layout_gravity="center"
             android:src="@drawable/evoq_logo"
             android:scaleType="fitCenter"
             android:adjustViewBounds="true"
-            android:background="#FFFFFF"
-            android:paddingHorizontal="6dp"
-            android:paddingVertical="3dp"
             android:contentDescription="EVOQ" />
 
     </androidx.appcompat.widget.Toolbar>
 
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="2dp"
+        android:background="@color/evoq_gold" />
+
+    <!-- Sort + Regenerate row -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:padding="12dp"
+        android:background="@color/evoq_dark_grey"
         android:gravity="center_vertical">
 
         <Spinner
@@ -39,19 +43,20 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:backgroundTint="@color/evoq_gold"
-            android:popupBackground="@color/evoq_dark_grey" />
+            android:popupBackground="@color/evoq_black" />
 
         <Button
             android:id="@+id/btnRegenerate"
             android:layout_width="wrap_content"
-            android:layout_height="36dp"
+            android:layout_height="40dp"
             android:text="@string/regenerate"
-            android:textColor="@color/evoq_black"
-            android:textSize="12sp"
+            android:textColor="#FFFFFF"
+            android:textSize="14sp"
+            android:textStyle="bold"
             android:textAllCaps="false"
             android:background="@color/evoq_gold"
-            android:layout_marginStart="8dp"
-            android:paddingHorizontal="12dp" />
+            android:layout_marginStart="10dp"
+            android:paddingHorizontal="16dp" />
 
     </LinearLayout>
 
@@ -62,7 +67,7 @@
         android:layout_gravity="center_horizontal"
         android:indeterminateTint="@color/evoq_gold"
         android:visibility="gone"
-        android:layout_marginTop="16dp" />
+        android:layout_marginTop="24dp" />
 
     <ScrollView
         android:layout_width="match_parent"
@@ -80,24 +85,25 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:textColor="@color/evoq_white"
-                android:textSize="14sp"
-                android:lineSpacingMultiplier="1.5"
-                android:fontFamily="monospace" />
+                android:textSize="16sp"
+                android:lineSpacingMultiplier="1.6"
+                android:fontFamily="sans-serif" />
 
             <View
                 android:layout_width="match_parent"
-                android:layout_height="1dp"
+                android:layout_height="2dp"
                 android:background="@color/evoq_dark_grey"
-                android:layout_marginVertical="16dp" />
+                android:layout_marginVertical="20dp" />
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/raw_transcript_label"
                 android:textColor="@color/evoq_gold"
-                android:textSize="11sp"
+                android:textSize="12sp"
+                android:textStyle="bold"
                 android:textAllCaps="true"
-                android:letterSpacing="0.1"
+                android:letterSpacing="0.12"
                 android:layout_marginBottom="8dp" />
 
             <TextView
@@ -105,8 +111,8 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:textColor="@color/evoq_grey"
-                android:textSize="12sp"
-                android:lineSpacingMultiplier="1.4" />
+                android:textSize="14sp"
+                android:lineSpacingMultiplier="1.5" />
 
         </LinearLayout>
 
@@ -122,24 +128,26 @@
         <Button
             android:id="@+id/btnDownloadDocx"
             android:layout_width="0dp"
-            android:layout_height="52dp"
+            android:layout_height="58dp"
             android:layout_weight="1"
             android:text="@string/download_docx"
-            android:textColor="@color/evoq_white"
-            android:textSize="13sp"
+            android:textColor="@color/evoq_gold"
+            android:textSize="15sp"
+            android:textStyle="bold"
             android:textAllCaps="false"
             android:background="@color/evoq_dark_grey"
-            android:layout_marginEnd="8dp"
+            android:layout_marginEnd="10dp"
             android:enabled="false" />
 
         <Button
             android:id="@+id/btnShare"
             android:layout_width="0dp"
-            android:layout_height="52dp"
+            android:layout_height="58dp"
             android:layout_weight="1"
             android:text="@string/share_report"
-            android:textColor="@color/evoq_black"
-            android:textSize="13sp"
+            android:textColor="#FFFFFF"
+            android:textSize="15sp"
+            android:textStyle="bold"
             android:textAllCaps="false"
             android:background="@color/evoq_gold"
             android:enabled="false" />

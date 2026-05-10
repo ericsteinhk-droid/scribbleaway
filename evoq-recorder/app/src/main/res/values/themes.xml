@@ -1,13 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.EvoqFieldRecorder" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+    <style name="Theme.EvoqFieldRecorder" parent="Theme.MaterialComponents.Light.NoActionBar">
         <item name="colorPrimary">@color/evoq_gold</item>
-        <item name="colorPrimaryVariant">@color/evoq_black</item>
-        <item name="colorOnPrimary">@color/evoq_black</item>
+        <item name="colorPrimaryVariant">@color/evoq_white</item>
+        <item name="colorOnPrimary">#FFFFFF</item>
         <item name="colorSurface">@color/evoq_dark_grey</item>
         <item name="colorOnSurface">@color/evoq_white</item>
         <item name="android:windowBackground">@color/evoq_black</item>
         <item name="android:statusBarColor">@color/evoq_black</item>
+        <item name="android:windowLightStatusBar">true</item>
         <item name="android:navigationBarColor">@color/evoq_black</item>
         <item name="toolbarStyle">@style/EvoqToolbar</item>
     </style>
@@ -15,7 +16,7 @@
     <style name="EvoqToolbar" parent="Widget.MaterialComponents.Toolbar">
         <item name="android:background">@color/evoq_black</item>
         <item name="titleTextColor">@color/evoq_white</item>
-        <item name="subtitleTextColor">@color/evoq_gold</item>
+        <item name="subtitleTextColor">@color/evoq_grey</item>
         <item name="navigationIconTint">@color/evoq_gold</item>
     </style>
 </resources>

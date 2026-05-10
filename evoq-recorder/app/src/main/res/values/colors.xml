@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="evoq_black">#0D0D0D</color>
-    <color name="evoq_dark_grey">#1A1A1A</color>
-    <color name="evoq_grey">#666666</color>
-    <color name="evoq_white">#F0F0F0</color>
-    <color name="evoq_gold">#C9A96E</color>
-    <color name="recording_red">#C0392B</color>
+    <!-- Bright high-contrast theme -->
+    <color name="evoq_black">#FFFFFF</color>        <!-- app background -->
+    <color name="evoq_dark_grey">#EAECF0</color>    <!-- surface / input areas -->
+    <color name="evoq_grey">#5A6270</color>          <!-- secondary / hint text -->
+    <color name="evoq_white">#0D1117</color>         <!-- primary text -->
+    <color name="evoq_gold">#B91C3C</color>          <!-- accent / CTA (deep rose from logo) -->
+    <color name="recording_red">#DC2626</color>      <!-- active recording state -->
 </resources>

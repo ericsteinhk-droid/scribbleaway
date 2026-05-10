@@ -10,21 +10,24 @@
         android:layout_width="match_parent"
         android:layout_height="?attr/actionBarSize"
         android:background="@color/evoq_black"
-        android:elevation="4dp">
+        android:elevation="2dp">
 
         <ImageView
-            android:layout_width="80dp"
-            android:layout_height="28dp"
+            android:layout_width="90dp"
+            android:layout_height="30dp"
             android:layout_gravity="center"
             android:src="@drawable/evoq_logo"
             android:scaleType="fitCenter"
             android:adjustViewBounds="true"
-            android:background="#FFFFFF"
-            android:paddingHorizontal="6dp"
-            android:paddingVertical="3dp"
             android:contentDescription="EVOQ" />
 
     </androidx.appcompat.widget.Toolbar>
+
+    <!-- thin accent line under toolbar -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="2dp"
+        android:background="@color/evoq_gold" />
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -39,35 +42,37 @@
             android:layout_height="wrap_content"
             android:text="@string/ready_to_record"
             android:textColor="@color/evoq_gold"
-            android:textSize="14sp"
+            android:textSize="17sp"
+            android:textStyle="bold"
             android:layout_gravity="center_horizontal"
-            android:layout_marginBottom="6dp" />
+            android:layout_marginBottom="4dp" />
 
         <Chronometer
             android:id="@+id/chronometer"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:textColor="@color/evoq_white"
-            android:textSize="36sp"
+            android:textSize="48sp"
+            android:textStyle="bold"
             android:layout_gravity="center_horizontal"
-            android:layout_marginBottom="12dp" />
+            android:layout_marginBottom="14dp" />
 
-        <!-- Context reminder — visible only before recording starts -->
+        <!-- Context reminder card -->
         <LinearLayout
             android:id="@+id/cardContextHint"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:background="@color/evoq_dark_grey"
-            android:padding="12dp"
-            android:layout_marginBottom="12dp">
+            android:padding="14dp"
+            android:layout_marginBottom="14dp">
 
             <TextView
-                android:layout_width="20dp"
+                android:layout_width="24dp"
                 android:layout_height="wrap_content"
                 android:text="💡"
-                android:textSize="14sp"
-                android:layout_marginEnd="8dp" />
+                android:textSize="16sp"
+                android:layout_marginEnd="10dp" />
 
             <TextView
                 android:id="@+id/tvContextHint"
@@ -75,8 +80,8 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:textColor="@color/evoq_grey"
-                android:textSize="12sp"
-                android:lineSpacingMultiplier="1.4" />
+                android:textSize="14sp"
+                android:lineSpacingMultiplier="1.5" />
 
         </LinearLayout>
 
@@ -85,9 +90,10 @@
             android:layout_height="wrap_content"
             android:text="@string/live_transcript"
             android:textColor="@color/evoq_gold"
-            android:textSize="12sp"
+            android:textSize="13sp"
+            android:textStyle="bold"
             android:textAllCaps="true"
-            android:letterSpacing="0.1"
+            android:letterSpacing="0.12"
             android:layout_marginBottom="8dp" />
 
         <ScrollView
@@ -95,15 +101,15 @@
             android:layout_height="0dp"
             android:layout_weight="1"
             android:background="@color/evoq_dark_grey"
-            android:padding="12dp">
+            android:padding="14dp">
 
             <TextView
                 android:id="@+id/tvTranscript"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:textColor="@color/evoq_white"
-                android:textSize="14sp"
-                android:lineSpacingMultiplier="1.4"
+                android:textSize="17sp"
+                android:lineSpacingMultiplier="1.5"
                 android:hint="@string/transcript_hint"
                 android:textColorHint="@color/evoq_grey" />
 
@@ -111,23 +117,24 @@
 
     </LinearLayout>
 
-    <!-- Shown when not recording -->
+    <!-- Start Recording button (idle state) -->
     <Button
         android:id="@+id/btnRecord"
         android:layout_width="match_parent"
-        android:layout_height="64dp"
+        android:layout_height="68dp"
         android:text="@string/start_recording"
-        android:textColor="@color/evoq_black"
-        android:textSize="16sp"
+        android:textColor="#FFFFFF"
+        android:textSize="18sp"
+        android:textStyle="bold"
         android:textAllCaps="false"
         android:background="@color/evoq_gold"
         android:layout_margin="16dp" />
 
-    <!-- Shown while recording or paused -->
+    <!-- Pause + Stop (recording / paused state) -->
     <LinearLayout
         android:id="@+id/layoutRecordingControls"
         android:layout_width="match_parent"
-        android:layout_height="64dp"
+        android:layout_height="68dp"
         android:orientation="horizontal"
         android:layout_margin="16dp"
         android:visibility="gone">
@@ -138,11 +145,12 @@
             android:layout_height="match_parent"
             android:layout_weight="1"
             android:text="@string/pause"
-            android:textColor="@color/evoq_black"
-            android:textSize="15sp"
+            android:textColor="#FFFFFF"
+            android:textSize="17sp"
+            android:textStyle="bold"
             android:textAllCaps="false"
             android:background="@color/evoq_gold"
-            android:layout_marginEnd="8dp" />
+            android:layout_marginEnd="10dp" />
 
         <Button
             android:id="@+id/btnStop"
@@ -150,8 +158,9 @@
             android:layout_height="match_parent"
             android:layout_weight="1"
             android:text="@string/stop_and_generate"
-            android:textColor="@color/evoq_white"
-            android:textSize="15sp"
+            android:textColor="#FFFFFF"
+            android:textSize="17sp"
+            android:textStyle="bold"
             android:textAllCaps="false"
             android:background="@color/recording_red" />
 
