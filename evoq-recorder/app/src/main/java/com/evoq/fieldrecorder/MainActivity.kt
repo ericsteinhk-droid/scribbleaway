@@ -4,6 +4,7 @@ import android.content.Intent
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
+import androidx.appcompat.app.AlertDialog
 import com.evoq.fieldrecorder.databinding.ActivityMainBinding
 
 class MainActivity : BaseActivity() {
@@ -23,9 +24,22 @@ class MainActivity : BaseActivity() {
     private fun selectLanguage(appLang: String, speechLang: String) {
         getSharedPreferences("evoq_prefs", MODE_PRIVATE)
             .edit().putString("app_language", appLang).apply()
-        val intent = Intent(this, RecorderActivity::class.java)
-        intent.putExtra(RecorderActivity.EXTRA_LANGUAGE, speechLang)
-        startActivity(intent)
+
+        val isFr = appLang == "fr"
+        val title   = if (isFr) getString(R.string.noise_warning_title_fr)   else getString(R.string.noise_warning_title_en)
+        val message = if (isFr) getString(R.string.noise_warning_message_fr) else getString(R.string.noise_warning_message_en)
+        val proceed = if (isFr) getString(R.string.proceed_fr)               else getString(R.string.proceed_en)
+
+        AlertDialog.Builder(this)
+            .setTitle(title)
+            .setMessage(message)
+            .setPositiveButton(proceed) { _, _ ->
+                val intent = Intent(this, RecorderActivity::class.java)
+                intent.putExtra(RecorderActivity.EXTRA_LANGUAGE, speechLang)
+                startActivity(intent)
+            }
+            .setCancelable(true)
+            .show()
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
