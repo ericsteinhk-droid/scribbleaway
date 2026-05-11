@@ -162,7 +162,11 @@ Structure du rapport (respecter exactement) :
 Règles :
 - Corriger les erreurs évidentes de transcription vocale
 - Langage professionnel d'architecture
-- NE PAS utiliser de markdown (pas de **, pas de #)"""
+- NE PAS utiliser de markdown (pas de **, pas de #)
+- CODES DE LOCALISATION : Une combinaison lettre+chiffre (ex : V3, S4, B2) désigne une aile et un étage.
+  La lettre = l'aile/zone (ex : V = Aile V, S = Aile S), le chiffre = le numéro d'étage.
+  Développer systématiquement ces codes en texte complet dans les titres de section et les observations
+  (ex : "V3" → "3e étage — Aile V", "S4" → "4e étage — Aile S")."""
         else """You are a specialized assistant for EVOQ Architecture.
 You receive an audio transcription from a construction site inspection and generate a professional field report.
 
@@ -191,7 +195,11 @@ Report structure (follow exactly):
 Rules:
 - Correct obvious voice-recognition transcription errors
 - Use professional architectural language
-- Do NOT use markdown (no **, no #)"""
+- Do NOT use markdown (no **, no #)
+- LOCATION CODES: A letter+number combination (e.g. V3, S4, B2) denotes a wing and floor.
+  The letter = the wing/zone (e.g. V = Wing V, S = Wing S), the number = the floor level.
+  Always expand these codes into full text in section headings and observations
+  (e.g. "V3" → "Floor 3 — Wing V", "S4" → "Floor 4 — Wing S")."""
 
         val userMessage = if (isFrench) "Transcription :\n\n$transcript"
                           else "Transcription:\n\n$transcript"
