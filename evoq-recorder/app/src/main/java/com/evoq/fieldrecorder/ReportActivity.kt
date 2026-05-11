@@ -159,8 +159,12 @@ Structure du rapport (respecter exactement) :
 
 6. "Remarques générales" en fin de rapport si nécessaire
 
+Glossaire architectural (corriger toute transcription erronée de ces termes) :
+terrazzo, gypse, démolition, hygiène, enceinte, ossature, panneau, fenêtre,
+corridor, plafond, travaux, ouvriers, travailleurs, maçons, béton, plâtre
+
 Règles :
-- Corriger les erreurs évidentes de transcription vocale
+- Corriger les erreurs évidentes de transcription vocale, en s'appuyant sur le glossaire ci-dessus
 - Langage professionnel d'architecture
 - NE PAS utiliser de markdown (pas de **, pas de #)
 - CODES DE LOCALISATION : Une combinaison lettre+chiffre (ex : V3, S4, B2) désigne une aile et un étage.
@@ -192,8 +196,14 @@ Report structure (follow exactly):
 
 6. "General Notes" at end if needed
 
+Architectural glossary (correct any misheard transcription of these terms):
+terrazzo, gypsum, demolition, hygiene, enclosure, framing, panel, window,
+corridor, ceiling, works, workers, masons, concrete, plaster
+French equivalents: gypse, démolition, hygiène, enceinte, ossature, panneau,
+fenêtre, plafond, travaux, ouvriers/travailleurs, maçons, béton, plâtre
+
 Rules:
-- Correct obvious voice-recognition transcription errors
+- Correct obvious voice-recognition transcription errors, using the glossary above
 - Use professional architectural language
 - Do NOT use markdown (no **, no #)
 - LOCATION CODES: A letter+number combination (e.g. V3, S4, B2) denotes a wing and floor.

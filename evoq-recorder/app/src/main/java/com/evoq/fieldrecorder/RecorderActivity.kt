@@ -184,6 +184,16 @@ class RecorderActivity : BaseActivity() {
             putExtra(RecognizerIntent.EXTRA_LANGUAGE, language)
             putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
             putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
+            if (android.os.Build.VERSION.SDK_INT >= 33) {
+                putExtra(RecognizerIntent.EXTRA_BIASING_STRINGS, arrayListOf(
+                    "terrazzo", "gypse", "gypsum", "démolition", "demolition",
+                    "hygiène", "hygiene", "enceinte", "enclosure",
+                    "ossature", "framing", "panneau", "panel",
+                    "fenêtre", "window", "corridor", "plafond", "ceiling",
+                    "travaux", "ouvriers", "travailleurs", "workers",
+                    "maçons", "masons", "béton", "concrete", "plâtre", "plaster"
+                ))
+            }
         }
         speechRecognizer?.startListening(intent)
     }
