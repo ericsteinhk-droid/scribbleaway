@@ -57,6 +57,7 @@
             android:layout_marginBottom="28dp" />
 
         <Button
+            style="@style/Widget.AppCompat.Button"
             android:id="@+id/btnSave"
             android:layout_width="match_parent"
             android:layout_height="58dp"

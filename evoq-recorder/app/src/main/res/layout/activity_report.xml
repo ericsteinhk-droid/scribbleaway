@@ -46,6 +46,7 @@
             android:popupBackground="@color/evoq_black" />
 
         <Button
+            style="@style/Widget.AppCompat.Button"
             android:id="@+id/btnRegenerate"
             android:layout_width="wrap_content"
             android:layout_height="40dp"
@@ -126,6 +127,7 @@
         android:layout_margin="16dp">
 
         <Button
+            style="@style/Widget.AppCompat.Button"
             android:id="@+id/btnDownloadDocx"
             android:layout_width="0dp"
             android:layout_height="58dp"
@@ -140,6 +142,7 @@
             android:enabled="false" />
 
         <Button
+            style="@style/Widget.AppCompat.Button"
             android:id="@+id/btnShare"
             android:layout_width="0dp"
             android:layout_height="58dp"

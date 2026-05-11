@@ -67,6 +67,7 @@
             android:layout_marginBottom="24dp" />
 
         <Button
+            style="@style/Widget.AppCompat.Button"
             android:id="@+id/btnEnglish"
             android:layout_width="240dp"
             android:layout_height="58dp"
@@ -78,6 +79,7 @@
             android:layout_marginBottom="14dp" />
 
         <Button
+            style="@style/Widget.AppCompat.Button"
             android:id="@+id/btnFrench"
             android:layout_width="240dp"
             android:layout_height="58dp"
