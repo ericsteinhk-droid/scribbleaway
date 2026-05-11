@@ -18,7 +18,7 @@ class MainActivity : BaseActivity() {
         setSupportActionBar(binding.toolbar)
 
         binding.btnEnglish.setOnClickListener { selectLanguage("en", "en-CA") }
-        binding.btnFrench.setOnClickListener  { selectLanguage("fr", "fr-CA") }
+        binding.btnFrench.setOnClickListener  { selectLanguage("fr", "fr-FR") }
     }
 
     private fun selectLanguage(appLang: String, speechLang: String) {
