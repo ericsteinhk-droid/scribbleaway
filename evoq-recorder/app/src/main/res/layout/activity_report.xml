@@ -133,11 +133,11 @@
             android:layout_height="58dp"
             android:layout_weight="1"
             android:text="@string/download_docx"
-            android:textColor="@color/evoq_gold"
+            android:textColor="#FFFFFF"
             android:textSize="15sp"
             android:textStyle="bold"
             android:textAllCaps="false"
-            android:background="@color/evoq_dark_grey"
+            android:background="#374151"
             android:layout_marginEnd="10dp"
             android:enabled="false" />
 
