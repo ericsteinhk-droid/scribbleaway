@@ -184,15 +184,21 @@ class RecorderActivity : BaseActivity() {
             putExtra(RecognizerIntent.EXTRA_LANGUAGE, language)
             putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
             putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
-            if (android.os.Build.VERSION.SDK_INT >= 33) {
-                putExtra(RecognizerIntent.EXTRA_BIASING_STRINGS, arrayListOf(
-                    "terrazzo", "gypse", "gypsum", "démolition", "demolition",
-                    "hygiène", "hygiene", "enceinte", "enclosure",
-                    "ossature", "framing", "panneau", "panel",
-                    "fenêtre", "window", "corridor", "plafond", "ceiling",
-                    "travaux", "ouvriers", "travailleurs", "workers",
-                    "maçons", "masons", "béton", "concrete", "plâtre", "plaster"
-                ))
+        if (android.os.Build.VERSION.SDK_INT >= 33) {
+                val biasingStrings = if (language.startsWith("fr")) {
+                    arrayListOf(
+                        "terrazzo", "gypse", "démolition", "hygiène", "enceinte",
+                        "ossature", "panneau", "fenêtre", "corridor", "plafond",
+                        "travaux", "ouvriers", "travailleurs", "maçons", "béton", "plâtre"
+                    )
+                } else {
+                    arrayListOf(
+                        "terrazzo", "gypsum", "demolition", "hygiene", "enclosure",
+                        "framing", "panel", "window", "corridor", "ceiling",
+                        "works", "workers", "masons", "concrete", "plaster"
+                    )
+                }
+                putExtra(RecognizerIntent.EXTRA_BIASING_STRINGS, biasingStrings)
             }
         }
         speechRecognizer?.startListening(intent)
@@ -243,8 +249,12 @@ class RecorderActivity : BaseActivity() {
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         if (item.itemId == android.R.id.home) {
-            if (isRecording) stopRecording()
-            finish()
+            if (isRecording) {
+                stopRecording()
+                // stopRecording launches ReportActivity; don't also finish here
+            } else {
+                finish()
+            }
             return true
         }
         return super.onOptionsItemSelected(item)
