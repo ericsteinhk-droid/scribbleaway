@@ -3,6 +3,9 @@ name: Build WordSearch.exe
 on:
   workflow_dispatch:   # manual trigger from the GitHub UI / mobile app
 
+permissions:
+  contents: write      # needed to create releases and upload assets
+
 jobs:
   build:
     runs-on: windows-latest
@@ -22,9 +25,10 @@ jobs:
       - name: Build executable
         run: pyinstaller word_search.spec
 
-      - name: Upload WordSearch.exe as artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: WordSearch-exe
-          path: dist\WordSearch.exe
-          retention-days: 30
+      - name: Publish as GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "v5.1-build.${{ github.run_number }}" dist\WordSearch.exe `
+            --title "WordSearch v5.1 (build ${{ github.run_number }})" `
+            --notes "Automated build from workflow run #${{ github.run_number }}. Download WordSearch.exe below."
