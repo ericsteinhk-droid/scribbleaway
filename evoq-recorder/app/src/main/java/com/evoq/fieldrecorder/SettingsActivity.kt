@@ -19,15 +19,21 @@ class SettingsActivity : BaseActivity() {
         supportActionBar?.title = getString(R.string.settings)
 
         val prefs = getSharedPreferences("evoq_prefs", MODE_PRIVATE)
-        val savedKey = prefs.getString("claude_api_key", "") ?: ""
-        if (savedKey.isNotBlank()) {
-            binding.etApiKey.setText(savedKey)
-        }
+
+        val savedClaudeKey = prefs.getString("claude_api_key", "") ?: ""
+        if (savedClaudeKey.isNotBlank()) binding.etApiKey.setText(savedClaudeKey)
+
+        val savedOpenAiKey = prefs.getString("openai_api_key", "") ?: ""
+        if (savedOpenAiKey.isNotBlank()) binding.etOpenAiKey.setText(savedOpenAiKey)
 
         binding.btnSave.setOnClickListener {
-            val key = binding.etApiKey.text.toString().trim()
-            if (key.isBlank()) return@setOnClickListener
-            prefs.edit().putString("claude_api_key", key).apply()
+            val claudeKey = binding.etApiKey.text.toString().trim()
+            val openAiKey = binding.etOpenAiKey.text.toString().trim()
+            if (claudeKey.isBlank() && openAiKey.isBlank()) return@setOnClickListener
+            prefs.edit()
+                .apply { if (claudeKey.isNotBlank()) putString("claude_api_key", claudeKey) }
+                .apply { if (openAiKey.isNotBlank()) putString("openai_api_key", openAiKey) }
+                .apply()
             showSavedDialog()
         }
     }

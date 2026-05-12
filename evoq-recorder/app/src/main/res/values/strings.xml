@@ -39,6 +39,9 @@
     <string name="context_hint_fr">Avant d\'enregistrer, décrivez brièvement en langage simple :\n• Raison de la visite (type d\'inspection, mandat, demande du client…)\n• Personnes présentes\n• Portée et limites d\'observation (zones inaccessibles, éléments masqués, etc.)\n\nProcédez ensuite à vos observations étage par étage ou zone par zone.</string>
     <string name="no_api_key_en">No API key configured.\n\nGo to Settings and enter your Claude API key.</string>
     <string name="no_api_key_fr">Aucune clé API configurée.\n\nAllez dans Paramètres et entrez votre clé API Claude.</string>
+    <string name="openai_api_key_label">OpenAI API Key (Whisper)</string>
+    <string name="openai_api_key_hint">Get your key at platform.openai.com — used for high-accuracy transcription</string>
+    <string name="transcribing_whisper">Transcribing with Whisper…</string>
     <string name="noise_warning_title_en">⚠ Audio Environment Notice</string>
     <string name="noise_warning_message_en">Recording in a noisy environment will affect voice recognition accuracy.\n\nFor best results, use a headset or move to a quieter location before recording.</string>
     <string name="noise_warning_title_fr">⚠ Avis — Environnement sonore</string>

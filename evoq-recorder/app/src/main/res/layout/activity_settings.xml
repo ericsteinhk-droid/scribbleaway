@@ -56,6 +56,45 @@
             android:textSize="14sp"
             android:layout_marginBottom="28dp" />
 
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="@color/evoq_dark_grey"
+            android:layout_marginBottom="28dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/openai_api_key_label"
+            android:textColor="@color/evoq_gold"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:textAllCaps="true"
+            android:letterSpacing="0.1"
+            android:layout_marginBottom="10dp" />
+
+        <EditText
+            android:id="@+id/etOpenAiKey"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="sk-..."
+            android:textColor="@color/evoq_white"
+            android:textColorHint="@color/evoq_grey"
+            android:background="@color/evoq_dark_grey"
+            android:padding="14dp"
+            android:inputType="textPassword"
+            android:fontFamily="monospace"
+            android:textSize="16sp"
+            android:layout_marginBottom="10dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/openai_api_key_hint"
+            android:textColor="@color/evoq_grey"
+            android:textSize="14sp"
+            android:layout_marginBottom="28dp" />
+
         <Button
             style="@style/Widget.AppCompat.Button"
             android:id="@+id/btnSave"
