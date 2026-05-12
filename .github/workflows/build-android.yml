@@ -5,11 +5,15 @@ on:
     branches:
       - claude/android-audio-recorder-app-WJH19
       - main
+    tags:
+      - 'v*'
   workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout code
@@ -39,9 +43,41 @@ jobs:
         run: gradle assembleDebug
         working-directory: evoq-recorder
 
-      - name: Upload APK
+      - name: Rename APK
+        run: |
+          mkdir -p dist
+          cp evoq-recorder/app/build/outputs/apk/debug/app-debug.apk \
+             dist/EVOQ-FieldRecorder-${{ github.ref_name }}.apk
+
+      - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: EVOQ-FieldRecorder
-          path: evoq-recorder/app/build/outputs/apk/debug/app-debug.apk
+          path: dist/EVOQ-FieldRecorder-${{ github.ref_name }}.apk
           retention-days: 30
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          name: EVOQ Field Recorder ${{ github.ref_name }}
+          files: dist/EVOQ-FieldRecorder-${{ github.ref_name }}.apk
+          body: |
+            ## EVOQ Field Recorder ${{ github.ref_name }}
+
+            Android field recording and report generation app for EVOQ Architecture.
+
+            ### Features
+            - Live voice transcription in English and French
+            - High-accuracy transcription via OpenAI Whisper (optional — configure key in Settings)
+            - AI-powered structured field report via Claude (Anthropic API key required)
+            - Location codes: letter+number (e.g. V3, S4) auto-expanded to wing + floor
+            - Sort observations by floor or zone
+            - Export and share as DOCX
+
+            ### Installation
+            1. Download `EVOQ-FieldRecorder-${{ github.ref_name }}.apk`
+            2. Transfer to your Android device (API 26 / Android 8.0+)
+            3. Enable **Install from unknown sources** if prompted
+            4. Open the APK to install
+            5. Go to **Settings** and enter your Claude API key (and optionally your OpenAI key for Whisper)
