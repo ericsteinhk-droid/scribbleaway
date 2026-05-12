@@ -8,6 +8,11 @@ on:
     tags:
       - 'v*'
   workflow_dispatch:
+    inputs:
+      release_version:
+        description: 'Version to publish as a GitHub Release (e.g. v1.0.0). Leave blank to build only.'
+        required: false
+        default: ''
 
 jobs:
   build:
@@ -43,27 +48,42 @@ jobs:
         run: gradle assembleDebug
         working-directory: evoq-recorder
 
+      - name: Determine version
+        id: version
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            echo "tag=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+            echo "publish=true" >> $GITHUB_OUTPUT
+          elif [[ -n "${{ inputs.release_version }}" ]]; then
+            echo "tag=${{ inputs.release_version }}" >> $GITHUB_OUTPUT
+            echo "publish=true" >> $GITHUB_OUTPUT
+          else
+            echo "tag=dev-$(date +%Y%m%d)" >> $GITHUB_OUTPUT
+            echo "publish=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Rename APK
         run: |
           mkdir -p dist
           cp evoq-recorder/app/build/outputs/apk/debug/app-debug.apk \
-             dist/EVOQ-FieldRecorder-${{ github.ref_name }}.apk
+             dist/EVOQ-FieldRecorder-${{ steps.version.outputs.tag }}.apk
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: EVOQ-FieldRecorder
-          path: dist/EVOQ-FieldRecorder-${{ github.ref_name }}.apk
+          name: EVOQ-FieldRecorder-${{ steps.version.outputs.tag }}
+          path: dist/EVOQ-FieldRecorder-${{ steps.version.outputs.tag }}.apk
           retention-days: 30
 
       - name: Create GitHub Release
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: steps.version.outputs.publish == 'true'
         uses: softprops/action-gh-release@v2
         with:
-          name: EVOQ Field Recorder ${{ github.ref_name }}
-          files: dist/EVOQ-FieldRecorder-${{ github.ref_name }}.apk
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: EVOQ Field Recorder ${{ steps.version.outputs.tag }}
+          files: dist/EVOQ-FieldRecorder-${{ steps.version.outputs.tag }}.apk
           body: |
-            ## EVOQ Field Recorder ${{ github.ref_name }}
+            ## EVOQ Field Recorder ${{ steps.version.outputs.tag }}
 
             Android field recording and report generation app for EVOQ Architecture.
 
@@ -76,7 +96,7 @@ jobs:
             - Export and share as DOCX
 
             ### Installation
-            1. Download `EVOQ-FieldRecorder-${{ github.ref_name }}.apk`
+            1. Download `EVOQ-FieldRecorder-${{ steps.version.outputs.tag }}.apk`
             2. Transfer to your Android device (API 26 / Android 8.0+)
             3. Enable **Install from unknown sources** if prompted
             4. Open the APK to install
