@@ -8,9 +8,22 @@ import csv
 import os
 import queue
 import re
+import sys
 import threading
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
+
+try:
+    from PIL import Image, ImageTk
+    _PIL_OK = True
+except ImportError:
+    _PIL_OK = False
+
+
+def _resource_path(relative: str) -> str:
+    """Resolve path to a bundled resource (works both in dev and PyInstaller .exe)."""
+    base = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
+    return os.path.join(base, relative)
 
 try:
     from docx import Document
@@ -209,6 +222,42 @@ class WordSearchApp(tk.Tk):
 
     def _build_ui(self):
         pad = {"padx": 8, "pady": 4}
+
+        # ---- Logo header bar ----
+        header_bar = tk.Frame(self, bg="#ffffff", height=64)
+        header_bar.pack(fill="x")
+        header_bar.pack_propagate(False)
+
+        if _PIL_OK:
+            try:
+                pil_img = Image.open(_resource_path("evoq_logo.png")).convert("RGBA")
+                new_h = 46
+                new_w = int(pil_img.width * new_h / pil_img.height)
+                pil_img = pil_img.resize((new_w, new_h), Image.LANCZOS)
+                self._logo_img = ImageTk.PhotoImage(pil_img)
+                tk.Label(header_bar, image=self._logo_img, bg="#ffffff").pack(
+                    side="left", padx=14, pady=9)
+            except Exception:
+                pass  # logo file missing — skip silently
+
+        tk.Label(
+            header_bar,
+            text="Word Search",
+            font=("Segoe UI", 15, "bold"),
+            fg="#1a237e",
+            bg="#ffffff",
+        ).pack(side="left", padx=(4, 0))
+
+        tk.Label(
+            header_bar,
+            text=".docx file scanner",
+            font=("Segoe UI", 10),
+            fg="#888888",
+            bg="#ffffff",
+        ).pack(side="left", padx=(6, 0), pady=(6, 0))
+
+        # Thin accent line under the header
+        tk.Frame(self, bg="#e0e0e0", height=1).pack(fill="x")
 
         # ---- Settings panel ----
         top = tk.LabelFrame(self, text="Search Settings", bg="#f0f0f0",
