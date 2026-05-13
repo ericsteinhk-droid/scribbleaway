@@ -185,7 +185,8 @@ class RecorderActivity : BaseActivity() {
             if (Build.VERSION.SDK_INT >= 33) {
                 val biasingStrings = if (language.startsWith("fr")) {
                     arrayListOf(
-                        "terrazzo", "gypse", "démolition", "hygiène", "enceinte",
+                        "terrazzo", "terrazo", "terrazeau", "terrasse au",
+                        "gypse", "démolition", "hygiène", "enceinte",
                         "ossature", "panneau", "fenêtre", "corridor", "plafond",
                         "travaux", "ouvriers", "travailleurs", "maçons", "béton", "plâtre"
                     )

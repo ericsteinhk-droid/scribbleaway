@@ -163,6 +163,9 @@ Glossaire architectural (corriger toute transcription erronée de ces termes) :
 terrazzo, gypse, démolition, hygiène, enceinte, ossature, panneau, fenêtre,
 corridor, plafond, travaux, ouvriers, travailleurs, maçons, béton, plâtre
 
+Corrections phonétiques connues (remplacer systématiquement par le terme correct) :
+"terrazo", "terrazeau", "terrasse au", "terra zo", "terra zoo" → terrazzo
+
 Règles :
 - Corriger les erreurs évidentes de transcription vocale, en s'appuyant sur le glossaire ci-dessus
 - Langage professionnel d'architecture
