@@ -60,7 +60,7 @@ class RecorderActivity : BaseActivity() {
         }
     }
 
-    // Whisper audio recording
+    private var consecutiveErrors = 0
     private var mediaRecorder: MediaRecorder? = null
     private var audioFile: File? = null
     private var hasAudioFile = false
@@ -133,8 +133,11 @@ class RecorderActivity : BaseActivity() {
         binding.chronometer.base = SystemClock.elapsedRealtime()
         binding.chronometer.start()
 
-        startMediaRecording()
+        consecutiveErrors = 0
+        // Start speech recognition immediately so it claims the mic first,
+        // then attempt audio recording after it has established its session.
         startListening()
+        handler.postDelayed({ if (isRecording && !isPaused) startMediaRecording() }, 1500)
     }
 
     private fun startMediaRecording() {
@@ -170,6 +173,7 @@ class RecorderActivity : BaseActivity() {
             isPaused = false
             binding.btnPause.text = getString(R.string.pause)
             binding.tvStatus.text = getString(R.string.recording)
+            consecutiveErrors = 0
             binding.chronometer.base = SystemClock.elapsedRealtime() - chronoElapsedBeforePause
             binding.chronometer.start()
             mediaRecorder?.resume()
@@ -207,6 +211,15 @@ class RecorderActivity : BaseActivity() {
                 if (isRecording && !isPaused
                     && error != SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS
                 ) {
+                    consecutiveErrors++
+                    // Three consecutive errors while MediaRecorder is running = mic conflict.
+                    // Release the recorder so SpeechRecognizer can recover.
+                    if (consecutiveErrors >= 3 && mediaRecorder != null) {
+                        try { mediaRecorder?.stop(); mediaRecorder?.release() } catch (e: Exception) { }
+                        mediaRecorder = null
+                        hasAudioFile = false
+                        consecutiveErrors = 0
+                    }
                     startListening()
                 }
             }
@@ -215,6 +228,7 @@ class RecorderActivity : BaseActivity() {
                 val match = results
                     ?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
                     ?.firstOrNull() ?: return
+                consecutiveErrors = 0
                 transcriptBuilder.append(match).append(" ")
                 binding.tvTranscript.text = transcriptBuilder.toString().trimEnd()
                 resetSilenceTimer()
