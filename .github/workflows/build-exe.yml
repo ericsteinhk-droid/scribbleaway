@@ -1,4 +1,4 @@
-name: Build WordSearch.exe
+name: Build EVOQ Search Tools
 
 on:
   workflow_dispatch:   # manual trigger from the GitHub UI / mobile app
@@ -22,13 +22,18 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Build executable
+      - name: Build WordSearch.exe
         run: pyinstaller word_search.spec
 
-      - name: Publish as GitHub Release
+      - name: Build FileSearch.exe
+        run: pyinstaller file_search.spec
+
+      - name: Publish both executables as GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release create "v5.1-build.${{ github.run_number }}" dist\WordSearch.exe `
-            --title "WordSearch v5.1 (build ${{ github.run_number }})" `
-            --notes "Automated build from workflow run #${{ github.run_number }}. Download WordSearch.exe below."
+          gh release create "v5.1-build.${{ github.run_number }}" `
+            dist\WordSearch.exe `
+            dist\FileSearch.exe `
+            --title "EVOQ Search Tools v5.1 (build ${{ github.run_number }})" `
+            --notes "## EVOQ Search Tools v5.1`n`n**WordSearch.exe** — Search keyword across Word (.docx) files only.`n`n**FileSearch.exe** — Search across Word (.docx) OR Excel (.xlsx / .xls) files. Choose file type at startup."
