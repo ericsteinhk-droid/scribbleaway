@@ -53,14 +53,12 @@ jobs:
         run: |
           if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
             echo "tag=${{ github.ref_name }}" >> $GITHUB_OUTPUT
-            echo "publish=true" >> $GITHUB_OUTPUT
           elif [[ -n "${{ inputs.release_version }}" ]]; then
             echo "tag=${{ inputs.release_version }}" >> $GITHUB_OUTPUT
-            echo "publish=true" >> $GITHUB_OUTPUT
           else
-            echo "tag=dev-$(date +%Y%m%d)" >> $GITHUB_OUTPUT
-            echo "publish=false" >> $GITHUB_OUTPUT
+            echo "tag=v1.0.0" >> $GITHUB_OUTPUT
           fi
+          echo "publish=true" >> $GITHUB_OUTPUT
 
       - name: Rename APK
         run: |
