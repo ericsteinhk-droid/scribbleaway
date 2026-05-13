@@ -3,7 +3,6 @@ package com.evoq.fieldrecorder
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.media.MediaRecorder
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
@@ -17,22 +16,10 @@ import android.view.View
 import android.widget.Toast
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import androidx.lifecycle.lifecycleScope
 import com.evoq.fieldrecorder.databinding.ActivityRecorderBinding
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.MultipartBody
-import okhttp3.OkHttpClient
-import okhttp3.Request
-import okhttp3.RequestBody.Companion.asRequestBody
-import org.json.JSONObject
-import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import java.util.concurrent.TimeUnit
 
 class RecorderActivity : BaseActivity() {
 
@@ -58,18 +45,6 @@ class RecorderActivity : BaseActivity() {
                 binding.tvTranscript.text = transcriptBuilder.toString().trimEnd()
             }
         }
-    }
-
-    private var consecutiveErrors = 0
-    private var mediaRecorder: MediaRecorder? = null
-    private var audioFile: File? = null
-    private var hasAudioFile = false
-
-    private val whisperClient by lazy {
-        OkHttpClient.Builder()
-            .connectTimeout(30, TimeUnit.SECONDS)
-            .readTimeout(180, TimeUnit.SECONDS)
-            .build()
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -133,39 +108,7 @@ class RecorderActivity : BaseActivity() {
         binding.chronometer.base = SystemClock.elapsedRealtime()
         binding.chronometer.start()
 
-        consecutiveErrors = 0
-        // Start speech recognition immediately so it claims the mic first,
-        // then attempt audio recording after it has established its session.
         startListening()
-        handler.postDelayed({ if (isRecording && !isPaused) startMediaRecording() }, 1500)
-    }
-
-    private fun startMediaRecording() {
-        val file = File(cacheDir, "rec_${System.currentTimeMillis()}.m4a")
-        audioFile = file
-        hasAudioFile = false
-        try {
-            mediaRecorder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                MediaRecorder(this)
-            } else {
-                @Suppress("DEPRECATION") MediaRecorder()
-            }
-            mediaRecorder!!.apply {
-                setAudioSource(MediaRecorder.AudioSource.VOICE_RECOGNITION)
-                setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
-                setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
-                setAudioEncodingBitRate(32_000)
-                setAudioSamplingRate(16_000)
-                setOutputFile(file.absolutePath)
-                prepare()
-                start()
-            }
-            hasAudioFile = true
-        } catch (e: Exception) {
-            // Mic could not be shared — Whisper unavailable, live transcript will be used
-            mediaRecorder?.release()
-            mediaRecorder = null
-        }
     }
 
     private fun togglePause() {
@@ -173,10 +116,8 @@ class RecorderActivity : BaseActivity() {
             isPaused = false
             binding.btnPause.text = getString(R.string.pause)
             binding.tvStatus.text = getString(R.string.recording)
-            consecutiveErrors = 0
             binding.chronometer.base = SystemClock.elapsedRealtime() - chronoElapsedBeforePause
             binding.chronometer.start()
-            mediaRecorder?.resume()
             startListening()
         } else {
             isPaused = true
@@ -188,7 +129,6 @@ class RecorderActivity : BaseActivity() {
             speechRecognizer?.stopListening()
             speechRecognizer?.destroy()
             speechRecognizer = null
-            mediaRecorder?.pause()
 
             if (transcriptBuilder.isNotEmpty() && !transcriptBuilder.endsWith("\n\n")) {
                 transcriptBuilder.append("\n\n")
@@ -211,15 +151,6 @@ class RecorderActivity : BaseActivity() {
                 if (isRecording && !isPaused
                     && error != SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS
                 ) {
-                    consecutiveErrors++
-                    // Three consecutive errors while MediaRecorder is running = mic conflict.
-                    // Release the recorder so SpeechRecognizer can recover.
-                    if (consecutiveErrors >= 3 && mediaRecorder != null) {
-                        try { mediaRecorder?.stop(); mediaRecorder?.release() } catch (e: Exception) { }
-                        mediaRecorder = null
-                        hasAudioFile = false
-                        consecutiveErrors = 0
-                    }
                     startListening()
                 }
             }
@@ -228,7 +159,6 @@ class RecorderActivity : BaseActivity() {
                 val match = results
                     ?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
                     ?.firstOrNull() ?: return
-                consecutiveErrors = 0
                 transcriptBuilder.append(match).append(" ")
                 binding.tvTranscript.text = transcriptBuilder.toString().trimEnd()
                 resetSilenceTimer()
@@ -289,44 +219,7 @@ class RecorderActivity : BaseActivity() {
         speechRecognizer?.destroy()
         speechRecognizer = null
 
-        var audioReady = hasAudioFile
-        try {
-            mediaRecorder?.stop()
-            mediaRecorder?.release()
-        } catch (e: Exception) {
-            audioReady = false
-        }
-        mediaRecorder = null
-
-        val openAiKey = getSharedPreferences("evoq_prefs", MODE_PRIVATE)
-            .getString("openai_api_key", "") ?: ""
-
-        val localFile = audioFile
-        if (audioReady && localFile?.exists() == true && openAiKey.isNotBlank()) {
-            binding.tvStatus.text = getString(R.string.transcribing_whisper)
-            binding.btnRecord.isEnabled = false
-            lifecycleScope.launch {
-                val whisperTranscript = withContext(Dispatchers.IO) {
-                    callWhisperApi(openAiKey, localFile, language)
-                }
-                localFile.delete()
-                audioFile = null
-                binding.btnRecord.isEnabled = true
-                val finalTranscript = if (whisperTranscript.isNullOrBlank()) {
-                    transcriptBuilder.toString().trim()
-                } else {
-                    whisperTranscript
-                }
-                proceedToReport(finalTranscript)
-            }
-        } else {
-            audioFile?.delete()
-            audioFile = null
-            proceedToReport(transcriptBuilder.toString().trim())
-        }
-    }
-
-    private fun proceedToReport(transcript: String) {
+        val transcript = transcriptBuilder.toString().trim()
         if (transcript.isEmpty()) {
             binding.tvStatus.text = getString(R.string.no_transcript)
             Toast.makeText(this, getString(R.string.no_transcript), Toast.LENGTH_LONG).show()
@@ -338,32 +231,6 @@ class RecorderActivity : BaseActivity() {
             putExtra(ReportActivity.EXTRA_RECORDING_DATE,
                 SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date()))
         })
-    }
-
-    private fun callWhisperApi(apiKey: String, file: File, lang: String): String? {
-        return try {
-            val langCode = if (lang.startsWith("fr")) "fr" else "en"
-            val body = MultipartBody.Builder()
-                .setType(MultipartBody.FORM)
-                .addFormDataPart("model", "whisper-1")
-                .addFormDataPart("language", langCode)
-                .addFormDataPart(
-                    "file", file.name,
-                    file.asRequestBody("audio/mp4".toMediaType())
-                )
-                .build()
-            val request = Request.Builder()
-                .url("https://api.openai.com/v1/audio/transcriptions")
-                .addHeader("Authorization", "Bearer $apiKey")
-                .post(body)
-                .build()
-            val response = whisperClient.newCall(request).execute()
-            val responseBody = response.body?.string() ?: return null
-            if (!response.isSuccessful) null
-            else JSONObject(responseBody).getString("text")
-        } catch (e: Exception) {
-            null
-        }
     }
 
     private fun showRecordingButtons() {
@@ -388,8 +255,5 @@ class RecorderActivity : BaseActivity() {
         super.onDestroy()
         handler.removeCallbacks(silenceRunnable)
         speechRecognizer?.destroy()
-        try { mediaRecorder?.stop(); mediaRecorder?.release() } catch (e: Exception) { }
-        mediaRecorder = null
-        audioFile?.delete()
     }
 }
