@@ -23,17 +23,10 @@ class SettingsActivity : BaseActivity() {
         val savedClaudeKey = prefs.getString("claude_api_key", "") ?: ""
         if (savedClaudeKey.isNotBlank()) binding.etApiKey.setText(savedClaudeKey)
 
-        val savedOpenAiKey = prefs.getString("openai_api_key", "") ?: ""
-        if (savedOpenAiKey.isNotBlank()) binding.etOpenAiKey.setText(savedOpenAiKey)
-
         binding.btnSave.setOnClickListener {
             val claudeKey = binding.etApiKey.text.toString().trim()
-            val openAiKey = binding.etOpenAiKey.text.toString().trim()
-            if (claudeKey.isBlank() && openAiKey.isBlank()) return@setOnClickListener
-            prefs.edit()
-                .apply { if (claudeKey.isNotBlank()) putString("claude_api_key", claudeKey) }
-                .apply { if (openAiKey.isNotBlank()) putString("openai_api_key", openAiKey) }
-                .apply()
+            if (claudeKey.isBlank()) return@setOnClickListener
+            prefs.edit().putString("claude_api_key", claudeKey).apply()
             showSavedDialog()
         }
     }
@@ -43,16 +36,12 @@ class SettingsActivity : BaseActivity() {
             .setTitle(getString(R.string.api_key_saved_title))
             .setMessage(getString(R.string.api_key_saved_message))
             .setPositiveButton(getString(R.string.go_home)) { _, _ ->
-                // Navigate back to MainActivity, clearing the back stack
-                val intent = Intent(this, MainActivity::class.java).apply {
+                startActivity(Intent(this, MainActivity::class.java).apply {
                     flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
-                }
-                startActivity(intent)
+                })
                 finish()
             }
-            .setNegativeButton(getString(R.string.stay_here)) { dialog, _ ->
-                dialog.dismiss()
-            }
+            .setNegativeButton(getString(R.string.stay_here)) { dialog, _ -> dialog.dismiss() }
             .setCancelable(true)
             .show()
     }

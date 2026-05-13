@@ -38,8 +38,8 @@ class MainActivity : BaseActivity() {
             .setTitle(title)
             .setView(dialogView)
             .setPositiveButton(proceed) { _, _ ->
-                startActivity(Intent(this, WhisperRecorderActivity::class.java).apply {
-                    putExtra(WhisperRecorderActivity.EXTRA_LANGUAGE, speechLang)
+                startActivity(Intent(this, RecorderActivity::class.java).apply {
+                    putExtra(RecorderActivity.EXTRA_LANGUAGE, speechLang)
                 })
             }
             .setCancelable(true)
