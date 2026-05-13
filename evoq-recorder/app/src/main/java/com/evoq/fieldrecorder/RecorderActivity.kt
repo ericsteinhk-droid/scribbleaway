@@ -1,13 +1,18 @@
 package com.evoq.fieldrecorder
 
 import android.Manifest
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.media.AudioManager
+import android.media.ToneGenerator
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
+import android.os.VibrationEffect
+import android.os.Vibrator
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
@@ -108,6 +113,7 @@ class RecorderActivity : BaseActivity() {
         binding.chronometer.base = SystemClock.elapsedRealtime()
         binding.chronometer.start()
 
+        playFeedback(start = true)
         startListening()
     }
 
@@ -220,6 +226,8 @@ class RecorderActivity : BaseActivity() {
         speechRecognizer?.destroy()
         speechRecognizer = null
 
+        playFeedback(start = false)
+
         val transcript = transcriptBuilder.toString().trim()
         if (transcript.isEmpty()) {
             binding.tvStatus.text = getString(R.string.no_transcript)
@@ -232,6 +240,27 @@ class RecorderActivity : BaseActivity() {
             putExtra(ReportActivity.EXTRA_RECORDING_DATE,
                 SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date()))
         })
+    }
+
+    private fun playFeedback(start: Boolean) {
+        // Haptic buzz
+        @Suppress("DEPRECATION")
+        val vibrator = getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
+        if (vibrator != null) {
+            val duration = if (start) 60L else 100L
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                vibrator.vibrate(VibrationEffect.createOneShot(duration, VibrationEffect.DEFAULT_AMPLITUDE))
+            } else {
+                vibrator.vibrate(duration)
+            }
+        }
+        // Audible ding on notification stream (respects silent mode)
+        try {
+            val tone = if (start) ToneGenerator.TONE_PROP_BEEP else ToneGenerator.TONE_PROP_ACK
+            val toneGen = ToneGenerator(AudioManager.STREAM_NOTIFICATION, 75)
+            toneGen.startTone(tone, 120)
+            handler.postDelayed({ toneGen.release() }, 300)
+        } catch (e: Exception) { /* device may not support ToneGenerator */ }
     }
 
     private fun showRecordingButtons() {
