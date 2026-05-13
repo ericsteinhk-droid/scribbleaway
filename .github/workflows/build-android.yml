@@ -56,7 +56,7 @@ jobs:
           elif [[ -n "${{ inputs.release_version }}" ]]; then
             echo "tag=${{ inputs.release_version }}" >> $GITHUB_OUTPUT
           else
-            echo "tag=v1.0.0" >> $GITHUB_OUTPUT
+            echo "tag=evoq-recorder-v1.0.0" >> $GITHUB_OUTPUT
           fi
           echo "publish=true" >> $GITHUB_OUTPUT
 
