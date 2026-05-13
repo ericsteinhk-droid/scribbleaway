@@ -21,6 +21,7 @@ import android.view.View
 import android.view.animation.AlphaAnimation
 import android.view.animation.Animation
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
@@ -94,6 +95,23 @@ class WhisperRecorderActivity : BaseActivity() {
     }
 
     private fun checkPermissionAndRecord() {
+        val openAiKey = getSharedPreferences("evoq_prefs", MODE_PRIVATE)
+            .getString("openai_api_key", "") ?: ""
+        if (openAiKey.isBlank()) {
+            val isFr = language.startsWith("fr")
+            AlertDialog.Builder(this)
+                .setTitle(if (isFr) "Clé API OpenAI requise" else "OpenAI API Key Required")
+                .setMessage(if (isFr)
+                    "Ajoutez votre clé API OpenAI dans Paramètres pour activer la transcription Whisper."
+                    else
+                    "Add your OpenAI API key in Settings to enable Whisper transcription.")
+                .setPositiveButton(getString(R.string.settings)) { _, _ ->
+                    startActivity(Intent(this, SettingsActivity::class.java))
+                }
+                .setNegativeButton(android.R.string.cancel, null)
+                .show()
+            return
+        }
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
             != PackageManager.PERMISSION_GRANTED
         ) {
@@ -268,7 +286,20 @@ class WhisperRecorderActivity : BaseActivity() {
             val result = withContext(Dispatchers.IO) { callWhisperApi(openAiKey, wavBytes) }
             pendingTranscriptions--
             updateTranscribingIndicator()
-            if (result.isNotBlank()) appendTranscript(result)
+            appendWhisperResult(result)
+        }
+    }
+
+    private fun appendWhisperResult(result: String) {
+        when {
+            result.startsWith("ERR:invalid_key") ->
+                Toast.makeText(this, "Invalid OpenAI key — check Settings", Toast.LENGTH_LONG).show()
+            result.startsWith("ERR:rate_limit") ->
+                Toast.makeText(this, "OpenAI rate limit — wait a moment and try again", Toast.LENGTH_LONG).show()
+            result.startsWith("ERR:") ->
+                Toast.makeText(this, "Transcription failed (${result.removePrefix("ERR:")})", Toast.LENGTH_LONG).show()
+            result.isNotBlank() -> appendTranscript(result)
+            // empty string = Whisper received audio but heard nothing (silence/noise)
         }
     }
 
@@ -304,9 +335,14 @@ class WhisperRecorderActivity : BaseActivity() {
         return try {
             val response = client.newCall(request).execute()
             val responseBody = response.body?.string() ?: ""
-            if (!response.isSuccessful) "" else JSONObject(responseBody).optString("text", "")
+            when {
+                response.code == 401 -> "ERR:invalid_key"
+                response.code == 429 -> "ERR:rate_limit"
+                !response.isSuccessful -> "ERR:api_${response.code}"
+                else -> JSONObject(responseBody).optString("text", "")
+            }
         } catch (e: Exception) {
-            ""
+            "ERR:network"
         }
     }
 
@@ -339,7 +375,7 @@ class WhisperRecorderActivity : BaseActivity() {
                     val result = withContext(Dispatchers.IO) { callWhisperApi(openAiKey, wavBytes) }
                     pendingTranscriptions--
                     updateTranscribingIndicator()
-                    if (result.isNotBlank()) appendTranscript(result)
+                    appendWhisperResult(result)
                     waitForPendingThenNavigate()
                 }
                 return
