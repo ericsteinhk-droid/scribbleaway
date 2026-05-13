@@ -48,4 +48,12 @@
     <string name="noise_warning_message_fr">Enregistrer dans un environnement bruyant affectera la précision de la reconnaissance vocale.\n\nPour de meilleurs résultats, utilisez un casque ou déplacez-vous dans un endroit plus calme avant d\'enregistrer.</string>
     <string name="proceed_en">Continue</string>
     <string name="proceed_fr">Continuer</string>
+    <string name="hifi_recorder_title">Enregistrement haute fidélité</string>
+    <string name="listening">● Écoute…</string>
+    <string name="paused_silence">⏸ Pause (silence détecté)</string>
+    <string name="whisper_transcript_hint">La transcription apparaîtra ici après chaque pause.</string>
+    <string name="generate_report">Générer le rapport</string>
+    <string name="mode_standard">Standard</string>
+    <string name="mode_hifi">Haute fidélité</string>
+    <string name="select_mode">Mode d\'enregistrement</string>
 </resources>

@@ -28,6 +28,8 @@
 
         <activity android:name=".RecorderActivity" android:exported="false"
             android:screenOrientation="portrait" />
+        <activity android:name=".WhisperRecorderActivity" android:exported="false"
+            android:screenOrientation="portrait" />
         <activity android:name=".ReportActivity" android:exported="false"
             android:screenOrientation="portrait" />
         <activity android:name=".SettingsActivity" android:exported="false" />
