@@ -1,7 +1,6 @@
 package com.evoq.fieldrecorder
 
 import android.content.Intent
-import android.graphics.Color
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
@@ -12,7 +11,6 @@ import com.evoq.fieldrecorder.databinding.ActivityMainBinding
 class MainActivity : BaseActivity() {
 
     private lateinit var binding: ActivityMainBinding
-    private var useHiFi = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -20,29 +18,8 @@ class MainActivity : BaseActivity() {
         setContentView(binding.root)
         setSupportActionBar(binding.toolbar)
 
-        binding.btnModeStandard.setOnClickListener { setMode(hifi = false) }
-        binding.btnModeHifi.setOnClickListener { setMode(hifi = true) }
-
         binding.btnEnglish.setOnClickListener { selectLanguage("en", "en-CA") }
         binding.btnFrench.setOnClickListener  { selectLanguage("fr", "fr-FR") }
-    }
-
-    private fun setMode(hifi: Boolean) {
-        useHiFi = hifi
-        val goldColor = getColor(R.color.evoq_gold)
-        val surfaceColor = getColor(R.color.evoq_dark_grey)
-
-        if (hifi) {
-            binding.btnModeStandard.setBackgroundColor(surfaceColor)
-            binding.btnModeStandard.setTextColor(goldColor)
-            binding.btnModeHifi.setBackgroundColor(goldColor)
-            binding.btnModeHifi.setTextColor(Color.WHITE)
-        } else {
-            binding.btnModeStandard.setBackgroundColor(goldColor)
-            binding.btnModeStandard.setTextColor(Color.WHITE)
-            binding.btnModeHifi.setBackgroundColor(surfaceColor)
-            binding.btnModeHifi.setTextColor(goldColor)
-        }
     }
 
     private fun selectLanguage(appLang: String, speechLang: String) {
@@ -61,15 +38,9 @@ class MainActivity : BaseActivity() {
             .setTitle(title)
             .setView(dialogView)
             .setPositiveButton(proceed) { _, _ ->
-                if (useHiFi) {
-                    startActivity(Intent(this, WhisperRecorderActivity::class.java).apply {
-                        putExtra(WhisperRecorderActivity.EXTRA_LANGUAGE, speechLang)
-                    })
-                } else {
-                    startActivity(Intent(this, RecorderActivity::class.java).apply {
-                        putExtra(RecorderActivity.EXTRA_LANGUAGE, speechLang)
-                    })
-                }
+                startActivity(Intent(this, WhisperRecorderActivity::class.java).apply {
+                    putExtra(WhisperRecorderActivity.EXTRA_LANGUAGE, speechLang)
+                })
             }
             .setCancelable(true)
             .show()

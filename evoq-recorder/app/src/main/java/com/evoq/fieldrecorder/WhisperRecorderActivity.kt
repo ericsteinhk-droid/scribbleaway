@@ -48,8 +48,9 @@ class WhisperRecorderActivity : BaseActivity() {
         const val EXTRA_LANGUAGE = "extra_language"
         private const val REQUEST_AUDIO_PERMISSION = 102
         private const val SAMPLE_RATE = 16000
-        private const val SILENCE_THRESHOLD_RMS = 600.0
+        private const val SILENCE_THRESHOLD_RMS = 800.0
         private const val SILENCE_PAUSE_MS = 5000L
+        private const val WARMUP_MS = 1500L           // ignore silence during mic warmup
         private const val MIN_PCM_BYTES = SAMPLE_RATE * 2  // 1 second minimum
     }
 
@@ -178,20 +179,31 @@ class WhisperRecorderActivity : BaseActivity() {
         )
         val bufferSize = maxOf(minBuffer, 4096)
 
-        audioRecord = AudioRecord(
-            MediaRecorder.AudioSource.VOICE_RECOGNITION,
+        val ar = AudioRecord(
+            MediaRecorder.AudioSource.MIC,
             SAMPLE_RATE, AudioFormat.CHANNEL_IN_MONO,
             AudioFormat.ENCODING_PCM_16BIT, bufferSize
         )
-        audioRecord?.startRecording()
+        if (ar.state != AudioRecord.STATE_INITIALIZED) {
+            ar.release()
+            Toast.makeText(this, "Microphone unavailable — try again", Toast.LENGTH_LONG).show()
+            isRecording = false
+            binding.btnPauseResume.text = getString(R.string.start_recording)
+            stopPulseAnimation()
+            binding.chronometer.stop()
+            return
+        }
+        audioRecord = ar
+        ar.startRecording()
 
         captureJob = lifecycleScope.launch(Dispatchers.IO) {
             val readBuf = ByteArray(bufferSize)
             var silentMs = 0L
+            var warmupMs = 0L
             var lastTs = System.currentTimeMillis()
 
             while (isActive) {
-                val read = audioRecord?.read(readBuf, 0, bufferSize) ?: break
+                val read = ar.read(readBuf, 0, bufferSize)
                 if (read <= 0) continue
 
                 val now = System.currentTimeMillis()
@@ -199,6 +211,12 @@ class WhisperRecorderActivity : BaseActivity() {
                 lastTs = now
 
                 synchronized(pcmBuffer) { pcmBuffer.write(readBuf, 0, read) }
+
+                // Skip silence detection during warmup so mic can settle
+                if (warmupMs < WARMUP_MS) {
+                    warmupMs += elapsed
+                    continue
+                }
 
                 val rms = calculateRms(readBuf, read)
                 if (rms < SILENCE_THRESHOLD_RMS) {
