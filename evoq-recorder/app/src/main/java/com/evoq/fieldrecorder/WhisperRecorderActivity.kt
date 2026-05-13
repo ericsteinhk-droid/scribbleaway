@@ -295,7 +295,7 @@ class WhisperRecorderActivity : BaseActivity() {
             result.startsWith("ERR:invalid_key") ->
                 Toast.makeText(this, "Invalid OpenAI key — check Settings", Toast.LENGTH_LONG).show()
             result.startsWith("ERR:rate_limit") ->
-                Toast.makeText(this, "OpenAI rate limit — wait a moment and try again", Toast.LENGTH_LONG).show()
+                Toast.makeText(this, "OpenAI rate limit exceeded after retries — try again in a minute", Toast.LENGTH_LONG).show()
             result.startsWith("ERR:") ->
                 Toast.makeText(this, "Transcription failed (${result.removePrefix("ERR:")})", Toast.LENGTH_LONG).show()
             result.isNotBlank() -> appendTranscript(result)
@@ -316,7 +316,7 @@ class WhisperRecorderActivity : BaseActivity() {
             if (pendingTranscriptions > 0) View.VISIBLE else View.GONE
     }
 
-    private fun callWhisperApi(apiKey: String, wavBytes: ByteArray): String {
+    private fun callWhisperApi(apiKey: String, wavBytes: ByteArray, attempt: Int = 0): String {
         val langCode = if (language.startsWith("fr")) "fr" else "en"
         val body = MultipartBody.Builder()
             .setType(MultipartBody.FORM)
@@ -337,7 +337,13 @@ class WhisperRecorderActivity : BaseActivity() {
             val responseBody = response.body?.string() ?: ""
             when {
                 response.code == 401 -> "ERR:invalid_key"
-                response.code == 429 -> "ERR:rate_limit"
+                response.code == 429 -> {
+                    if (attempt >= 3) return "ERR:rate_limit"
+                    val retryAfter = response.header("Retry-After")?.toLongOrNull()
+                        ?: (10L * (attempt + 1))
+                    Thread.sleep(minOf(retryAfter * 1000L, 30_000L))
+                    callWhisperApi(apiKey, wavBytes, attempt + 1)
+                }
                 !response.isSuccessful -> "ERR:api_${response.code}"
                 else -> JSONObject(responseBody).optString("text", "")
             }
