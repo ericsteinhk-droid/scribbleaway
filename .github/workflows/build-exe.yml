@@ -32,8 +32,8 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release create "v5.1-build.${{ github.run_number }}" `
+          gh release create "v5.1-run${{ github.run_number }}-attempt${{ github.run_attempt }}" `
             dist\WordSearch.exe `
             dist\FileSearch.exe `
-            --title "EVOQ Search Tools v5.1 (build ${{ github.run_number }})" `
-            --notes "## EVOQ Search Tools v5.1`n`n**WordSearch.exe** — Search keyword across Word (.docx) files only.`n`n**FileSearch.exe** — Search across Word (.docx) OR Excel (.xlsx / .xls) files. Choose file type at startup."
+            --title "EVOQ Search Tools v5.1 (run ${{ github.run_number }}, attempt ${{ github.run_attempt }})" `
+            --notes "## EVOQ Search Tools v5.1`n`n**WordSearch.exe** — Search keywords across Word (.docx) files only.`n`n**FileSearch.exe** — Search across Word (.docx) OR Excel (.xlsx / .xls) files. Choose file type at startup."
