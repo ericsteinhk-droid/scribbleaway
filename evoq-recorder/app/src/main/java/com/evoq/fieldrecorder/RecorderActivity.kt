@@ -191,16 +191,49 @@ class RecorderActivity : BaseActivity() {
             if (Build.VERSION.SDK_INT >= 33) {
                 val biasingStrings = if (language.startsWith("fr")) {
                     arrayListOf(
+                        // Terrazzo phonetic variants
                         "terrazzo", "terrazo", "terrazeau", "terrasse au",
-                        "gypse", "démolition", "hygiène", "enceinte",
-                        "ossature", "panneau", "fenêtre", "corridor", "plafond",
-                        "travaux", "ouvriers", "travailleurs", "maçons", "béton", "plâtre"
+                        // Matériaux
+                        "béton", "bloc de béton", "béton armé",
+                        "gypse", "gypse laminé",
+                        "plâtre", "plâtrage",
+                        "maçonnerie", "terracotta",
+                        "tôle", "quartz", "scellant", "silicone",
+                        "plinthes", "moulures",
+                        "cadre de porte", "porte métallique", "quincaillerie de porte", "ferme-porte",
+                        "manchon", "conduit électrique", "conduit de ventilation",
+                        "tuyauterie", "gicleur", "détecteur de fumée",
+                        "drain de plancher", "tuile de plafond",
+                        "coffrage", "colombage", "linteau", "fourrure", "ignifuge",
+                        // Activités
+                        "démolition", "découpe", "percement", "étaiement",
+                        "coulée de béton", "pose de gypse",
+                        "installation de cloisons", "installation de portes",
+                        "installation électrique", "installation plomberie", "installation ventilation",
+                        "scellement", "finition", "délestage",
+                        "filage électrique", "mise en cure",
+                        "vérification coupe-feu", "installation d'ancrages",
+                        // Intervenants
+                        "surintendant", "gérant de projet", "chargé de projet",
+                        "coordonnateur", "surveillant de chantier",
+                        "ingénieur mécanique", "ingénieur électrique", "ingénieur structure",
+                        "entrepreneur général", "sous-traitants",
+                        // Acronymes
+                        "CVAC", "DDC", "ATK", "BX", "POM", "UdeM",
+                        // Termes existants
+                        "hygiène", "enceinte", "ossature", "panneau", "fenêtre",
+                        "corridor", "plafond", "travaux", "ouvriers", "travailleurs", "maçons"
                     )
                 } else {
                     arrayListOf(
                         "terrazzo", "gypsum", "demolition", "hygiene", "enclosure",
                         "framing", "panel", "window", "corridor", "ceiling",
-                        "works", "workers", "masons", "concrete", "plaster"
+                        "concrete", "plaster", "formwork", "lintel", "fireproofing",
+                        "sprinkler", "smoke detector", "floor drain", "ceiling tile",
+                        "electrical conduit", "ventilation duct", "plumbing",
+                        "superintendent", "project manager", "site supervisor",
+                        "mechanical engineer", "electrical engineer", "structural engineer",
+                        "general contractor", "subcontractors"
                     )
                 }
                 putExtra(RecognizerIntent.EXTRA_BIASING_STRINGS, biasingStrings)

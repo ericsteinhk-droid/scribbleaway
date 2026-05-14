@@ -159,15 +159,24 @@ Structure du rapport (respecter exactement) :
 
 6. "Remarques générales" en fin de rapport si nécessaire
 
-Glossaire architectural (corriger toute transcription erronée de ces termes) :
-terrazzo, gypse, démolition, hygiène, enceinte, ossature, panneau, fenêtre,
-corridor, plafond, travaux, ouvriers, travailleurs, maçons, béton, plâtre
+Lexique technique de référence (orthographier et reconnaître ces termes avec précision) :
+
+INTERVENANTS : Architecte directeur du projet, Architecte surveillante de chantier, Chargé de projet, Gérant de projet, Assistant-gérant de projet, Surintendant, Assistant-surintendant, Gestionnaire de projet, Analyste en gestion de projet, Chef de réalisation, Coordonnateur réalisation, Surveillant de chantier, Ingénieur mécanique, Ingénieur électrique, Ingénieur structure, Entrepreneur général, Sous-traitants spécialisés
+
+MATÉRIAUX : Béton, Bloc de béton, Maçonnerie, Terracotta, Gypse, Gypse laminé, Plâtre, Peinture, Tôle, Quartz, Scellant, Silicone, Plinthes, Moulures, Cadre de porte, Porte métallique, Quincaillerie de porte, Ferme-porte, Manchon, Conduit électrique, Conduit de ventilation, Tuyauterie, Gicleur, Détecteur de fumée, Drain de plancher, Tuile de plafond, Coffrage, Colombage, Linteau, Fourrure, Ignifuge
+
+ACRONYMES (conserver tels quels sans développer) : DDC, DIR, QRT, NDLR, UdeM, POM, CVAC, CF, T&M, ATK, BX
+
+ACTIVITÉS : Démolition, Découpe, Percement, Étaiement, Coffrage, Coulée de béton, Installation de cloisons, Installation de portes, Colombage, Pose de gypse, Installation électrique, Installation plomberie, Installation ventilation, Coordination, Relocalisation, Ajustement, Plâtrage, Peinture, Scellement, Finition, Inspection, Surveillance de chantier, Vérification coupe-feu, Délestage, Filage électrique, Mise en cure, Réparation, Installation d'ancrages
 
 Corrections phonétiques connues (remplacer systématiquement par le terme correct) :
 "terrazo", "terrazeau", "terrasse au", "terra zo", "terra zoo" → terrazzo
+"terra cota", "terra-cotta" → terracotta
+"gicleurs" → gicleur(s)
+"CVAC" même si transcrit "cévac", "séveac" ou similaire → CVAC
 
 Règles :
-- Corriger les erreurs évidentes de transcription vocale, en s'appuyant sur le glossaire ci-dessus
+- Corriger les erreurs évidentes de transcription vocale, en s'appuyant sur le lexique ci-dessus
 - Langage professionnel d'architecture
 - NE PAS utiliser de markdown (pas de **, pas de #)
 - CODES DE LOCALISATION : Une combinaison lettre+chiffre (ex : V3, S4, B2) désigne une aile et un étage.
@@ -199,11 +208,15 @@ Report structure (follow exactly):
 
 6. "General Notes" at end if needed
 
-Architectural glossary (correct any misheard transcription of these terms):
-terrazzo, gypsum, demolition, hygiene, enclosure, framing, panel, window,
-corridor, ceiling, works, workers, masons, concrete, plaster
-French equivalents: gypse, démolition, hygiène, enceinte, ossature, panneau,
-fenêtre, plafond, travaux, ouvriers/travailleurs, maçons, béton, plâtre
+Technical lexicon reference (spell and recognise these terms accurately):
+
+PERSONNEL: Architecte directeur du projet, Architecte surveillante de chantier, Chargé de projet, Gérant de projet, Surintendant, Assistant-surintendant, Gestionnaire de projet, Coordonnateur réalisation, Surveillant de chantier, Ingénieur mécanique, Ingénieur électrique, Ingénieur structure, Entrepreneur général, Sous-traitants spécialisés
+
+MATERIALS: Béton / Concrete, Bloc de béton / Concrete block, Maçonnerie / Masonry, Terracotta, Gypse / Gypsum, Gypse laminé / Laminated gypsum, Plâtre / Plaster, Tôle / Sheet metal, Quartz, Scellant / Sealant, Silicone, Plinthes / Baseboards, Moulures / Mouldings, Cadre de porte / Door frame, Porte métallique / Metal door, Quincaillerie de porte / Door hardware, Ferme-porte / Door closer, Manchon / Sleeve, Conduit électrique / Electrical conduit, Conduit de ventilation / Ventilation duct, Tuyauterie / Piping, Gicleur / Sprinkler, Détecteur de fumée / Smoke detector, Drain de plancher / Floor drain, Tuile de plafond / Ceiling tile, Coffrage / Formwork, Colombage / Stud framing, Linteau / Lintel, Fourrure / Furring, Ignifuge / Fireproofing
+
+ACRONYMS (preserve as-is): DDC, DIR, QRT, NDLR, UdeM, POM, CVAC, CF, T&M, ATK, BX
+
+ACTIVITIES: Démolition, Découpe / Cutting, Percement / Drilling, Étaiement / Shoring, Coulée de béton / Concrete pour, Installation de cloisons / Partition installation, Pose de gypse / Gypsum board installation, Plâtrage / Plastering, Scellement / Sealing, Vérification coupe-feu / Fire-stop verification, Délestage / Load shedding, Filage électrique / Electrical wiring, Mise en cure / Curing, Installation d'ancrages / Anchor installation
 
 Rules:
 - Correct obvious voice-recognition transcription errors, using the glossary above
