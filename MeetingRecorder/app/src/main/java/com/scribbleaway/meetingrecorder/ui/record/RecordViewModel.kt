@@ -25,36 +25,43 @@ class RecordViewModel(app: Application) : AndroidViewModel(app) {
     private val repo = (app as App).meetingRepository
 
     private var service: RecordingService? = null
-    private val _serviceReady = MutableStateFlow(false)
 
-    val recordingState: StateFlow<RecordingState> = _serviceReady
-        .flatMapLatest { ready ->
-            if (ready) service!!.state else flowOf(RecordingState.IDLE)
-        }.stateIn(viewModelScope, SharingStarted.Eagerly, RecordingState.IDLE)
+    // If startRecording() is called before onServiceConnected fires, we store
+    // the meetingId here and start recording the moment the service connects.
+    private var pendingStartMeetingId = -1L
 
-    val elapsedSeconds: StateFlow<Long> = _serviceReady
-        .flatMapLatest { ready ->
-            if (ready) service!!.elapsedSeconds else flowOf(0L)
-        }.stateIn(viewModelScope, SharingStarted.Eagerly, 0L)
+    private val _recordingState = MutableStateFlow(RecordingState.IDLE)
+    val recordingState: StateFlow<RecordingState> = _recordingState.asStateFlow()
 
-    val chunkCount: StateFlow<Int> = _serviceReady
-        .flatMapLatest { ready ->
-            if (ready) service!!.chunkCount else flowOf(0)
-        }.stateIn(viewModelScope, SharingStarted.Eagerly, 0)
+    private val _elapsedSeconds = MutableStateFlow(0L)
+    val elapsedSeconds: StateFlow<Long> = _elapsedSeconds.asStateFlow()
+
+    private val _chunkCount = MutableStateFlow(0)
+    val chunkCount: StateFlow<Int> = _chunkCount.asStateFlow()
 
     private val _meetingId = MutableStateFlow(-1L)
 
-    // Emits the meetingId once stop+save is fully complete; PreviewFragment observes this
     private val _navigateToPreview = MutableStateFlow(-1L)
     val navigateToPreview: StateFlow<Long> = _navigateToPreview.asStateFlow()
 
     private val connection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName, binder: IBinder) {
-            service = (binder as RecordingService.RecordingBinder).getService()
-            _serviceReady.value = true
+            val svc = (binder as RecordingService.RecordingBinder).getService()
+            service = svc
+
+            // Bridge service StateFlows into our own so the fragment observes one source
+            viewModelScope.launch { svc.state.collect { _recordingState.value = it } }
+            viewModelScope.launch { svc.elapsedSeconds.collect { _elapsedSeconds.value = it } }
+            viewModelScope.launch { svc.chunkCount.collect { _chunkCount.value = it } }
+
+            // If the user tapped Record before the bind completed, start now
+            if (pendingStartMeetingId > 0) {
+                svc.startRecording(pendingStartMeetingId, prefs.chunkDurationMinutes)
+                pendingStartMeetingId = -1L
+            }
         }
+
         override fun onServiceDisconnected(name: ComponentName) {
-            _serviceReady.value = false
             service = null
         }
     }
@@ -66,6 +73,7 @@ class RecordViewModel(app: Application) : AndroidViewModel(app) {
 
     fun unbindService() {
         runCatching { getApplication<Application>().unbindService(connection) }
+        service = null
     }
 
     fun startRecording() {
@@ -74,9 +82,18 @@ class RecordViewModel(app: Application) : AndroidViewModel(app) {
             val title = "${prefs.meetingTitleTemplate} — ${df.format(Date())}"
             val meetingId = repo.createMeeting(title)
             _meetingId.value = meetingId
-            val intent = Intent(getApplication(), RecordingService::class.java)
-            getApplication<Application>().startForegroundService(intent)
-            service?.startRecording(meetingId, prefs.chunkDurationMinutes)
+
+            getApplication<Application>().startForegroundService(
+                Intent(getApplication(), RecordingService::class.java)
+            )
+
+            val svc = service
+            if (svc != null) {
+                svc.startRecording(meetingId, prefs.chunkDurationMinutes)
+            } else {
+                // onServiceConnected will pick this up and start recording
+                pendingStartMeetingId = meetingId
+            }
         }
     }
 
@@ -90,8 +107,6 @@ class RecordViewModel(app: Application) : AndroidViewModel(app) {
         val chunks = service?.stopRecording() ?: return
 
         viewModelScope.launch {
-            // The final (non-rotated) chunk is the last one returned; rotated chunks are
-            // already persisted via the onChunkReady callback in RecordingService.
             if (chunks.isNotEmpty()) {
                 val last = chunks.last()
                 runCatching {
