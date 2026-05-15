@@ -1,6 +1,5 @@
 package com.scribbleaway.meetingrecorder.network
 
-import com.scribbleaway.meetingrecorder.api.ChatModels
 import com.scribbleaway.meetingrecorder.api.ChatRequest
 import com.scribbleaway.meetingrecorder.api.ChatResponse
 import com.scribbleaway.meetingrecorder.api.WhisperResponse
