@@ -48,6 +48,10 @@ class PreviewViewModel(app: Application) : AndroidViewModel(app) {
             _processing.value = true
             _processingStatus.value = "Préparation…"
 
+            // Brief pause so the final-chunk DB write from RecordViewModel
+            // (which runs concurrently) has time to complete before we read chunks.
+            kotlinx.coroutines.delay(500)
+
             val meeting = repo.getMeeting(meetingId)
             if (meeting == null) {
                 _error.value = "Réunion introuvable."

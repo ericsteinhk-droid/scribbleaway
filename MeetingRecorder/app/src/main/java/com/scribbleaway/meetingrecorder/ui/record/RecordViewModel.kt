@@ -104,11 +104,16 @@ class RecordViewModel(app: Application) : AndroidViewModel(app) {
     fun stopRecording() {
         val meetingId = _meetingId.value
         if (meetingId < 0) return
-        val chunks = service?.stopRecording() ?: return
+        val chunks = service?.stopRecording()
 
+        // Trigger navigation immediately on the main thread — do not wait for
+        // the chunk save so the app never stalls on the processing screen.
+        _navigateToPreview.value = meetingId
+
+        // Persist the final chunk in the background; PreviewViewModel will
+        // read whatever is in the DB when processing starts.
         viewModelScope.launch {
-            if (chunks.isNotEmpty()) {
-                val last = chunks.last()
+            chunks?.lastOrNull()?.let { last ->
                 runCatching {
                     repo.savePendingChunk(
                         meetingId,
@@ -122,7 +127,6 @@ class RecordViewModel(app: Application) : AndroidViewModel(app) {
                     )
                 }
             }
-            _navigateToPreview.value = meetingId
         }
     }
 
