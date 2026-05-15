@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/background"
+    android:padding="24dp">
+
+    <!-- Settings button top-right -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnSettings"
+        style="@style/Widget.Material3.Button.TextButton.Icon"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/settings"
+        app:icon="@drawable/ic_settings"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <!-- Recording indicator dot -->
+    <View
+        android:id="@+id/recordingIndicator"
+        android:layout_width="14dp"
+        android:layout_height="14dp"
+        android:background="@drawable/circle_red"
+        android:visibility="gone"
+        app:layout_constraintBottom_toTopOf="@id/tvTimer"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/btnSettings"
+        app:layout_constraintVertical_chainStyle="packed" />
+
+    <!-- Timer -->
+    <TextView
+        android:id="@+id/tvTimer"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="00:00"
+        android:textSize="72sp"
+        android:textColor="@color/on_background"
+        android:fontFamily="monospace"
+        android:layout_marginTop="8dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/recordingIndicator" />
+
+    <!-- Status text -->
+    <TextView
+        android:id="@+id/tvStatus"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/status_ready"
+        android:textSize="18sp"
+        android:textColor="@color/secondary_text"
+        android:layout_marginTop="8dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tvTimer" />
+
+    <!-- Chunk count -->
+    <TextView
+        android:id="@+id/tvChunkInfo"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text=""
+        android:textSize="13sp"
+        android:textColor="@color/secondary_text"
+        android:layout_marginTop="4dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tvStatus" />
+
+    <!-- Record button -->
+    <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
+        android:id="@+id/btnRecord"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/btn_record"
+        app:icon="@drawable/ic_mic"
+        app:layout_constraintBottom_toTopOf="@id/btnPause"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tvChunkInfo"
+        app:layout_constraintVertical_bias="0.6" />
+
+    <!-- Pause / Resume button -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnPause"
+        style="@style/Widget.Material3.Button.OutlinedButton"
+        android:layout_width="0dp"
+        android:layout_height="56dp"
+        android:text="@string/btn_pause"
+        android:layout_marginTop="24dp"
+        android:layout_marginEnd="8dp"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toStartOf="@id/btnStop"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/btnRecord"
+        app:layout_constraintVertical_bias="1.0" />
+
+    <!-- Stop button -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnStop"
+        style="@style/Widget.Material3.Button"
+        android:layout_width="0dp"
+        android:layout_height="56dp"
+        android:text="@string/btn_stop"
+        android:layout_marginTop="24dp"
+        android:layout_marginStart="8dp"
+        android:backgroundTint="@color/red"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toEndOf="@id/btnPause"
+        app:layout_constraintTop_toBottomOf="@id/btnRecord"
+        app:layout_constraintVertical_bias="1.0" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

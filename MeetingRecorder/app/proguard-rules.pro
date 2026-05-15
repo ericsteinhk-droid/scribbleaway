@@ -1,0 +1,6 @@
+-keep class com.scribbleaway.meetingrecorder.api.** { *; }
+-keep class com.scribbleaway.meetingrecorder.model.** { *; }
+-keepattributes Signature
+-keepattributes *Annotation*
+-dontwarn okhttp3.**
+-dontwarn retrofit2.**

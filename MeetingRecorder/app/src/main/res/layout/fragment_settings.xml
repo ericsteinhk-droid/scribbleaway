@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/background">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="24dp">
+
+        <!-- API Key -->
+        <com.google.android.material.textfield.TextInputLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="@string/hint_api_key"
+            app:endIconMode="password_toggle"
+            style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+            android:layout_marginBottom="24dp">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etApiKey"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="textPassword"
+                android:maxLines="1" />
+
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <!-- Meeting title template -->
+        <com.google.android.material.textfield.TextInputLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="@string/hint_meeting_title"
+            style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+            android:layout_marginBottom="24dp">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etMeetingTitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:maxLines="1" />
+
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <!-- Chunk duration slider -->
+        <TextView
+            android:id="@+id/tvChunkLabel"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textSize="14sp"
+            android:textColor="@color/on_background"
+            android:layout_marginBottom="4dp"
+            android:text="@string/label_chunk_duration" />
+
+        <com.google.android.material.slider.Slider
+            android:id="@+id/sliderChunkDuration"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:valueFrom="5"
+            android:valueTo="20"
+            android:stepSize="5"
+            android:value="15"
+            android:layout_marginBottom="24dp" />
+
+        <!-- Expected speaker count slider -->
+        <TextView
+            android:id="@+id/tvSpeakerLabel"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textSize="14sp"
+            android:textColor="@color/on_background"
+            android:layout_marginBottom="4dp"
+            android:text="@string/label_speaker_count" />
+
+        <com.google.android.material.slider.Slider
+            android:id="@+id/sliderSpeakers"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:valueFrom="2"
+            android:valueTo="10"
+            android:stepSize="1"
+            android:value="4"
+            android:layout_marginBottom="32dp" />
+
+        <!-- Save -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnSave"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:text="@string/btn_save" />
+
+    </LinearLayout>
+
+</ScrollView>

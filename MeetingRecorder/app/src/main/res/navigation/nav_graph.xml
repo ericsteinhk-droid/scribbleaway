@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/nav_graph"
+    app:startDestination="@id/recordFragment">
+
+    <fragment
+        android:id="@+id/recordFragment"
+        android:name="com.scribbleaway.meetingrecorder.ui.record.RecordFragment"
+        android:label="@string/app_name"
+        tools:layout="@layout/fragment_record">
+
+        <action
+            android:id="@+id/action_record_to_preview"
+            app:destination="@id/previewFragment" />
+
+        <action
+            android:id="@+id/action_record_to_settings"
+            app:destination="@id/settingsFragment" />
+
+    </fragment>
+
+    <fragment
+        android:id="@+id/previewFragment"
+        android:name="com.scribbleaway.meetingrecorder.ui.preview.PreviewFragment"
+        android:label="@string/preview_title"
+        tools:layout="@layout/fragment_preview">
+
+        <argument
+            android:name="meetingId"
+            app:argType="long" />
+
+    </fragment>
+
+    <fragment
+        android:id="@+id/settingsFragment"
+        android:name="com.scribbleaway.meetingrecorder.ui.settings.SettingsFragment"
+        android:label="@string/settings"
+        tools:layout="@layout/fragment_settings" />
+
+</navigation>
