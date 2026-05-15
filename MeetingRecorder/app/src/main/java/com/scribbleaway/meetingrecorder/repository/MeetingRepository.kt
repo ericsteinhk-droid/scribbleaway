@@ -37,12 +37,25 @@ class MeetingRepository(
         meetingDao.updateStatus(meetingId, MeetingStatus.PROCESSING)
 
         val chunks = chunkDao.getChunksForMeeting(meetingId)
+        if (chunks.isEmpty()) {
+            meetingDao.updateStatus(meetingId, MeetingStatus.ERROR)
+            throw RuntimeException("Aucun fichier audio trouvé. L'enregistrement n'a pas été sauvegardé correctement.")
+        }
+
         val allSegments = mutableListOf<com.scribbleaway.meetingrecorder.api.WhisperSegment>()
+        val transcriptionErrors = mutableListOf<String>()
 
         chunks.forEachIndexed { i, chunk ->
             onProgress("Transcription du fichier ${i + 1}/${chunks.size}…")
-            val result = runCatching { transcriptionRepo.transcribeChunk(chunk) }
-            result.getOrNull()?.segments?.let { allSegments.addAll(it) }
+            runCatching { transcriptionRepo.transcribeChunk(chunk) }
+                .onSuccess { result -> allSegments.addAll(result.segments) }
+                .onFailure { error -> transcriptionErrors.add("Fichier ${i + 1}: ${error.message}") }
+        }
+
+        if (allSegments.isEmpty()) {
+            meetingDao.updateStatus(meetingId, MeetingStatus.ERROR)
+            val detail = transcriptionErrors.joinToString("; ")
+            throw RuntimeException("Transcription échouée. Vérifiez votre clé API OpenAI dans Paramètres. Détail: $detail")
         }
 
         onProgress("Identification des intervenants…")
@@ -53,7 +66,11 @@ class MeetingRepository(
         }
 
         onProgress("Génération du résumé…")
-        val summary = runCatching { summaryService.summarize(diarized) }.getOrElse { null }
+        val summary = runCatching {
+            summaryService.summarize(diarized)
+        }.onFailure { error ->
+            onProgress("Avertissement résumé: ${error.message}")
+        }.getOrNull()
 
         val transcriptJson = gson.toJson(diarized)
         val summaryJson = if (summary != null) gson.toJson(summary) else ""

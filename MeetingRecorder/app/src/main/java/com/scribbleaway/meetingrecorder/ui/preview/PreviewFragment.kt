@@ -52,8 +52,9 @@ class PreviewFragment : Fragment() {
                 launch {
                     viewModel.error.collect { err ->
                         err ?: return@collect
-                        Snackbar.make(binding.root, err, Snackbar.LENGTH_LONG).show()
-                        viewModel.clearError()
+                        Snackbar.make(binding.root, err, Snackbar.LENGTH_INDEFINITE)
+                            .setAction("OK") { viewModel.clearError() }
+                            .show()
                     }
                 }
             }
