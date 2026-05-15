@@ -15,7 +15,7 @@ object AppModule {
     fun provideMeetingRepository(context: Context): MeetingRepository {
         val prefs = AppPreferences(context)
         val db = AppDatabase.getInstance(context)
-        val client = OpenAiClient(prefs.openAiApiKey)
+        val client = OpenAiClient { prefs.openAiApiKey }
         val gson = Gson()
         val transcriptionRepo = TranscriptionRepository(client, db.chunkDao())
         val diarizationService = DiarizationService(client)

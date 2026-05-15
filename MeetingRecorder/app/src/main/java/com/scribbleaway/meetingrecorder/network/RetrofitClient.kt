@@ -14,13 +14,16 @@ import okhttp3.logging.HttpLoggingInterceptor
 import java.io.File
 import java.util.concurrent.TimeUnit
 
-class OpenAiClient(private val apiKey: String) {
+// apiKeyProvider is a lambda so the key is read from prefs on every call,
+// not captured once at construction time (which would bake in an empty key
+// if the user hadn't yet entered it when the app first started).
+class OpenAiClient(private val apiKeyProvider: () -> String) {
 
     private val gson = Gson()
 
     private val http = OkHttpClient.Builder()
         .connectTimeout(30, TimeUnit.SECONDS)
-        .readTimeout(300, TimeUnit.SECONDS)  // Whisper uploads can be slow
+        .readTimeout(300, TimeUnit.SECONDS)
         .writeTimeout(120, TimeUnit.SECONDS)
         .addInterceptor(HttpLoggingInterceptor().apply {
             level = HttpLoggingInterceptor.Level.BASIC
@@ -28,6 +31,7 @@ class OpenAiClient(private val apiKey: String) {
         .build()
 
     fun transcribeAudio(file: File, prompt: String): WhisperResponse {
+        val key = apiKeyProvider()
         val body = MultipartBody.Builder()
             .setType(MultipartBody.FORM)
             .addFormDataPart("model", "whisper-1")
@@ -42,7 +46,7 @@ class OpenAiClient(private val apiKey: String) {
 
         val request = Request.Builder()
             .url("https://api.openai.com/v1/audio/transcriptions")
-            .header("Authorization", "Bearer $apiKey")
+            .header("Authorization", "Bearer $key")
             .post(body)
             .build()
 
@@ -54,12 +58,13 @@ class OpenAiClient(private val apiKey: String) {
     }
 
     fun chatCompletion(request: ChatRequest): ChatResponse {
+        val key = apiKeyProvider()
         val json = gson.toJson(request)
         val reqBody = json.toRequestBody("application/json".toMediaType())
 
         val httpReq = Request.Builder()
             .url("https://api.openai.com/v1/chat/completions")
-            .header("Authorization", "Bearer $apiKey")
+            .header("Authorization", "Bearer $key")
             .post(reqBody)
             .build()
 
