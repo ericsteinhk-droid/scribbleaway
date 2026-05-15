@@ -1,17 +1,24 @@
 name: Build Meeting Recorder APK
 
 on:
-  workflow_dispatch:   # manual trigger from the GitHub UI / mobile app
-
-permissions:
-  contents: write      # needed to create releases and upload assets
+  push:
+    branches:
+      - claude/android-meeting-recorder-app-3S7fw
+  workflow_dispatch:
+    inputs:
+      release_version:
+        description: 'Version tag (e.g. meeting-recorder-v1.0.0). Leave blank to use default.'
+        required: false
+        default: ''
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     steps:
-      - name: Checkout repository
+      - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Set up JDK 17
@@ -20,45 +27,71 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
+      - name: Accept Android SDK licenses
+        run: yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
 
-      - name: Cache Gradle packages
-        uses: actions/cache@v4
+      - name: Install Android SDK platform 34
+        run: $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platforms;android-34" "build-tools;34.0.0"
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
         with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: gradle-${{ hashFiles('MeetingRecorder/gradle/wrapper/gradle-wrapper.properties', 'MeetingRecorder/app/build.gradle.kts') }}
-          restore-keys: gradle-
+          gradle-version: '8.7'
 
-      - name: Make gradlew executable
-        run: chmod +x MeetingRecorder/gradlew
+      - name: Write local.properties
+        run: echo "sdk.dir=$ANDROID_HOME" > MeetingRecorder/local.properties
 
       - name: Build debug APK
+        run: gradle assembleDebug
         working-directory: MeetingRecorder
-        run: ./gradlew assembleDebug --no-daemon
 
-      - name: Publish APK as GitHub Release
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Determine version tag
+        id: version
         run: |
-          gh release create "meeting-recorder-v1.0-run${{ github.run_number }}-attempt${{ github.run_attempt }}" \
-            MeetingRecorder/app/build/outputs/apk/debug/app-debug.apk \
-            --title "Meeting Recorder v1.0 (build ${{ github.run_number }})" \
-            --notes "## Enregistreur de réunion v1.0
+          if [[ -n "${{ inputs.release_version }}" ]]; then
+            echo "tag=${{ inputs.release_version }}" >> $GITHUB_OUTPUT
+          else
+            echo "tag=meeting-recorder-v1.0.0" >> $GITHUB_OUTPUT
+          fi
 
-          Android app for recording construction site meetings in Canadian French.
+      - name: Rename APK
+        run: |
+          mkdir -p dist
+          cp MeetingRecorder/app/build/outputs/apk/debug/app-debug.apk \
+             dist/MeetingRecorder-${{ steps.version.outputs.tag }}.apk
 
-          **Requirements:** Android 8.0+ (API 26)
+      - name: Move tag to current commit
+        run: |
+          git tag -f ${{ steps.version.outputs.tag }}
+          git push origin ${{ steps.version.outputs.tag }} --force
 
-          **Setup:** On first launch, tap ⚙ Paramètres and enter your OpenAI API key.
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: Enregistreur de réunion ${{ steps.version.outputs.tag }}
+          make_latest: true
+          files: dist/MeetingRecorder-${{ steps.version.outputs.tag }}.apk
+          body: |
+            ## Enregistreur de réunion ${{ steps.version.outputs.tag }}
 
-          ### Features
-          - Chunked recording (auto-splits every 15 min for Whisper API)
-          - Faint beep at start, pause, and stop
-          - Whisper transcription in Canadian French with construction lexicon
-          - GPT-4o speaker diarization (Gérant de projet, Architecte, Surintendant, etc.)
-          - Structured summary: résumé exécutif, points discutés, décisions, actions
-          - Preview before export
-          - Single DOCX export with full summary + diarized transcript"
+            Application Android pour l'enregistrement de réunions de chantier en français canadien.
+
+            ### Fonctionnalités
+            - Enregistrement par segments de 15 min (compatible API Whisper)
+            - Bip sonore discret au départ, pause et arrêt
+            - Transcription via OpenAI Whisper (langue : français)
+            - Identification des intervenants via GPT-4o (lexique de chantier intégré)
+            - Résumé structuré : résumé exécutif, points discutés, décisions, actions, points en suspens
+            - Aperçu avant export
+            - Export DOCX complet (résumé + transcription diarisée)
+
+            ### Prérequis
+            - Clé API OpenAI (platform.openai.com) avec accès à `whisper-1` et `gpt-4o`
+
+            ### Installation
+            1. Télécharger `MeetingRecorder-${{ steps.version.outputs.tag }}.apk`
+            2. Transférer sur l'appareil Android (API 26 / Android 8.0+)
+            3. Activer **Installer depuis des sources inconnues** si requis
+            4. Ouvrir le fichier APK pour installer
+            5. Aller dans **Paramètres** et entrer la clé API OpenAI
