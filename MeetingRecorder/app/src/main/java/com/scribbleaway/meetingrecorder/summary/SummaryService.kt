@@ -29,7 +29,7 @@ class SummaryService(private val client: OpenAiClient) {
                 ChatMessage("system", SYSTEM_PROMPT),
                 ChatMessage("user", buildUserPrompt(transcriptText))
             ),
-            temperature = 0.3,
+            temperature = 0.2,
             maxTokens = 4096,
             responseFormat = ResponseFormat("json_object")
         )
@@ -63,8 +63,8 @@ class SummaryService(private val client: OpenAiClient) {
             val m = item as? Map<*, *> ?: return@mapNotNull null
             ActionItem(
                 action = m["action"] as? String ?: "",
-                responsable = m["responsable"] as? String ?: "À déterminer",
-                echeance = m["echeance"] as? String ?: ""
+                responsable = m["responsable"] as? String ?: "[responsable non mentionné]",
+                echeance = m["echeance"] as? String ?: "[échéance non précisée]"
             )
         } ?: emptyList()
 
@@ -82,23 +82,33 @@ class SummaryService(private val client: OpenAiClient) {
     )
 
     private fun buildUserPrompt(transcript: String) = """
-Voici la transcription complète d'une réunion de chantier.
-Génère un résumé structuré détaillé en français québécois professionnel.
+Voici la transcription d'une réunion de chantier. Génère un résumé structuré en français québécois professionnel.
 
-Retourne exactement ce JSON (respecte ces clés):
+RÈGLES D'EXACTITUDE — à respecter impérativement :
+- Ne rédige que ce qui est clairement exprimé dans la transcription.
+- Si une information est absente, ambiguë ou de faible certitude, indique-le entre crochets dans le texte,
+  par exemple : [information non précisée], [nom non mentionné], [date à confirmer], [propos peu audible],
+  [interprétation incertaine — vérifier].
+- N'invente aucun chiffre, date, nom, décision ou engagement qui n'apparaît pas dans la transcription.
+- Si la transcription est trop courte ou trop fragmentée pour rédiger une section, indique
+  [information insuffisante pour cette section].
+- Pour les actions : si le responsable n'est pas nommé, écris [responsable non mentionné].
+  Si l'échéance n'est pas précisée, écris [échéance non précisée].
+
+Retourne exactement ce JSON :
 {
-  "resume_executif": "3 à 5 paragraphes résumant la réunion",
+  "resume_executif": "3 à 5 paragraphes résumant fidèlement la réunion, avec caveats entre crochets si nécessaire",
   "points_discutes": [
-    {"timestamp": "HH:MM", "sujet": "titre court", "details": "description détaillée"}
+    {"timestamp": "HH:MM", "sujet": "titre court", "details": "description avec caveats si besoin"}
   ],
-  "decisions": ["décision 1", "décision 2"],
+  "decisions": ["décision telle qu'exprimée, avec [caveat] si incertaine"],
   "actions": [
-    {"action": "description", "responsable": "nom/rôle", "echeance": "date ou délai"}
+    {"action": "description précise", "responsable": "nom ou rôle, ou [responsable non mentionné]", "echeance": "date/délai ou [échéance non précisée]"}
   ],
-  "points_en_suspens": ["point 1", "point 2"]
+  "points_en_suspens": ["point en suspens ou question sans réponse claire"]
 }
 
-Transcription:
+Transcription :
 $transcript
 """.trimIndent()
 
@@ -106,20 +116,27 @@ $transcript
         private const val SYSTEM_PROMPT = """Tu es expert en rédaction de comptes rendus de réunions de chantier de construction
 au Québec. Tu rédiges en français québécois professionnel et formel.
 
-Lexique du projet (termes techniques à utiliser correctement):
-MATÉRIAUX: béton, bloc de béton, maçonnerie, terracotta, gypse, gypse laminé, plâtre, peinture,
+TON RÔLE EST DE RAPPORTER FIDÈLEMENT, PAS D'INTERPRÉTER.
+- Restitue uniquement ce qui a été dit explicitement.
+- Lorsqu'un propos est flou, incomplet ou potentiellement mal transcrit, signale-le entre crochets :
+  [propos peu audible], [terme incertain], [information à vérifier].
+- Ne complète jamais une information manquante par conjecture ou par déduction.
+- La précision et l'honnêteté intellectuelle ont priorité sur la fluidité du texte.
+
+Lexique du projet (termes techniques à reconnaître et utiliser correctement) :
+MATÉRIAUX : béton, bloc de béton, maçonnerie, terracotta, gypse, gypse laminé, plâtre, peinture,
 tôle, quartz, scellant, silicone, plinthes, moulures, cadre de porte, porte métallique,
 quincaillerie de porte, ferme-porte, manchon, conduit électrique, conduit de ventilation,
 tuyauterie, gicleur, détecteur de fumée, drain de plancher, tuile de plafond, coffrage,
 colombage, linteau, fourrure, ignifuge.
 
-ACTIVITÉS: démolition, découpe, percement, étaiement, coffrage, coulée de béton,
+ACTIVITÉS : démolition, découpe, percement, étaiement, coffrage, coulée de béton,
 installation de cloisons, pose de gypse, installation électrique, plomberie, ventilation,
 coordination, relocalisation, plâtrage, peinture, scellement, finition, inspection,
 surveillance de chantier, vérification coupe-feu, délestage, filage électrique, mise en cure,
 réparation, installation d'ancrages.
 
-ACRONYMES: DDC (document de coordination), DIR (directive), QRT (question/réponse technique),
+ACRONYMES : DDC (document de coordination), DIR (directive), QRT (question/réponse technique),
 NDLR (note de la rédaction), UdeM (Université de Montréal), POM, CVAC (chauffage-ventilation-
 climatisation), CF (coupe-feu), T&M (temps et matériaux), ATK, BX."""
     }
