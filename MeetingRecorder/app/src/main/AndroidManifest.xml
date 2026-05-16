@@ -20,16 +20,23 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.MeetingRecorder">
 
+        <!-- Splash screen is the entry point -->
         <activity
-            android:name=".MainActivity"
+            android:name=".SplashActivity"
             android:exported="true"
             android:screenOrientation="portrait"
-            android:windowSoftInputMode="adjustResize">
+            android:theme="@style/Theme.MeetingRecorder.Splash">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:windowSoftInputMode="adjustResize" />
 
         <service
             android:name=".service.RecordingService"

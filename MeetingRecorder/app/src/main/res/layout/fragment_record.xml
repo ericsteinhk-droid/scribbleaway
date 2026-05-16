@@ -7,6 +7,20 @@
     android:background="@color/background"
     android:padding="24dp">
 
+    <!-- EVOQ logo top-left -->
+    <ImageView
+        android:id="@+id/ivEvoqLogo"
+        android:layout_width="0dp"
+        android:layout_height="32dp"
+        android:src="@drawable/evoq_logo"
+        android:adjustViewBounds="true"
+        android:scaleType="fitStart"
+        android:contentDescription="EVOQ Architecture"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintEnd_toStartOf="@id/btnSettings"
+        app:layout_constraintBottom_toBottomOf="@id/btnSettings" />
+
     <!-- Settings button top-right -->
     <com.google.android.material.button.MaterialButton
         android:id="@+id/btnSettings"

@@ -93,6 +93,26 @@
             android:layout_height="56dp"
             android:text="@string/btn_save" />
 
+        <!-- EVOQ logo + copyright -->
+        <ImageView
+            android:layout_width="120dp"
+            android:layout_height="wrap_content"
+            android:src="@drawable/evoq_logo"
+            android:adjustViewBounds="true"
+            android:layout_gravity="center"
+            android:layout_marginTop="40dp"
+            android:contentDescription="EVOQ Architecture" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:layout_marginTop="8dp"
+            android:layout_marginBottom="16dp"
+            android:text="© Eric Stein, EVOQ Architecture"
+            android:textSize="11sp"
+            android:textColor="@color/secondary_text" />
+
     </LinearLayout>
 
 </ScrollView>
