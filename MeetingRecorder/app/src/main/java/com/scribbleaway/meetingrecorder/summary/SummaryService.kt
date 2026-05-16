@@ -2,19 +2,16 @@ package com.scribbleaway.meetingrecorder.summary
 
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
-import com.scribbleaway.meetingrecorder.api.ChatMessage
-import com.scribbleaway.meetingrecorder.api.ChatRequest
-import com.scribbleaway.meetingrecorder.api.ResponseFormat
 import com.scribbleaway.meetingrecorder.model.ActionItem
 import com.scribbleaway.meetingrecorder.model.MeetingSummary
 import com.scribbleaway.meetingrecorder.model.PointDiscute
 import com.scribbleaway.meetingrecorder.model.TranscriptSegment
-import com.scribbleaway.meetingrecorder.network.OpenAiClient
+import com.scribbleaway.meetingrecorder.network.AnthropicClient
 import com.scribbleaway.meetingrecorder.util.formatTimestamp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-class SummaryService(private val client: OpenAiClient) {
+class SummaryService(private val client: AnthropicClient) {
 
     private val gson = Gson()
 
@@ -23,28 +20,23 @@ class SummaryService(private val client: OpenAiClient) {
             "[${formatTimestamp(seg.startSeconds)}] ${seg.speaker}: ${seg.text}"
         }
 
-        val request = ChatRequest(
-            model = "gpt-4o",
-            messages = listOf(
-                ChatMessage("system", SYSTEM_PROMPT),
-                ChatMessage("user", buildUserPrompt(transcriptText))
-            ),
-            temperature = 0.2,
-            maxTokens = 4096,
-            responseFormat = ResponseFormat("json_object")
-        )
-
         return runCatching {
-            val response = withContext(Dispatchers.IO) { client.chatCompletion(request) }
-            val content = response.choices.firstOrNull()?.message?.content
-                ?: return@runCatching defaultSummary()
+            val content = withContext(Dispatchers.IO) {
+                client.complete(
+                    system = SYSTEM_PROMPT,
+                    userMessage = buildUserPrompt(transcriptText),
+                    temperature = 0.2,
+                    maxTokens = 4096
+                )
+            }
             parseResponse(content)
         }.getOrElse { defaultSummary() }
     }
 
     private fun parseResponse(json: String): MeetingSummary {
+        val cleaned = json.trim().removePrefix("```json").removePrefix("```").removeSuffix("```").trim()
         val type = object : TypeToken<Map<String, Any>>() {}.type
-        val map: Map<String, Any> = gson.fromJson(json, type)
+        val map: Map<String, Any> = gson.fromJson(cleaned, type)
 
         val resumeExecutif = map["resume_executif"] as? String ?: ""
 
@@ -95,7 +87,7 @@ RÈGLES D'EXACTITUDE — à respecter impérativement :
 - Pour les actions : si le responsable n'est pas nommé, écris [responsable non mentionné].
   Si l'échéance n'est pas précisée, écris [échéance non précisée].
 
-Retourne exactement ce JSON :
+Retourne uniquement le JSON suivant, sans balises markdown ni texte supplémentaire :
 {
   "resume_executif": "3 à 5 paragraphes résumant fidèlement la réunion, avec caveats entre crochets si nécessaire",
   "points_discutes": [
@@ -122,6 +114,7 @@ TON RÔLE EST DE RAPPORTER FIDÈLEMENT, PAS D'INTERPRÉTER.
   [propos peu audible], [terme incertain], [information à vérifier].
 - Ne complète jamais une information manquante par conjecture ou par déduction.
 - La précision et l'honnêteté intellectuelle ont priorité sur la fluidité du texte.
+- Réponds uniquement avec le JSON demandé, sans aucun texte supplémentaire ni balises markdown.
 
 Lexique du projet (termes techniques à reconnaître et utiliser correctement) :
 MATÉRIAUX : béton, bloc de béton, maçonnerie, terracotta, gypse, gypse laminé, plâtre, peinture,

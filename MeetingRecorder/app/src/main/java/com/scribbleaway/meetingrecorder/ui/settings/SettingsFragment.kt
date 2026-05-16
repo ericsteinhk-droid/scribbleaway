@@ -27,6 +27,7 @@ class SettingsFragment : Fragment() {
 
         val prefs = viewModel.prefs
         binding.etApiKey.setText(prefs.openAiApiKey)
+        binding.etAnthropicKey.setText(prefs.anthropicApiKey)
         binding.etMeetingTitle.setText(prefs.meetingTitleTemplate)
         binding.sliderChunkDuration.value = prefs.chunkDurationMinutes.toFloat()
         binding.sliderSpeakers.value = prefs.defaultSpeakerCount.toFloat()
@@ -47,6 +48,7 @@ class SettingsFragment : Fragment() {
                 return@setOnClickListener
             }
             prefs.openAiApiKey = key
+            prefs.anthropicApiKey = binding.etAnthropicKey.text?.toString()?.trim() ?: ""
             prefs.meetingTitleTemplate = binding.etMeetingTitle.text?.toString()?.trim()
                 ?.ifBlank { "Réunion de chantier" } ?: "Réunion de chantier"
             prefs.chunkDurationMinutes = binding.sliderChunkDuration.value.toInt()

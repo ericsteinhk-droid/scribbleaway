@@ -11,6 +11,10 @@ class AppPreferences(context: Context) {
         get() = prefs.getString(KEY_API_KEY, "") ?: ""
         set(value) = prefs.edit { putString(KEY_API_KEY, value) }
 
+    var anthropicApiKey: String
+        get() = prefs.getString(KEY_ANTHROPIC_KEY, "") ?: ""
+        set(value) = prefs.edit { putString(KEY_ANTHROPIC_KEY, value) }
+
     var chunkDurationMinutes: Int
         get() = prefs.getInt(KEY_CHUNK_DURATION, 15)
         set(value) = prefs.edit { putInt(KEY_CHUNK_DURATION, value) }
@@ -25,6 +29,7 @@ class AppPreferences(context: Context) {
 
     companion object {
         private const val KEY_API_KEY = "openai_api_key"
+        private const val KEY_ANTHROPIC_KEY = "anthropic_api_key"
         private const val KEY_CHUNK_DURATION = "chunk_duration_minutes"
         private const val KEY_SPEAKER_COUNT = "speaker_count"
         private const val KEY_TITLE_TEMPLATE = "meeting_title_template"

@@ -1,8 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Enregistreur de réunion</string>
+    <string name="app_name">ScribbleAway</string>
     <string name="preview_title">Résumé de réunion</string>
     <string name="settings">Paramètres</string>
+
+    <!-- Splash screen -->
+    <string name="splash_tagline">Enregistreur de réunion de chantier</string>
+    <string name="splash_providers">Transcription · OpenAI Whisper\nIdentification des intervenants · OpenAI GPT-4o\nRésumé intelligent · Anthropic Claude</string>
+    <string name="splash_copyright">© Eric Stein, EVOQ Architecture</string>
 
     <!-- Recording screen -->
     <string name="btn_record">Enregistrer</string>
@@ -35,7 +40,8 @@
     <string name="speaker_count_label">Nombre d\'intervenants estimé: %d</string>
 
     <!-- Settings -->
-    <string name="hint_api_key">Clé API OpenAI (sk-…)</string>
+    <string name="hint_api_key">Clé API OpenAI (sk-…) — transcription et diarisation</string>
+    <string name="hint_anthropic_key">Clé API Anthropic (sk-ant-…) — résumé</string>
     <string name="hint_meeting_title">Titre de réunion par défaut</string>
     <string name="settings_saved">Paramètres enregistrés</string>
     <string name="api_key_empty">Veuillez saisir une clé API OpenAI valide</string>

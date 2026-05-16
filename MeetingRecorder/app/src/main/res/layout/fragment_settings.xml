@@ -30,6 +30,24 @@
 
         </com.google.android.material.textfield.TextInputLayout>
 
+        <!-- Anthropic API Key (for Claude summary) -->
+        <com.google.android.material.textfield.TextInputLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="@string/hint_anthropic_key"
+            app:endIconMode="password_toggle"
+            style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+            android:layout_marginBottom="24dp">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etAnthropicKey"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="textPassword"
+                android:maxLines="1" />
+
+        </com.google.android.material.textfield.TextInputLayout>
+
         <!-- Meeting title template -->
         <com.google.android.material.textfield.TextInputLayout
             android:layout_width="match_parent"
