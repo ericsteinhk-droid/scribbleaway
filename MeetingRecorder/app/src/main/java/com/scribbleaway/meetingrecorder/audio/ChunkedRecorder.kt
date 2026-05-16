@@ -54,6 +54,16 @@ class ChunkedRecorder(private val context: Context) {
         return completedChunks.toList()
     }
 
+    fun cancel(): List<java.io.File> {
+        rotationJob?.cancel()
+        rotationJob = null
+        stopCurrentRecorder()
+        val allFiles = completedChunks.map { it.file }.toMutableList()
+        currentFile?.let { if (it.exists()) allFiles.add(it) }
+        completedChunks.clear()
+        return allFiles
+    }
+
     private fun scheduleRotation(
         chunkDurationMs: Long,
         scope: CoroutineScope,

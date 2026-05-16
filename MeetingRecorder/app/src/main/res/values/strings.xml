@@ -9,6 +9,10 @@
     <string name="btn_pause">Pause</string>
     <string name="btn_resume">Reprendre</string>
     <string name="btn_stop">Arrêter</string>
+    <string name="btn_cancel_recording">Annuler l\'enregistrement</string>
+    <string name="cancel_confirm_title">Annuler l\'enregistrement ?</string>
+    <string name="cancel_confirm_message">L\'enregistrement en cours sera supprimé définitivement.</string>
+    <string name="cancel_confirm_yes">Oui, annuler</string>
     <string name="btn_export_docx">Exporter en DOCX</string>
     <string name="btn_save">Enregistrer les paramètres</string>
     <string name="share_docx">Partager le compte rendu</string>

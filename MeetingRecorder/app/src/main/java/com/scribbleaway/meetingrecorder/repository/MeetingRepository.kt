@@ -89,4 +89,9 @@ class MeetingRepository(
         chunkDao.deleteForMeeting(meeting.id)
         meetingDao.delete(meeting)
     }
+
+    suspend fun deleteMeetingById(id: Long) {
+        chunkDao.deleteForMeeting(id)
+        meetingDao.deleteById(id)
+    }
 }

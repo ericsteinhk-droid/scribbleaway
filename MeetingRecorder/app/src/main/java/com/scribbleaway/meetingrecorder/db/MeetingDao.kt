@@ -27,4 +27,7 @@ interface MeetingDao {
 
     @Delete
     suspend fun delete(meeting: Meeting)
+
+    @Query("DELETE FROM meetings WHERE id = :id")
+    suspend fun deleteById(id: Long)
 }

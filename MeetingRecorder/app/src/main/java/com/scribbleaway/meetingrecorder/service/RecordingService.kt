@@ -108,6 +108,24 @@ class RecordingService : LifecycleService() {
         return chunks
     }
 
+    fun cancelRecording(): List<java.io.File> {
+        lifecycleScope.launch { beepPlayer.beepStop() }
+        timerJob?.cancel()
+        val files = recorder.cancel()
+        _state.value = RecordingState.IDLE
+        _elapsedSeconds.value = 0L
+        _chunkCount.value = 0
+        stopForeground(Service.STOP_FOREGROUND_REMOVE)
+        return files
+    }
+
+    fun resetToIdle() {
+        _state.value = RecordingState.IDLE
+        _elapsedSeconds.value = 0L
+        _chunkCount.value = 0
+        stopSelf()
+    }
+
     private fun startTimer() {
         timerJob = lifecycleScope.launch {
             val base = pausedElapsed

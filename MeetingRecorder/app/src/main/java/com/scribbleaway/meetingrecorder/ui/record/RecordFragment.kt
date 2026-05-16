@@ -49,6 +49,7 @@ class RecordFragment : Fragment() {
         binding.btnRecord.setOnClickListener { onRecordClicked() }
         binding.btnPause.setOnClickListener { onPauseClicked() }
         binding.btnStop.setOnClickListener { viewModel.stopRecording() }
+        binding.btnCancel.setOnClickListener { onCancelClicked() }
         binding.btnSettings.setOnClickListener {
             findNavController().navigate(R.id.action_record_to_settings)
         }
@@ -102,6 +103,15 @@ class RecordFragment : Fragment() {
         else permissionLauncher.launch(missing.toTypedArray())
     }
 
+    private fun onCancelClicked() {
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.cancel_confirm_title)
+            .setMessage(R.string.cancel_confirm_message)
+            .setPositiveButton(R.string.cancel_confirm_yes) { _, _ -> viewModel.cancelRecording() }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
     private fun onPauseClicked() {
         when (viewModel.recordingState.value) {
             RecordingState.RECORDING -> viewModel.pauseRecording()
@@ -117,6 +127,7 @@ class RecordFragment : Fragment() {
                 binding.btnRecord.text = getString(R.string.btn_record)
                 binding.btnPause.visibility = View.GONE
                 binding.btnStop.visibility = View.GONE
+                binding.btnCancel.visibility = View.GONE
                 binding.tvStatus.setText(R.string.status_ready)
                 binding.recordingIndicator.visibility = View.GONE
             }
@@ -125,6 +136,7 @@ class RecordFragment : Fragment() {
                 binding.btnPause.visibility = View.VISIBLE
                 binding.btnPause.text = getString(R.string.btn_pause)
                 binding.btnStop.visibility = View.VISIBLE
+                binding.btnCancel.visibility = View.VISIBLE
                 binding.tvStatus.setText(R.string.status_recording)
                 binding.recordingIndicator.visibility = View.VISIBLE
             }
@@ -133,6 +145,7 @@ class RecordFragment : Fragment() {
                 binding.btnPause.visibility = View.VISIBLE
                 binding.btnPause.text = getString(R.string.btn_resume)
                 binding.btnStop.visibility = View.VISIBLE
+                binding.btnCancel.visibility = View.VISIBLE
                 binding.tvStatus.setText(R.string.status_paused)
                 binding.recordingIndicator.visibility = View.GONE
             }
@@ -140,6 +153,7 @@ class RecordFragment : Fragment() {
                 binding.btnRecord.isEnabled = false
                 binding.btnPause.visibility = View.GONE
                 binding.btnStop.visibility = View.GONE
+                binding.btnCancel.visibility = View.GONE
                 binding.tvStatus.setText(R.string.status_processing)
                 binding.recordingIndicator.visibility = View.GONE
             }

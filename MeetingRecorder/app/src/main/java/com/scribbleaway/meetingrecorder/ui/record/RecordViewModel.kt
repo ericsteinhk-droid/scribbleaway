@@ -130,7 +130,21 @@ class RecordViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun onNavigatedToPreview() { _navigateToPreview.value = -1L }
+    fun cancelRecording() {
+        val meetingId = _meetingId.value
+        val filesToDelete = service?.cancelRecording() ?: emptyList()
+        _meetingId.value = -1L
+        viewModelScope.launch {
+            filesToDelete.forEach { runCatching { it.delete() } }
+            if (meetingId > 0) runCatching { repo.deleteMeetingById(meetingId) }
+        }
+    }
+
+    fun onNavigatedToPreview() {
+        _navigateToPreview.value = -1L
+        _meetingId.value = -1L
+        service?.resetToIdle()
+    }
 
     fun hasApiKey(): Boolean = prefs.openAiApiKey.isNotBlank()
 
