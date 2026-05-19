@@ -6,6 +6,7 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
+import java.io.IOException
 import java.util.concurrent.TimeUnit
 
 class AnthropicClient(private val apiKeyProvider: () -> String) {
@@ -16,6 +17,7 @@ class AnthropicClient(private val apiKeyProvider: () -> String) {
         .connectTimeout(30, TimeUnit.SECONDS)
         .readTimeout(300, TimeUnit.SECONDS)
         .writeTimeout(60, TimeUnit.SECONDS)
+        .retryOnConnectionFailure(true)
         .build()
 
     private data class Message(val role: String, val content: String)
@@ -58,12 +60,25 @@ class AnthropicClient(private val apiKeyProvider: () -> String) {
             .post(reqBody)
             .build()
 
-        http.newCall(httpReq).execute().use { response ->
-            val bodyStr = response.body?.string() ?: throw RuntimeException("Réponse Anthropic vide")
+        var lastError: IOException? = null
+        repeat(3) { attempt ->
+            try {
+                return executeRequest(httpReq)
+            } catch (e: IOException) {
+                lastError = e
+                if (attempt < 2) Thread.sleep((attempt + 1) * 2000L)
+            }
+        }
+        throw RuntimeException("Connexion Anthropic interrompue après 3 tentatives. Vérifiez votre réseau.", lastError)
+    }
+
+    private fun executeRequest(request: Request): String {
+        http.newCall(request).execute().use { response ->
+            val bodyStr = response.body?.string() ?: throw IOException("Réponse Anthropic vide")
             if (!response.isSuccessful) throw RuntimeException("Erreur Anthropic ${response.code}: $bodyStr")
             val parsed = gson.fromJson(bodyStr, ApiResponse::class.java)
             return parsed.content.firstOrNull { it.type == "text" }?.text
-                ?: throw RuntimeException("Aucun contenu texte dans la réponse Anthropic")
+                ?: throw IOException("Aucun contenu texte dans la réponse Anthropic")
         }
     }
 }
