@@ -30,7 +30,23 @@ class SummaryService(private val client: AnthropicClient) {
                 )
             }
             parseResponse(content)
-        }.getOrElse { defaultSummary() }
+        }.getOrElse { error ->
+            val reason = when {
+                error.message?.contains("non configurée") == true ->
+                    "[Résumé non disponible — clé API Anthropic manquante. Veuillez l'ajouter dans Paramètres.]"
+                error.message != null ->
+                    "[Résumé non disponible — ${error.message}]"
+                else ->
+                    "[Résumé non disponible — erreur inconnue]"
+            }
+            MeetingSummary(
+                resumeExecutif = reason,
+                pointsDiscutes = emptyList(),
+                decisions = emptyList(),
+                actions = emptyList(),
+                pointsEnSuspens = emptyList()
+            )
+        }
     }
 
     private fun parseResponse(json: String): MeetingSummary {
