@@ -1,0 +1,5 @@
+node_modules/
+family.db
+family.db-shm
+family.db-wal
+.env

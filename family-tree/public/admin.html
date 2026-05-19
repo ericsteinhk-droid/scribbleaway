@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin — Family Tree</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<!-- ── Login section ──────────────────────────────────────────────────────── -->
+<div id="login-section" class="admin-login-wrap" style="display:none;">
+  <div class="admin-login-card">
+    <div class="lock-icon">🔐</div>
+    <h2 data-i18n="adminLogin">Administrator Login</h2>
+    <p class="member-meta" style="margin-top:6px;" data-i18n="appTitle">Family Tree</p>
+
+    <form id="login-form">
+      <input type="password" id="admin-pw" data-i18n-placeholder="adminPassword"
+             placeholder="Password" autocomplete="current-password">
+      <p class="login-error" id="login-error"></p>
+      <button type="submit" class="btn-primary" style="width:100%;margin-top:8px;" data-i18n="adminLoginBtn">
+        Log in
+      </button>
+    </form>
+
+    <div style="margin-top:14px;">
+      <a href="/" style="font-size:13px;color:var(--text-muted);">← Back to tree</a>
+    </div>
+  </div>
+</div>
+
+<!-- ── Dashboard section ──────────────────────────────────────────────────── -->
+<div id="dashboard-section" class="admin-layout" style="display:none;">
+
+  <header class="admin-header">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <span style="font-size:22px;">🌳</span>
+      <h1 data-i18n="adminTitle">Admin Panel</h1>
+    </div>
+    <div style="display:flex;gap:10px;align-items:center;">
+      <button id="admin-lang-toggle" class="btn-icon" style="color:#fff;" aria-label="Switch language">FR</button>
+      <a href="/" class="btn-icon" style="color:#fff;text-decoration:none;" title="View tree">🌳</a>
+      <button id="logout-btn" class="btn-secondary" style="font-size:13px;" data-i18n="adminLogout">Log out</button>
+    </div>
+  </header>
+
+  <main class="admin-main">
+
+    <!-- Stats row -->
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-num" id="stat-approved">—</div>
+        <div class="stat-label" data-i18n="totalApproved">Approved</div>
+      </div>
+      <div class="stat-card pending">
+        <div class="stat-num" id="stat-pending">—</div>
+        <div class="stat-label" data-i18n="totalPending">Pending</div>
+      </div>
+      <div class="stat-card rejected">
+        <div class="stat-num" id="stat-rejected">—</div>
+        <div class="stat-label" data-i18n="totalRejected">Rejected</div>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tab-bar">
+      <button class="tab-btn active" data-tab="tab-pending" data-i18n="adminPending">Pending Review</button>
+      <button class="tab-btn" data-tab="tab-all" data-i18n="adminAllMembers">All Members</button>
+    </div>
+
+    <!-- Pending tab -->
+    <div id="tab-pending" class="tab-content active">
+      <div id="pending-list">
+        <div class="no-items-msg" data-i18n="adminNoPending">No submissions pending review.</div>
+      </div>
+    </div>
+
+    <!-- All members tab -->
+    <div id="tab-all" class="tab-content">
+      <div id="all-members-list"></div>
+    </div>
+
+  </main>
+</div>
+
+<script src="js/i18n.js"></script>
+<script src="js/admin.js"></script>
+</body>
+</html>
