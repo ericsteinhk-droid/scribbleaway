@@ -287,6 +287,8 @@ function choiceBtn(field, value, emoji, label, selected) {
 }
 
 function parentSelect(field, value, label, preferGender) {
+  const newNameField = field === 'fatherId' ? 'newFatherName' : 'newMotherName';
+
   const wrap = document.createElement('div');
   wrap.className = 'parent-select-wrap';
 
@@ -302,7 +304,6 @@ function parentSelect(field, value, label, preferGender) {
   none.textContent = t('step7none');
   sel.appendChild(none);
 
-  // Prefer matching gender at top, then others
   const sorted = [...familyData].sort((a, b) => {
     if (a.gender === preferGender && b.gender !== preferGender) return -1;
     if (b.gender === preferGender && a.gender !== preferGender) return 1;
@@ -318,12 +319,31 @@ function parentSelect(field, value, label, preferGender) {
     sel.appendChild(opt);
   });
 
+  // "Type new name" input
+  const divider = document.createElement('p');
+  divider.className = 'parent-or';
+  divider.textContent = t('step7orType');
+
+  const newInp = document.createElement('input');
+  newInp.type = 'text';
+  newInp.className = 'quest-input';
+  newInp.placeholder = t('step7newNameHint');
+  newInp.value = formData[newNameField] || '';
+
+  // Mutual exclusion: selecting from dropdown clears typed name and vice-versa
   sel.addEventListener('change', () => {
     formData[field] = sel.value ? parseInt(sel.value) : null;
+    if (sel.value) { newInp.value = ''; formData[newNameField] = null; }
+  });
+  newInp.addEventListener('input', () => {
+    formData[newNameField] = newInp.value.trim() || null;
+    if (newInp.value.trim()) { sel.value = ''; formData[field] = null; }
   });
 
   wrap.appendChild(lbl);
   wrap.appendChild(sel);
+  wrap.appendChild(divider);
+  wrap.appendChild(newInp);
   return wrap;
 }
 
@@ -409,15 +429,17 @@ async function submitForm() {
   nextBtn.textContent = t('submitting');
 
   const payload = {
-    first_name:   formData.firstName?.trim(),
-    last_name:    formData.lastName?.trim(),
-    birth_year:   formData.birthYear  || null,
-    death_year:   formData.alive === false ? (formData.deathYear || null) : null,
-    gender:       formData.gender     || 'unknown',
-    father_id:    formData.fatherId   || null,
-    mother_id:    formData.motherId   || null,
-    notes:        formData.notes?.trim() || null,
-    submitted_by: formData.submittedBy?.trim() || null,
+    first_name:      formData.firstName?.trim(),
+    last_name:       formData.lastName?.trim(),
+    birth_year:      formData.birthYear  || null,
+    death_year:      formData.alive === false ? (formData.deathYear || null) : null,
+    gender:          formData.gender     || 'unknown',
+    father_id:       formData.fatherId   || null,
+    mother_id:       formData.motherId   || null,
+    new_father_name: formData.newFatherName || null,
+    new_mother_name: formData.newMotherName || null,
+    notes:           formData.notes?.trim() || null,
+    submitted_by:    formData.submittedBy?.trim() || null,
   };
 
   try {

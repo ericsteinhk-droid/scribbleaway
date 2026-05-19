@@ -69,13 +69,32 @@ app.get('/api/family', (req, res) => {
 });
 
 app.post('/api/family', (req, res) => {
-  const { first_name, last_name, birth_year, death_year, gender, father_id, mother_id, notes, submitted_by } = req.body || {};
+  const { first_name, last_name, birth_year, death_year, gender,
+          father_id, mother_id, notes, submitted_by,
+          new_father_name, new_mother_name } = req.body || {};
   if (!first_name?.trim() || !last_name?.trim()) {
     return res.status(400).json({ error: 'First name and last name are required' });
   }
   if (death_year && birth_year && death_year < birth_year) {
     return res.status(400).json({ error: 'Death year cannot be before birth year' });
   }
+
+  // Create pending entries for newly named parents
+  function insertNamedParent(fullName, gender) {
+    const parts = fullName.trim().split(/\s+/);
+    const fn = parts[0];
+    const ln = parts.slice(1).join(' ') || '?';
+    return db.prepare(`
+      INSERT INTO persons (first_name, last_name, gender, status, submitted_by)
+      VALUES (?, ?, ?, 'pending', ?)
+    `).run(fn, ln, gender, submitted_by?.trim() || null).lastInsertRowid;
+  }
+
+  let resolvedFatherId = father_id || null;
+  let resolvedMotherId = mother_id || null;
+  if (new_father_name?.trim() && !father_id) resolvedFatherId = insertNamedParent(new_father_name, 'male');
+  if (new_mother_name?.trim() && !mother_id) resolvedMotherId = insertNamedParent(new_mother_name, 'female');
+
   const result = db.prepare(`
     INSERT INTO persons (first_name, last_name, birth_year, death_year, gender, father_id, mother_id, notes, submitted_by)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -83,7 +102,7 @@ app.post('/api/family', (req, res) => {
     first_name.trim(), last_name.trim(),
     birth_year || null, death_year || null,
     gender || 'unknown',
-    father_id || null, mother_id || null,
+    resolvedFatherId, resolvedMotherId,
     notes?.trim() || null,
     submitted_by?.trim() || null
   );
@@ -91,6 +110,22 @@ app.post('/api/family', (req, res) => {
 });
 
 // ── Admin routes ──────────────────────────────────────────────────────────────
+
+// Admin: create a new member directly (approved by default)
+app.post('/api/admin/members', requireAdmin, (req, res) => {
+  const { first_name, last_name, birth_year, death_year, gender, father_id, mother_id, notes, status } = req.body || {};
+  if (!first_name?.trim()) return res.status(400).json({ error: 'First name required' });
+  const result = db.prepare(`
+    INSERT INTO persons (first_name, last_name, birth_year, death_year, gender, father_id, mother_id, notes, status, submitted_by)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'admin')
+  `).run(
+    first_name.trim(), (last_name?.trim() || '?'),
+    birth_year || null, death_year || null,
+    gender || 'unknown', father_id || null, mother_id || null,
+    notes?.trim() || null, status || 'approved'
+  );
+  res.json({ id: result.lastInsertRowid });
+});
 
 app.get('/api/admin/pending', requireAdmin, (req, res) => {
   const rows = db.prepare(`

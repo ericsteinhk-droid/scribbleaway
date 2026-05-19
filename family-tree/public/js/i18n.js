@@ -47,6 +47,8 @@ const TRANSLATIONS = {
     step7father: 'Father',
     step7mother: 'Mother',
     step7none: '— Unknown / not yet added —',
+    step7orType: 'Or type their name if not listed:',
+    step7newNameHint: 'Full name (e.g. Jean Dupont)',
     step8q: 'Anything else you\'d like to add?',
     step8hint: 'Stories, nicknames, profession, location… (optional)',
     step9q: 'Last step — what\'s your name?',
@@ -67,6 +69,17 @@ const TRANSLATIONS = {
     generation: 'Generation',
     submittedBy: 'Added by',
     noNotes: 'No notes',
+
+    // Edit form
+    editFirstName: 'First name',
+    editLastName: 'Last name',
+    editBorn: 'Birth year',
+    editDied: 'Death year',
+    editGender: 'Gender',
+    editFather: 'Father',
+    editMother: 'Mother',
+    editNotes: 'Notes',
+    editNewParentHint: 'Or type a new name to create…',
 
     // Admin
     adminTitle: 'Admin Panel',
@@ -144,6 +157,8 @@ const TRANSLATIONS = {
     step7father: 'Père',
     step7mother: 'Mère',
     step7none: '— Inconnu / pas encore ajouté —',
+    step7orType: 'Ou tapez leur nom s\'il n\'est pas dans la liste :',
+    step7newNameHint: 'Nom complet (ex : Jean Dupont)',
     step8q: 'Souhaitez-vous ajouter autre chose ?',
     step8hint: 'Anecdotes, surnoms, profession, lieu de vie… (facultatif)',
     step9q: 'Dernière étape — quel est votre prénom ?',
@@ -163,6 +178,17 @@ const TRANSLATIONS = {
     generation: 'Génération',
     submittedBy: 'Ajouté par',
     noNotes: 'Aucune note',
+
+    // Edit form
+    editFirstName: 'Prénom',
+    editLastName: 'Nom de famille',
+    editBorn: 'Année de naissance',
+    editDied: 'Année de décès',
+    editGender: 'Genre',
+    editFather: 'Père',
+    editMother: 'Mère',
+    editNotes: 'Notes',
+    editNewParentHint: 'Ou tapez un nouveau nom pour le créer…',
 
     adminTitle: 'Panneau d\'administration',
     adminLogin: 'Connexion administrateur',
