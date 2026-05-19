@@ -12,17 +12,17 @@
         android:orientation="vertical"
         android:padding="24dp">
 
-        <!-- API Key -->
+        <!-- AssemblyAI API Key (transcription + diarisation) -->
         <com.google.android.material.textfield.TextInputLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="@string/hint_api_key"
+            android:hint="@string/hint_assembly_key"
             app:endIconMode="password_toggle"
             style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
             android:layout_marginBottom="24dp">
 
             <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/etApiKey"
+                android:id="@+id/etAssemblyKey"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:inputType="textPassword"
@@ -30,7 +30,7 @@
 
         </com.google.android.material.textfield.TextInputLayout>
 
-        <!-- Anthropic API Key (for Claude summary) -->
+        <!-- Anthropic API Key (résumé Claude) -->
         <com.google.android.material.textfield.TextInputLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

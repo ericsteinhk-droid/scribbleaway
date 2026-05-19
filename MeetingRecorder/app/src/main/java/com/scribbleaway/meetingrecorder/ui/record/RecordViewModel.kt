@@ -146,7 +146,7 @@ class RecordViewModel(app: Application) : AndroidViewModel(app) {
         service?.resetToIdle()
     }
 
-    fun hasApiKey(): Boolean = prefs.openAiApiKey.isNotBlank()
+    fun hasApiKey(): Boolean = prefs.assemblyAiApiKey.isNotBlank()
 
     override fun onCleared() {
         super.onCleared()

@@ -1,4 +1,4 @@
-name: Build Meeting Recorder APK
+name: Build AssemblyAway APK
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       release_version:
-        description: 'Version tag (e.g. meeting-recorder-v1.0.0). Leave blank to use default.'
+        description: 'Version tag (e.g. assemblyaway-v1.0.0). Leave blank to use default.'
         required: false
         default: ''
 
@@ -51,14 +51,14 @@ jobs:
           if [[ -n "${{ inputs.release_version }}" ]]; then
             echo "tag=${{ inputs.release_version }}" >> $GITHUB_OUTPUT
           else
-            echo "tag=meeting-recorder-v1.0.0" >> $GITHUB_OUTPUT
+            echo "tag=assemblyaway-v1.0.0" >> $GITHUB_OUTPUT
           fi
 
       - name: Rename APK
         run: |
           mkdir -p dist
           cp MeetingRecorder/app/build/outputs/apk/debug/app-debug.apk \
-             dist/MeetingRecorder-${{ steps.version.outputs.tag }}.apk
+             dist/AssemblyAway-${{ steps.version.outputs.tag }}.apk
 
       - name: Move tag to current commit
         run: |
@@ -69,29 +69,28 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.version.outputs.tag }}
-          name: Enregistreur de réunion ${{ steps.version.outputs.tag }}
+          name: AssemblyAway ${{ steps.version.outputs.tag }}
           make_latest: true
-          files: dist/MeetingRecorder-${{ steps.version.outputs.tag }}.apk
+          files: dist/AssemblyAway-${{ steps.version.outputs.tag }}.apk
           body: |
-            ## Enregistreur de réunion ${{ steps.version.outputs.tag }}
+            ## AssemblyAway ${{ steps.version.outputs.tag }}
 
             Application Android pour l'enregistrement de réunions de chantier en français canadien.
+            Diarisation audio réelle par AssemblyAI — chaque intervenant reçoit une étiquette distincte.
 
-            ### Fonctionnalités
-            - Enregistrement par segments de 15 min (compatible API Whisper)
-            - Bip sonore discret au départ, pause et arrêt
-            - Transcription via OpenAI Whisper (langue : français)
-            - Identification des intervenants via GPT-4o (lexique de chantier intégré)
-            - Résumé structuré : résumé exécutif, points discutés, décisions, actions, points en suspens
-            - Aperçu avant export
-            - Export DOCX complet (résumé + transcription diarisée)
+            ### Pipeline
+            - **Enregistrement** : segments M4A (≤15 min), bip sonore discret
+            - **Transcription + diarisation** : AssemblyAI (fr, speaker_labels, word boost chantier)
+            - **Résumé structuré** : Anthropic Claude — résumé exécutif, points discutés, décisions, actions, points en suspens
+            - **Export** : DOCX complet (résumé + transcription diarisée), aperçu avant export
 
-            ### Prérequis
-            - Clé API OpenAI (platform.openai.com) avec accès à `whisper-1` et `gpt-4o`
+            ### Clés API requises
+            - **AssemblyAI** (assemblyai.com) — transcription et identification des intervenants
+            - **Anthropic** (console.anthropic.com) — résumé intelligent (optionnel)
 
             ### Installation
-            1. Télécharger `MeetingRecorder-${{ steps.version.outputs.tag }}.apk`
+            1. Télécharger `AssemblyAway-${{ steps.version.outputs.tag }}.apk`
             2. Transférer sur l'appareil Android (API 26 / Android 8.0+)
             3. Activer **Installer depuis des sources inconnues** si requis
             4. Ouvrir le fichier APK pour installer
-            5. Aller dans **Paramètres** et entrer la clé API OpenAI
+            5. Aller dans **Paramètres** et entrer les clés API
