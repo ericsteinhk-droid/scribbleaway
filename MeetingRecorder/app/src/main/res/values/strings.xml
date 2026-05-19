@@ -44,6 +44,9 @@
     <string name="settings_saved">Paramètres enregistrés</string>
     <string name="assembly_key_empty">Veuillez saisir une clé API AssemblyAI valide</string>
 
+    <!-- Errors -->
+    <string name="error_title">Erreur</string>
+
     <!-- Permissions / API key -->
     <string name="permission_denied">Permission microphone refusée</string>
     <string name="api_key_required_title">Clé API requise</string>

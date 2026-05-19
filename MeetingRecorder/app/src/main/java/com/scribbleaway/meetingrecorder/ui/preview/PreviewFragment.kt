@@ -11,7 +11,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.navArgs
-import com.google.android.material.snackbar.Snackbar
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.scribbleaway.meetingrecorder.R
 import com.scribbleaway.meetingrecorder.databinding.FragmentPreviewBinding
 import com.scribbleaway.meetingrecorder.model.MeetingSummary
@@ -52,8 +52,10 @@ class PreviewFragment : Fragment() {
                 launch {
                     viewModel.error.collect { err ->
                         err ?: return@collect
-                        Snackbar.make(binding.root, err, Snackbar.LENGTH_INDEFINITE)
-                            .setAction("OK") { viewModel.clearError() }
+                        MaterialAlertDialogBuilder(requireContext())
+                            .setTitle(R.string.error_title)
+                            .setMessage(err)
+                            .setPositiveButton(android.R.string.ok) { _, _ -> viewModel.clearError() }
                             .show()
                     }
                 }
