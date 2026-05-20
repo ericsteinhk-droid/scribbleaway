@@ -5,6 +5,8 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Toast
+import androidx.core.content.FileProvider
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
@@ -17,6 +19,7 @@ import com.scribbleaway.meetingrecorder.databinding.FragmentPreviewBinding
 import com.scribbleaway.meetingrecorder.model.MeetingSummary
 import com.scribbleaway.meetingrecorder.model.TranscriptSegment
 import com.scribbleaway.meetingrecorder.util.formatTimestamp
+import com.scribbleaway.meetingrecorder.util.meetingDir
 import kotlinx.coroutines.launch
 
 class PreviewFragment : Fragment() {
@@ -35,6 +38,7 @@ class PreviewFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         binding.btnExport.setOnClickListener { viewModel.exportDocx() }
+        binding.btnShareAudio.setOnClickListener { shareAudioFiles() }
 
         viewLifecycleOwner.lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
@@ -137,6 +141,26 @@ class PreviewFragment : Fragment() {
             sb.appendLine(seg.text)
         }
         binding.tvTranscript.text = sb.toString()
+    }
+
+    private fun shareAudioFiles() {
+        val ctx = requireContext()
+        val dir = meetingDir(ctx, args.meetingId)
+        val files = dir.listFiles { f -> f.extension == "m4a" }
+            ?.sortedBy { it.name }
+            ?: emptyList()
+        if (files.isEmpty()) {
+            Toast.makeText(ctx, R.string.no_audio_files, Toast.LENGTH_LONG).show()
+            return
+        }
+        val authority = "${ctx.packageName}.fileprovider"
+        val uris = ArrayList(files.map { FileProvider.getUriForFile(ctx, authority, it) })
+        val intent = Intent(Intent.ACTION_SEND_MULTIPLE).apply {
+            type = "audio/mp4"
+            putParcelableArrayListExtra(Intent.EXTRA_STREAM, uris)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        startActivity(Intent.createChooser(intent, getString(R.string.share_audio_files)))
     }
 
     private fun shareDocx(uri: android.net.Uri) {

@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <paths>
     <files-path name="exports" path="exports/" />
+    <files-path name="meetings" path="meetings/" />
+    <external-files-path name="meetings_ext" path="meetings/" />
     <cache-path name="cache" path="." />
 </paths>

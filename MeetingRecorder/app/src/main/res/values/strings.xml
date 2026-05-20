@@ -21,6 +21,8 @@
     <string name="btn_export_docx">Exporter en DOCX</string>
     <string name="btn_save">Enregistrer les paramètres</string>
     <string name="share_docx">Partager le compte rendu</string>
+    <string name="share_audio_files">Partager les fichiers audio</string>
+    <string name="no_audio_files">Aucun fichier audio trouvé pour cette réunion.</string>
 
     <!-- Status -->
     <string name="status_ready">Prêt à enregistrer</string>
