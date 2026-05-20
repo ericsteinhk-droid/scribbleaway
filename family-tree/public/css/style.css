@@ -544,6 +544,21 @@ header {
 .success-msg   { font-size: 15px; color: var(--text-muted); max-width: 340px; line-height: 1.7; }
 .success-actions { display: flex; gap: 12px; margin-top: 8px; flex-wrap: wrap; justify-content: center; }
 
+/* ─── Discrete admin link ───────────────────────────────────────────────────── */
+#admin-link {
+  position: absolute;
+  bottom: 12px;
+  left: 14px;
+  font-size: 13px;
+  color: var(--border);
+  text-decoration: none;
+  opacity: 0.4;
+  transition: opacity var(--transition), color var(--transition);
+  z-index: 5;
+  line-height: 1;
+}
+#admin-link:hover { opacity: 1; color: var(--text-muted); }
+
 /* ─── Scrollbar ─────────────────────────────────────────────────────────────── */
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: var(--surface2); }

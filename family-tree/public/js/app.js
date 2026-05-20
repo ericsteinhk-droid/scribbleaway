@@ -100,7 +100,7 @@ function closePersonDetail() {
 }
 
 // ── Questionnaire ──────────────────────────────────────────────────────────────
-const TOTAL_STEPS = 9;
+const TOTAL_STEPS = 8;
 let currentStep = 1;
 let formData    = {};
 
@@ -169,21 +169,15 @@ function buildStep(n) {
   switch (n) {
     case 1: {
       div.appendChild(question(t('step1q'), t('step1hint')));
-      const inp = textInput('firstName', formData.firstName || '', t('step1hint'));
-      div.appendChild(inp);
+      div.appendChild(textInput('fullName', formData.fullName || '', t('step1hint')));
       break;
     }
     case 2: {
-      div.appendChild(question(t('step2q'), t('step2hint')));
-      div.appendChild(textInput('lastName', formData.lastName || '', t('step2hint')));
-      break;
-    }
-    case 3: {
       div.appendChild(question(t('step3q'), ''));
       div.appendChild(yearInput('birthYear', formData.birthYear, t('step3hint'), t('step3skip')));
       break;
     }
-    case 4: {
+    case 3: {
       div.appendChild(question(t('step4q'), ''));
       const opts = div.appendChild(document.createElement('div'));
       opts.className = 'choice-grid';
@@ -191,12 +185,12 @@ function buildStep(n) {
       opts.appendChild(choiceBtn('alive', false, '🕊️', t('step4no'),  formData.alive === false));
       break;
     }
-    case 5: {
+    case 4: {
       div.appendChild(question(t('step5q'), ''));
       div.appendChild(yearInput('deathYear', formData.deathYear, t('step5hint'), t('step5skip')));
       break;
     }
-    case 6: {
+    case 5: {
       div.appendChild(question(t('step6q'), ''));
       const opts = div.appendChild(document.createElement('div'));
       opts.className = 'choice-grid choice-grid-3';
@@ -205,13 +199,13 @@ function buildStep(n) {
       opts.appendChild(choiceBtn('gender', 'unknown', '🧑', t('step6unknown'), !formData.gender || formData.gender === 'unknown'));
       break;
     }
-    case 7: {
+    case 6: {
       div.appendChild(question(t('step7q'), t('step7hint')));
       div.appendChild(parentSelect('fatherId', formData.fatherId, t('step7father'), 'male'));
       div.appendChild(parentSelect('motherId', formData.motherId, t('step7mother'), 'female'));
       break;
     }
-    case 8: {
+    case 7: {
       div.appendChild(question(t('step8q'), t('step8hint')));
       const ta = document.createElement('textarea');
       ta.className = 'quest-textarea';
@@ -222,10 +216,9 @@ function buildStep(n) {
       div.appendChild(ta);
       break;
     }
-    case 9: {
+    case 8: {
       div.appendChild(question(t('step9q'), t('step9hint')));
       div.appendChild(textInput('submittedBy', formData.submittedBy || '', t('step9hint')));
-      // Show summary card
       div.appendChild(summaryCard());
       break;
     }
@@ -351,7 +344,7 @@ function summaryCard() {
   const card = document.createElement('div');
   card.className = 'summary-card';
 
-  const name = `${formData.firstName || '?'} ${formData.lastName || '?'}`;
+  const name = formData.fullName || '?';
   const born = formData.birthYear ? `${t('born')} ${formData.birthYear}` : '';
   const died = formData.alive === false && formData.deathYear ? `${t('died')} ${formData.deathYear}` : (formData.alive !== false && formData.birthYear ? `· ${t('alive')}` : '');
 
@@ -365,17 +358,14 @@ function summaryCard() {
 function validateStep(n) {
   switch (n) {
     case 1:
-      if (!formData.firstName?.trim()) { showStepError(t('errorRequired')); return false; }
+      if (!formData.fullName?.trim()) { showStepError(t('errorRequired')); return false; }
       break;
     case 2:
-      if (!formData.lastName?.trim()) { showStepError(t('errorRequired')); return false; }
-      break;
-    case 3:
       if (formData.birthYear && (formData.birthYear < 1700 || formData.birthYear > new Date().getFullYear())) {
         showStepError(t('errorYear')); return false;
       }
       break;
-    case 5:
+    case 4:
       if (formData.deathYear && formData.birthYear && formData.deathYear < formData.birthYear) {
         showStepError(t('errorYear')); return false;
       }
@@ -405,9 +395,9 @@ async function advanceStep() {
   }
 
   // Skip death year step if alive
-  if (currentStep === 4 && formData.alive !== false) {
+  if (currentStep === 3 && formData.alive !== false) {
     formData.deathYear = null;
-    currentStep = 6;
+    currentStep = 5;
   } else {
     currentStep++;
   }
@@ -415,8 +405,8 @@ async function advanceStep() {
 }
 
 function retreatStep() {
-  if (currentStep === 6 && formData.alive !== false) {
-    currentStep = 4;
+  if (currentStep === 5 && formData.alive !== false) {
+    currentStep = 3;
   } else {
     currentStep--;
   }
@@ -428,9 +418,10 @@ async function submitForm() {
   nextBtn.disabled = true;
   nextBtn.textContent = t('submitting');
 
+  const nameParts = (formData.fullName || '').trim().split(/\s+/);
   const payload = {
-    first_name:      formData.firstName?.trim(),
-    last_name:       formData.lastName?.trim(),
+    first_name:      nameParts[0] || '?',
+    last_name:       nameParts.slice(1).join(' ') || '?',
     birth_year:      formData.birthYear  || null,
     death_year:      formData.alive === false ? (formData.deathYear || null) : null,
     gender:          formData.gender     || 'unknown',
