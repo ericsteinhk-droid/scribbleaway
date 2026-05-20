@@ -1,4 +1,4 @@
-name: Build AssemblyAway APK
+name: Build ScribbleAway APK
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       release_version:
-        description: 'Version tag (e.g. assemblyaway-v1.0.0). Leave blank to use default.'
+        description: 'Version tag (e.g. scribbleaway-v1.0.0). Leave blank to use default.'
         required: false
         default: ''
 
@@ -51,14 +51,14 @@ jobs:
           if [[ -n "${{ inputs.release_version }}" ]]; then
             echo "tag=${{ inputs.release_version }}" >> $GITHUB_OUTPUT
           else
-            echo "tag=assemblyaway-v1.0.0" >> $GITHUB_OUTPUT
+            echo "tag=scribbleaway-v1.0.0" >> $GITHUB_OUTPUT
           fi
 
       - name: Rename APK
         run: |
           mkdir -p dist
           cp MeetingRecorder/app/build/outputs/apk/debug/app-debug.apk \
-             dist/AssemblyAway-${{ steps.version.outputs.tag }}.apk
+             dist/ScribbleAway-${{ steps.version.outputs.tag }}.apk
 
       - name: Move tag to current commit
         run: |
@@ -69,27 +69,28 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.version.outputs.tag }}
-          name: AssemblyAway ${{ steps.version.outputs.tag }}
+          name: ScribbleAway ${{ steps.version.outputs.tag }}
           make_latest: true
-          files: dist/AssemblyAway-${{ steps.version.outputs.tag }}.apk
+          files: dist/ScribbleAway-${{ steps.version.outputs.tag }}.apk
           body: |
-            ## AssemblyAway ${{ steps.version.outputs.tag }}
+            ## ScribbleAway ${{ steps.version.outputs.tag }}
 
             Application Android pour l'enregistrement de réunions de chantier en français canadien.
-            Diarisation audio réelle par AssemblyAI — chaque intervenant reçoit une étiquette distincte.
 
             ### Pipeline
             - **Enregistrement** : segments M4A (≤15 min), bip sonore discret
-            - **Transcription + diarisation** : AssemblyAI (fr, speaker_labels, word boost chantier)
+            - **Transcription** : OpenAI Whisper (`whisper-1`, fr, verbose_json)
+            - **Diarisation** : GPT-4o — attribution des locuteurs par analyse du contenu
             - **Résumé structuré** : Anthropic Claude — résumé exécutif, points discutés, décisions, actions, points en suspens
             - **Export** : DOCX complet (résumé + transcription diarisée), aperçu avant export
+            - **Partage audio** : partage des fichiers M4A directement depuis l'écran d'aperçu
 
             ### Clés API requises
-            - **AssemblyAI** (assemblyai.com) — transcription et identification des intervenants
+            - **OpenAI** (platform.openai.com) — transcription Whisper + diarisation GPT-4o
             - **Anthropic** (console.anthropic.com) — résumé intelligent (optionnel)
 
             ### Installation
-            1. Télécharger `AssemblyAway-${{ steps.version.outputs.tag }}.apk`
+            1. Télécharger `ScribbleAway-${{ steps.version.outputs.tag }}.apk`
             2. Transférer sur l'appareil Android (API 26 / Android 8.0+)
             3. Activer **Installer depuis des sources inconnues** si requis
             4. Ouvrir le fichier APK pour installer

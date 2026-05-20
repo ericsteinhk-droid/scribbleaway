@@ -53,7 +53,7 @@ class MeetingRepository(
         if (allSegments.isEmpty()) {
             meetingDao.updateStatus(meetingId, MeetingStatus.ERROR)
             val detail = transcriptionErrors.joinToString("; ")
-            throw RuntimeException("Transcription échouée. Vérifiez votre clé API AssemblyAI dans Paramètres. Détail: $detail")
+            throw RuntimeException("Transcription échouée. Vérifiez votre clé API OpenAI dans Paramètres. Détail: $detail")
         }
 
         onProgress("Génération du résumé…")

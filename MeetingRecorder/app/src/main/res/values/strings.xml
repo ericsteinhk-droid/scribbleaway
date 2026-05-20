@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">AssemblyAway</string>
+    <string name="app_name">ScribbleAway</string>
     <string name="preview_title">Résumé de réunion</string>
     <string name="settings">Paramètres</string>
 
     <!-- Splash screen -->
     <string name="splash_tagline">Enregistreur de réunion de chantier</string>
-    <string name="splash_providers">Transcription et diarisation · AssemblyAI\nRésumé intelligent · Anthropic Claude</string>
+    <string name="splash_providers">Transcription · OpenAI Whisper · Diarisation · GPT-4o\nRésumé intelligent · Anthropic Claude</string>
     <string name="splash_copyright">© Eric Stein, EVOQ Architecture</string>
 
     <!-- Recording screen -->
@@ -40,11 +40,11 @@
     <string name="speaker_count_label">Nombre d\'intervenants estimé: %d</string>
 
     <!-- Settings fields -->
-    <string name="hint_assembly_key">Clé API AssemblyAI — transcription et diarisation</string>
+    <string name="hint_openai_key">Clé API OpenAI (sk-…) — transcription et diarisation</string>
     <string name="hint_anthropic_key">Clé API Anthropic (sk-ant-…) — résumé</string>
     <string name="hint_meeting_title">Titre de réunion par défaut</string>
     <string name="settings_saved">Paramètres enregistrés</string>
-    <string name="assembly_key_empty">Veuillez saisir une clé API AssemblyAI valide</string>
+    <string name="openai_key_empty">Veuillez saisir une clé API OpenAI valide</string>
 
     <!-- Errors -->
     <string name="error_title">Erreur</string>
@@ -52,7 +52,7 @@
     <!-- Permissions / API key -->
     <string name="permission_denied">Permission microphone refusée</string>
     <string name="api_key_required_title">Clé API requise</string>
-    <string name="api_key_required_message">Veuillez configurer votre clé API AssemblyAI dans les paramètres avant d\'enregistrer.</string>
+    <string name="api_key_required_message">Veuillez configurer votre clé API OpenAI dans les paramètres avant d\'enregistrer.</string>
     <string name="go_to_settings">Paramètres</string>
 
     <!-- Notification -->

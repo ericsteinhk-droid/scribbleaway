@@ -7,9 +7,9 @@ class AppPreferences(context: Context) {
 
     private val prefs = context.getSharedPreferences("meeting_recorder_prefs", Context.MODE_PRIVATE)
 
-    var assemblyAiApiKey: String
-        get() = prefs.getString(KEY_ASSEMBLY_KEY, "") ?: ""
-        set(value) = prefs.edit { putString(KEY_ASSEMBLY_KEY, value) }
+    var openAiApiKey: String
+        get() = prefs.getString(KEY_OPENAI_KEY, "") ?: ""
+        set(value) = prefs.edit { putString(KEY_OPENAI_KEY, value) }
 
     var anthropicApiKey: String
         get() = prefs.getString(KEY_ANTHROPIC_KEY, "") ?: ""
@@ -28,7 +28,7 @@ class AppPreferences(context: Context) {
         set(value) = prefs.edit { putString(KEY_TITLE_TEMPLATE, value) }
 
     companion object {
-        private const val KEY_ASSEMBLY_KEY = "assemblyai_api_key"
+        private const val KEY_OPENAI_KEY = "openai_api_key"
         private const val KEY_ANTHROPIC_KEY = "anthropic_api_key"
         private const val KEY_CHUNK_DURATION = "chunk_duration_minutes"
         private const val KEY_SPEAKER_COUNT = "speaker_count"

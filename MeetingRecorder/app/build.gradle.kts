@@ -10,7 +10,7 @@ android {
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.scribbleaway.assemblyrecorder"
+        applicationId = "com.scribbleaway.meetingrecorder"
         minSdk = 26
         targetSdk = 34
         versionCode = 1

@@ -12,17 +12,17 @@
         android:orientation="vertical"
         android:padding="24dp">
 
-        <!-- AssemblyAI API Key (transcription + diarisation) -->
+        <!-- OpenAI API Key (Whisper transcription + GPT-4o diarisation) -->
         <com.google.android.material.textfield.TextInputLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="@string/hint_assembly_key"
+            android:hint="@string/hint_openai_key"
             app:endIconMode="password_toggle"
             style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
             android:layout_marginBottom="24dp">
 
             <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/etAssemblyKey"
+                android:id="@+id/etOpenAiKey"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:inputType="textPassword"

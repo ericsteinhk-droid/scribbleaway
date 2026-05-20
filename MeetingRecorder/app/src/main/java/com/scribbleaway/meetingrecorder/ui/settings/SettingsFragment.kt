@@ -26,7 +26,7 @@ class SettingsFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         val prefs = viewModel.prefs
-        binding.etAssemblyKey.setText(prefs.assemblyAiApiKey)
+        binding.etOpenAiKey.setText(prefs.openAiApiKey)
         binding.etAnthropicKey.setText(prefs.anthropicApiKey)
         binding.etMeetingTitle.setText(prefs.meetingTitleTemplate)
         binding.sliderChunkDuration.value = prefs.chunkDurationMinutes.toFloat()
@@ -42,12 +42,12 @@ class SettingsFragment : Fragment() {
         }
 
         binding.btnSave.setOnClickListener {
-            val assemblyKey = binding.etAssemblyKey.text?.toString()?.trim() ?: ""
-            if (assemblyKey.isBlank()) {
-                Snackbar.make(binding.root, R.string.assembly_key_empty, Snackbar.LENGTH_SHORT).show()
+            val openAiKey = binding.etOpenAiKey.text?.toString()?.trim() ?: ""
+            if (openAiKey.isBlank()) {
+                Snackbar.make(binding.root, R.string.openai_key_empty, Snackbar.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
-            prefs.assemblyAiApiKey = assemblyKey
+            prefs.openAiApiKey = openAiKey
             prefs.anthropicApiKey = binding.etAnthropicKey.text?.toString()?.trim() ?: ""
             prefs.meetingTitleTemplate = binding.etMeetingTitle.text?.toString()?.trim()
                 ?.ifBlank { "Réunion de chantier" } ?: "Réunion de chantier"
