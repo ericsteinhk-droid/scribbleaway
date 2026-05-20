@@ -7,7 +7,8 @@ import java.util.Date
 import java.util.Locale
 
 fun meetingDir(context: Context, meetingId: Long): File {
-    return File(context.filesDir, "meetings/$meetingId").also { it.mkdirs() }
+    val base = context.getExternalFilesDir(null) ?: context.filesDir
+    return File(base, "meetings/$meetingId").also { it.mkdirs() }
 }
 
 fun chunkFile(context: Context, meetingId: Long, index: Int): File {
