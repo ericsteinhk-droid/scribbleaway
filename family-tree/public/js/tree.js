@@ -45,16 +45,8 @@ class FamilyTreeRenderer {
     const byId = {};
     people.forEach(p => byId[p.id] = p);
 
-    // Build parent→children and child→parents maps
-    const childrenOf = {};
-    const parentsOf  = {};
-    const couples    = {}; // id → spouse id (inferred from shared children)
-
-    people.forEach(p => {
-      childrenOf[p.id] = childrenOf[p.id] || [];
-      parentsOf[p.id]  = parentsOf[p.id]  || [];
-    });
-
+    const childrenOf = {}, parentsOf = {}, couples = {};
+    people.forEach(p => { childrenOf[p.id] = []; parentsOf[p.id] = []; });
     people.forEach(p => {
       if (p.father_id && byId[p.father_id]) {
         childrenOf[p.father_id].push(p.id);
@@ -70,117 +62,130 @@ class FamilyTreeRenderer {
       }
     });
 
-    // Assign generation via BFS from roots
+    // ── Generation assignment (max-depth BFS — no visited set so deeper paths win) ──
     const gen = {};
     const roots = people.filter(p => parentsOf[p.id].length === 0);
     const queue = roots.map(p => ({ id: p.id, g: 0 }));
-    const visited = new Set();
-
     while (queue.length) {
       const { id, g } = queue.shift();
-      if (visited.has(id)) continue;
-      visited.add(id);
-      if (gen[id] === undefined || g > gen[id]) gen[id] = g;
-      childrenOf[id].forEach(cid => {
-        if (!visited.has(cid)) queue.push({ id: cid, g: g + 1 });
-      });
+      if (gen[id] !== undefined && gen[id] >= g) continue; // already at same/deeper level
+      gen[id] = g;
+      childrenOf[id].forEach(cid => queue.push({ id: cid, g: g + 1 }));
     }
-    // Catch disconnected nodes
     people.forEach(p => { if (gen[p.id] === undefined) gen[p.id] = 0; });
 
-    // Group by generation
+    // ── Group into generations, sort siblings together ──
     const byGen = {};
-    people.forEach(p => {
-      const g = gen[p.id];
-      (byGen[g] = byGen[g] || []).push(p);
-    });
-
-    // Sort generations
+    people.forEach(p => { const g = gen[p.id]; (byGen[g] = byGen[g] || []).push(p); });
     const genNums = Object.keys(byGen).map(Number).sort((a, b) => a - b);
 
-    // Build couple units per generation
-    const positions = {};
-    const coupleLines = [];
-    const childLines  = [];
+    genNums.forEach(g => {
+      byGen[g].sort((a, b) => {
+        const aKey = [a.father_id || 0, a.mother_id || 0].sort().join('-');
+        const bKey = [b.father_id || 0, b.mother_id || 0].sort().join('-');
+        return aKey.localeCompare(bKey);
+      });
+    });
 
-    genNums.forEach((g, rowIdx) => {
-      const row = byGen[g];
+    // ── Build couple/single units per generation ──
+    const genUnits = {};
+    genNums.forEach(g => {
       const placed = new Set();
-      const units  = []; // [{members: [p,...], coupleKey}]
-
-      row.forEach(p => {
+      genUnits[g] = [];
+      byGen[g].forEach(p => {
         if (placed.has(p.id)) return;
         placed.add(p.id);
         const spouseId = couples[p.id];
-        const spouse = spouseId ? byId[spouseId] : null;
-        if (spouse && row.includes(spouse) && !placed.has(spouse.id)) {
-          placed.add(spouse.id);
-          units.push({ members: [p, spouse] });
-        } else {
-          units.push({ members: [p] });
+        const members = [p];
+        if (spouseId && byId[spouseId] && byGen[g].find(q => q.id === spouseId) && !placed.has(spouseId)) {
+          placed.add(spouseId);
+          members.push(byId[spouseId]);
         }
+        const allChildren = new Set();
+        members.forEach(m => childrenOf[m.id].forEach(cid => allChildren.add(cid)));
+        genUnits[g].push({ members, children: [...allChildren] });
       });
-
-      // Total row width
-      const unitWidths = units.map(u => u.members.length * CARD.w + (u.members.length - 1) * GAP.spouse);
-      const rowW = unitWidths.reduce((s, w) => s + w, 0) + (units.length - 1) * GAP.h;
-      let x = -rowW / 2;
-      const y = rowIdx * (CARD.h + GAP.v);
-
-      units.forEach((unit, ui) => {
-        const uw = unitWidths[ui];
-        unit.members.forEach((p, mi) => {
-          positions[p.id] = {
-            x: x + mi * (CARD.w + GAP.spouse),
-            y,
-            cx: x + mi * (CARD.w + GAP.spouse) + CARD.w / 2,
-            cy: y + CARD.h / 2,
-            gen: g
-          };
-        });
-        // Couple line midpoint
-        if (unit.members.length === 2) {
-          const p1 = positions[unit.members[0].id];
-          const p2 = positions[unit.members[1].id];
-          unit.midX = (p1.cx + p2.cx) / 2;
-          unit.midY = p1.cy;
-          coupleLines.push({ x1: p1.cx, y1: p1.cy, x2: p2.cx, y2: p2.cy });
-        } else {
-          unit.midX = positions[unit.members[0].id].cx;
-          unit.midY = positions[unit.members[0].id].cy;
-        }
-        unit.bottomMidX = unit.midX;
-        unit.bottomMidY = y + CARD.h;
-        x += uw + GAP.h;
-      });
-
-      // Store units for link drawing
-      byGen[g]._units = units;
     });
 
-    // Draw parent → child lines
+    const unitW = u => u.members.length * CARD.w + (u.members.length - 1) * GAP.spouse;
+    const rowY  = g => genNums.indexOf(g) * (CARD.h + GAP.v);
+
+    // ── Initial left-to-right layout ──
+    const positions = {};
+    const unitMid   = new Map(); // unit → current midX
+
     genNums.forEach(g => {
-      const units = (byGen[g] || [])._units || [];
+      const y = rowY(g);
+      let x = 0;
+      genUnits[g].forEach(unit => {
+        const w = unitW(unit);
+        unitMid.set(unit, x + w / 2);
+        unit.members.forEach((p, i) => {
+          positions[p.id] = { x: x + i * (CARD.w + GAP.spouse), y, cx: x + i * (CARD.w + GAP.spouse) + CARD.w / 2 };
+        });
+        x += w + GAP.h;
+      });
+    });
+
+    // ── Bottom-up adjustment: center each unit above its children ──
+    [...genNums].reverse().forEach(g => {
+      const units = genUnits[g];
+
       units.forEach(unit => {
-        const allChildren = new Set();
-        unit.members.forEach(p => childrenOf[p.id].forEach(cid => allChildren.add(cid)));
-        if (!allChildren.size) return;
+        const cxs = unit.children.filter(cid => positions[cid]).map(cid => positions[cid].cx);
+        if (!cxs.length) return;
+        const targetMid = cxs.reduce((s, c) => s + c, 0) / cxs.length;
+        const shift = targetMid - unitMid.get(unit);
+        if (Math.abs(shift) < 0.5) return;
+        unit.members.forEach(p => { positions[p.id].x += shift; positions[p.id].cx += shift; });
+        unitMid.set(unit, unitMid.get(unit) + shift);
+      });
 
-        const childPos = [...allChildren].filter(cid => positions[cid]).map(cid => positions[cid]);
-        if (!childPos.length) return;
+      // Resolve overlaps left→right
+      const sorted = [...units].sort((a, b) => positions[a.members[0].id].x - positions[b.members[0].id].x);
+      for (let i = 1; i < sorted.length; i++) {
+        const prev = sorted[i - 1], curr = sorted[i];
+        const minX = positions[prev.members[prev.members.length - 1].id].x + CARD.w + GAP.h;
+        const currX = positions[curr.members[0].id].x;
+        if (currX < minX) {
+          const shift = minX - currX;
+          curr.members.forEach(p => { positions[p.id].x += shift; positions[p.id].cx += shift; });
+          unitMid.set(curr, unitMid.get(curr) + shift);
+        }
+      }
+    });
 
-        const childMinX = Math.min(...childPos.map(p => p.cx));
-        const childMaxX = Math.max(...childPos.map(p => p.cx));
-        const childY    = childPos[0].y; // all on same row
+    // ── Build line data ──
+    const coupleLines = [], childLines = [];
 
-        const parentMidX = unit.bottomMidX;
-        const parentBotY = unit.bottomMidY;
-        const midY = (parentBotY + childY) / 2;
+    genNums.forEach(g => {
+      const y = rowY(g);
+      genUnits[g].forEach(unit => {
+        const mid = unitMid.get(unit);
 
-        childLines.push({
-          parentX: parentMidX, parentY: parentBotY,
-          childMinX, childMaxX, childY, midY,
-          childXs: childPos.map(p => p.cx)
+        if (unit.members.length === 2) {
+          const cx1 = positions[unit.members[0].id].cx;
+          const cx2 = positions[unit.members[1].id].cx;
+          coupleLines.push({ x1: cx1, y1: y + CARD.h / 2, x2: cx2, y2: y + CARD.h / 2 });
+        }
+
+        const validChildren = unit.children.filter(cid => positions[cid]);
+        if (!validChildren.length) return;
+
+        // Group children by their row in case generations differ
+        const byRow = {};
+        validChildren.forEach(cid => {
+          const cy = positions[cid].y;
+          (byRow[cy] = byRow[cy] || []).push(positions[cid].cx);
+        });
+
+        Object.entries(byRow).forEach(([childYStr, childCxs]) => {
+          const childY = parseFloat(childYStr);
+          const midY   = (y + CARD.h + childY) / 2;
+          // Horizontal bar always spans from parent drop to outermost child
+          const hMin   = Math.min(mid, ...childCxs);
+          const hMax   = Math.max(mid, ...childCxs);
+          childLines.push({ parentX: mid, parentY: y + CARD.h, hMin, hMax, midY, childY, childCxs });
         });
       });
     });
@@ -191,30 +196,25 @@ class FamilyTreeRenderer {
   _drawLinks(coupleLines, childLines) {
     const linkG = this.g.append('g').attr('class', 'links');
 
-    // Couple lines (horizontal, dashed)
     linkG.selectAll('.couple-line')
-      .data(coupleLines)
-      .join('line')
+      .data(coupleLines).join('line')
       .attr('class', 'couple-line')
       .attr('x1', d => d.x1).attr('y1', d => d.y1)
       .attr('x2', d => d.x2).attr('y2', d => d.y2);
 
-    // Parent–child connections
     childLines.forEach(d => {
-      // Vertical drop from parent
+      // Drop from parent midpoint to horizontal junction
       linkG.append('line').attr('class', 'child-vline')
         .attr('x1', d.parentX).attr('y1', d.parentY)
         .attr('x2', d.parentX).attr('y2', d.midY);
 
-      // Horizontal bar across children
-      if (d.childXs.length > 1) {
-        linkG.append('line').attr('class', 'child-hline')
-          .attr('x1', d.childMinX).attr('y1', d.midY)
-          .attr('x2', d.childMaxX).attr('y2', d.midY);
-      }
+      // Horizontal bar — always drawn, always includes parentX and all children
+      linkG.append('line').attr('class', 'child-hline')
+        .attr('x1', d.hMin).attr('y1', d.midY)
+        .attr('x2', d.hMax).attr('y2', d.midY);
 
-      // Drop to each child
-      d.childXs.forEach(cx => {
+      // Drop from junction to each child
+      d.childCxs.forEach(cx => {
         linkG.append('line').attr('class', 'child-vline')
           .attr('x1', cx).attr('y1', d.midY)
           .attr('x2', cx).attr('y2', d.childY);

@@ -547,17 +547,19 @@ header {
 /* ─── Discrete admin link ───────────────────────────────────────────────────── */
 #admin-link {
   position: absolute;
-  bottom: 12px;
-  left: 14px;
-  font-size: 13px;
-  color: var(--border);
+  bottom: 8px;
+  left: 10px;
+  font-size: 18px;
+  color: var(--text-muted);
   text-decoration: none;
-  opacity: 0.4;
-  transition: opacity var(--transition), color var(--transition);
+  opacity: 0.25;
+  transition: opacity var(--transition);
   z-index: 5;
-  line-height: 1;
+  /* large tap area for mobile */
+  padding: 12px;
+  margin: -12px;
 }
-#admin-link:hover { opacity: 1; color: var(--text-muted); }
+#admin-link:hover, #admin-link:active { opacity: 0.8; }
 
 /* ─── Scrollbar ─────────────────────────────────────────────────────────────── */
 ::-webkit-scrollbar { width: 6px; }
