@@ -26,14 +26,13 @@ class AssemblyAiClient(private val apiKeyProvider: () -> String) {
 
     private data class UploadResponse(@SerializedName("upload_url") val uploadUrl: String)
 
+    // Minimal request: only parameters confirmed supported for French.
+    // speech_model and word_boost removed — "best" model rejects fr language_code.
     private data class TranscriptRequest(
         @SerializedName("audio_url") val audioUrl: String,
         @SerializedName("language_code") val languageCode: String = "fr",
         @SerializedName("speaker_labels") val speakerLabels: Boolean = true,
-        @SerializedName("speakers_expected") val speakersExpected: Int,
-        @SerializedName("speech_model") val speechModel: String = "best",
-        @SerializedName("word_boost") val wordBoost: List<String> = WORD_BOOST,
-        @SerializedName("boost_param") val boostParam: String = "high"
+        @SerializedName("speakers_expected") val speakersExpected: Int
     )
 
     private data class IdResponse(val id: String)
@@ -87,7 +86,6 @@ class AssemblyAiClient(private val apiKeyProvider: () -> String) {
         val request = Request.Builder()
             .url("https://api.assemblyai.com/v2/transcript")
             .header("Authorization", key)
-            .header("Content-Type", "application/json")
             .post(reqBody)
             .build()
         http.newCall(request).execute().use { response ->
@@ -106,7 +104,7 @@ class AssemblyAiClient(private val apiKeyProvider: () -> String) {
 
         val maxWaitMs = 10 * 60 * 1000L
         val startMs = System.currentTimeMillis()
-        Thread.sleep(5_000) // give AssemblyAI a moment before first poll
+        Thread.sleep(5_000)
 
         while (System.currentTimeMillis() - startMs < maxWaitMs) {
             val result = http.newCall(pollRequest).execute().use { response ->
@@ -135,21 +133,11 @@ class AssemblyAiClient(private val apiKeyProvider: () -> String) {
                 )
             }
         }
-        // Fallback: no speaker labels returned — single block
         return listOf(TranscriptSegment(
             speaker = "Intervenant",
             startSeconds = offsetSeconds,
             endSeconds = offsetSeconds + (text?.length?.div(15.0) ?: 60.0),
             text = text?.trim() ?: ""
         ))
-    }
-
-    companion object {
-        private val WORD_BOOST = listOf(
-            "DDC", "DIR", "QRT", "NDLR", "UdeM", "POM", "CVAC", "ATK", "BX",
-            "béton", "coffrage", "maçonnerie", "terracotta", "gypse", "ignifuge",
-            "gicleur", "ferme-porte", "scellant", "silicone", "colombage", "linteau",
-            "fourrure", "étaiement", "délestage", "tuyauterie"
-        )
     }
 }
