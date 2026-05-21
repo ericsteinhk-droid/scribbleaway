@@ -443,7 +443,7 @@
 <!-- ══ BARRE D'ACTIONS ══ -->
 <div class="bottom-bar" id="bottom-bar">
   <button class="btn btn-outline" onclick="editSetup()">✏️ Modifier</button>
-  <button class="btn btn-success"  onclick="openFmt()">📄 Exporter</button>
+  <button class="btn btn-success"  onclick="openFmt()">📤 Partager</button>
 </div>
 
 
@@ -451,21 +451,21 @@
 <div class="fmt-overlay" id="fmt-overlay" onclick="closeFmt()">
   <div class="fmt-sheet" onclick="event.stopPropagation()">
     <div class="fmt-handle"></div>
-    <div class="fmt-title">Choisir le format d'export</div>
+    <div class="fmt-title">Partager la liste de présences</div>
 
     <button class="fmt-opt" onclick="doExport('xlsx')">
       <span class="fmt-opt-icon">📊</span>
       <div class="fmt-opt-text">
-        <strong>Excel (.xlsx)</strong>
-        <small>Ouvrir dans Microsoft Excel ou Google Sheets</small>
+        <strong>Partager en Excel (.xlsx)</strong>
+        <small>Envoyer par courriel, Teams, Drive…</small>
       </div>
     </button>
 
     <button class="fmt-opt" onclick="doExport('pdf')">
       <span class="fmt-opt-icon">📄</span>
       <div class="fmt-opt-text">
-        <strong>PDF</strong>
-        <small>Imprimer ou enregistrer en PDF</small>
+        <strong>Partager en PDF</strong>
+        <small>Imprimer ou envoyer en PDF</small>
       </div>
     </button>
 
