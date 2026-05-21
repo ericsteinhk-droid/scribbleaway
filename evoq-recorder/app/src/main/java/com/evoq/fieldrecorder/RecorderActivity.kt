@@ -32,6 +32,8 @@ class RecorderActivity : BaseActivity() {
         const val EXTRA_LANGUAGE = "extra_language"
         private const val REQUEST_AUDIO_PERMISSION = 101
         private const val SILENCE_PARAGRAPH_MS = 4000L
+        private const val PAUSE_CLEANUP_TIMEOUT_MS = 2500L
+        private const val KEY_TRANSCRIPT = "saved_transcript"
     }
 
     private lateinit var binding: ActivityRecorderBinding
@@ -43,6 +45,7 @@ class RecorderActivity : BaseActivity() {
     private var chronoElapsedBeforePause = 0L
 
     private val handler = Handler(Looper.getMainLooper())
+
     private val silenceRunnable = Runnable {
         if (isRecording && !isPaused && transcriptBuilder.isNotEmpty()) {
             if (!transcriptBuilder.endsWith("\n\n")) {
@@ -50,6 +53,11 @@ class RecorderActivity : BaseActivity() {
                 binding.tvTranscript.text = transcriptBuilder.toString().trimEnd()
             }
         }
+    }
+
+    // Safety net: if stopListening() never delivers a callback, clean up after timeout.
+    private val pauseCleanupRunnable = Runnable {
+        if (isPaused) finalizePause()
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -65,9 +73,20 @@ class RecorderActivity : BaseActivity() {
             if (language.startsWith("fr")) R.string.context_hint_fr else R.string.context_hint_en
         )
 
+        // Restore transcript that survived a config-change or system-kill recreation.
+        savedInstanceState?.getString(KEY_TRANSCRIPT)?.takeIf { it.isNotEmpty() }?.let { saved ->
+            transcriptBuilder.append(saved)
+            binding.tvTranscript.text = saved.trimEnd()
+        }
+
         binding.btnRecord.setOnClickListener { checkPermissionAndRecord() }
         binding.btnPause.setOnClickListener { togglePause() }
         binding.btnStop.setOnClickListener { stopRecording() }
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putString(KEY_TRANSCRIPT, transcriptBuilder.toString())
     }
 
     private fun checkPermissionAndRecord() {
@@ -119,6 +138,8 @@ class RecorderActivity : BaseActivity() {
 
     private fun togglePause() {
         if (isPaused) {
+            // Resume: cancel the cleanup timeout and start listening again.
+            handler.removeCallbacks(pauseCleanupRunnable)
             isPaused = false
             binding.btnPause.text = getString(R.string.pause)
             binding.tvStatus.text = getString(R.string.recording)
@@ -126,6 +147,8 @@ class RecorderActivity : BaseActivity() {
             binding.chronometer.start()
             startListening()
         } else {
+            // Pause: stop the recognizer but do NOT destroy it yet.
+            // onResults/onError will capture any final in-flight words and then call finalizePause().
             isPaused = true
             handler.removeCallbacks(silenceRunnable)
             binding.btnPause.text = getString(R.string.resume)
@@ -133,14 +156,20 @@ class RecorderActivity : BaseActivity() {
             chronoElapsedBeforePause = SystemClock.elapsedRealtime() - binding.chronometer.base
             binding.chronometer.stop()
             speechRecognizer?.stopListening()
-            speechRecognizer?.destroy()
-            speechRecognizer = null
-
-            if (transcriptBuilder.isNotEmpty() && !transcriptBuilder.endsWith("\n\n")) {
-                transcriptBuilder.append("\n\n")
-                binding.tvTranscript.text = transcriptBuilder.toString().trimEnd()
-            }
+            // Safety: if no callback arrives within the timeout, clean up anyway.
+            handler.postDelayed(pauseCleanupRunnable, PAUSE_CLEANUP_TIMEOUT_MS)
         }
+    }
+
+    /** Appends paragraph break, destroys the recognizer, and refreshes the transcript view. */
+    private fun finalizePause() {
+        handler.removeCallbacks(pauseCleanupRunnable)
+        speechRecognizer?.destroy()
+        speechRecognizer = null
+        if (transcriptBuilder.isNotEmpty() && !transcriptBuilder.endsWith("\n\n")) {
+            transcriptBuilder.append("\n\n")
+        }
+        binding.tvTranscript.text = transcriptBuilder.toString().trimEnd()
     }
 
     private fun startListening() {
@@ -154,9 +183,9 @@ class RecorderActivity : BaseActivity() {
             override fun onEndOfSpeech() {}
 
             override fun onError(error: Int) {
-                if (isRecording && !isPaused
-                    && error != SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS
-                ) {
+                if (isPaused) {
+                    finalizePause()
+                } else if (isRecording && error != SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS) {
                     startListening()
                 }
             }
@@ -164,11 +193,19 @@ class RecorderActivity : BaseActivity() {
             override fun onResults(results: Bundle?) {
                 val match = results
                     ?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
-                    ?.firstOrNull() ?: return
-                transcriptBuilder.append(match).append(" ")
-                binding.tvTranscript.text = transcriptBuilder.toString().trimEnd()
-                resetSilenceTimer()
-                if (isRecording && !isPaused) startListening()
+                    ?.firstOrNull()
+
+                if (match != null) {
+                    transcriptBuilder.append(match).append(" ")
+                }
+
+                if (isPaused) {
+                    finalizePause()
+                } else if (isRecording) {
+                    binding.tvTranscript.text = transcriptBuilder.toString().trimEnd()
+                    resetSilenceTimer()
+                    startListening()
+                }
             }
 
             override fun onPartialResults(partialResults: Bundle?) {
@@ -251,6 +288,7 @@ class RecorderActivity : BaseActivity() {
         isRecording = false
         isPaused = false
         handler.removeCallbacks(silenceRunnable)
+        handler.removeCallbacks(pauseCleanupRunnable)
         binding.chronometer.stop()
         showStartButton()
         binding.cardContextHint.visibility = View.VISIBLE
@@ -276,7 +314,6 @@ class RecorderActivity : BaseActivity() {
     }
 
     private fun playFeedback(start: Boolean) {
-        // Haptic buzz
         @Suppress("DEPRECATION")
         val vibrator = getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
         if (vibrator != null) {
@@ -287,7 +324,6 @@ class RecorderActivity : BaseActivity() {
                 vibrator.vibrate(duration)
             }
         }
-        // Audible ding on notification stream (respects silent mode)
         try {
             val tone = if (start) ToneGenerator.TONE_PROP_BEEP else ToneGenerator.TONE_PROP_ACK
             val toneGen = ToneGenerator(AudioManager.STREAM_NOTIFICATION, 75)
@@ -317,6 +353,7 @@ class RecorderActivity : BaseActivity() {
     override fun onDestroy() {
         super.onDestroy()
         handler.removeCallbacks(silenceRunnable)
+        handler.removeCallbacks(pauseCleanupRunnable)
         speechRecognizer?.destroy()
     }
 }
