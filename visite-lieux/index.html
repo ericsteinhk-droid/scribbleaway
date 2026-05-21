@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#1565C0">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Présences">
+  <title>Visite des Lieux — Présences</title>
+  <link rel="manifest" href="manifest.json">
+  <script src="https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --blue:        #1565C0;
+      --blue-dark:   #0D47A1;
+      --blue-light:  #E3F2FD;
+      --orange:      #E65100;
+      --green:       #2E7D32;
+      --red:         #C62828;
+      --surface:     #FFFFFF;
+      --bg:          #F0F4F8;
+      --text:        #1A1A2E;
+      --muted:       #6B7280;
+      --border:      #D1D5DB;
+      --shadow-sm:   0 1px 3px rgba(0,0,0,.12), 0 1px 2px rgba(0,0,0,.08);
+      --shadow:      0 4px 12px rgba(0,0,0,.12);
+      --radius:      14px;
+      --radius-sm:   8px;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100dvh;
+      -webkit-tap-highlight-color: transparent;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── APP BAR ── */
+    .app-bar {
+      background: var(--blue);
+      color: #fff;
+      padding: 14px 20px 14px;
+      padding-top: max(14px, env(safe-area-inset-top));
+      position: sticky;
+      top: 0;
+      z-index: 200;
+      box-shadow: 0 2px 8px rgba(0,0,0,.25);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .app-bar-icon { font-size: 1.4rem; }
+    .app-bar-text h1 { font-size: 1rem; font-weight: 700; letter-spacing: .3px; }
+    .app-bar-text p  { font-size: .72rem; opacity: .8; margin-top: 1px; }
+
+    /* ── SCREENS ── */
+    .screen { display: none; padding: 16px; padding-bottom: 110px; max-width: 640px; margin: 0 auto; }
+    .screen.active { display: block; }
+
+    /* ── CARD ── */
+    .card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-sm);
+      padding: 20px;
+      margin-bottom: 14px;
+    }
+    .card-title {
+      font-size: .72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--blue);
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* ── PROJECT BANNER ── */
+    .project-banner {
+      background: linear-gradient(135deg, var(--blue) 0%, var(--blue-dark) 100%);
+      color: #fff;
+      border-radius: var(--radius);
+      padding: 18px 20px;
+      margin-bottom: 14px;
+      box-shadow: var(--shadow);
+    }
+    .project-banner .row {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .project-banner .row:last-child { margin-bottom: 0; }
+    .project-banner .lbl {
+      font-size: .7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .8px;
+      opacity: .75;
+      min-width: 90px;
+      margin-top: 2px;
+    }
+    .project-banner .val { font-size: .92rem; font-weight: 600; line-height: 1.3; }
+
+    /* ── FORM ── */
+    .form-group { margin-bottom: 16px; }
+    .form-group:last-child { margin-bottom: 0; }
+
+    label {
+      display: block;
+      font-size: .72rem;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .8px;
+      margin-bottom: 7px;
+    }
+
+    input[type="text"],
+    input[type="email"] {
+      width: 100%;
+      padding: 14px 16px;
+      border: 2px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-size: .97rem;
+      color: var(--text);
+      background: var(--surface);
+      transition: border-color .18s, background .18s;
+      -webkit-appearance: none;
+    }
+    input:focus {
+      outline: none;
+      border-color: var(--blue);
+      background: var(--blue-light);
+    }
+    input[readonly] {
+      background: #F3F4F6;
+      color: var(--muted);
+      cursor: default;
+    }
+
+    /* ── BUTTONS ── */
+    .btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: 100%;
+      padding: 15px 20px;
+      border: none;
+      border-radius: var(--radius-sm);
+      font-size: .97rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform .1s, filter .15s;
+      -webkit-appearance: none;
+      user-select: none;
+    }
+    .btn:active { transform: scale(.97); filter: brightness(.93); }
+
+    .btn-primary { background: var(--blue);   color: #fff; }
+    .btn-success { background: var(--green);  color: #fff; }
+    .btn-outline {
+      background: transparent;
+      border: 2px solid var(--blue);
+      color: var(--blue);
+      padding: 13px 20px;
+    }
+
+    /* ── VISITOR LIST ── */
+    .visitor-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 13px 0;
+      border-bottom: 1px solid var(--border);
+      animation: slideIn .2s ease;
+    }
+    .visitor-row:last-child { border-bottom: none; }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(-8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .num-badge {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background: var(--blue);
+      color: #fff;
+      font-size: .82rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .v-info { flex: 1; min-width: 0; }
+    .v-name  { font-weight: 600; font-size: .93rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .v-co    { font-size: .78rem; color: var(--muted); margin-top: 1px; }
+    .v-mail  { font-size: .72rem; color: var(--blue);  margin-top: 2px; }
+
+    .btn-del {
+      background: none;
+      border: none;
+      color: var(--red);
+      font-size: 1.15rem;
+      cursor: pointer;
+      padding: 8px;
+      border-radius: 50%;
+      transition: background .15s;
+      flex-shrink: 0;
+    }
+    .btn-del:active { background: #FCE4E4; }
+
+    /* ── SECTION HEADER ── */
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 0;
+    }
+
+    /* ── BADGES ── */
+    .count-badge {
+      background: var(--blue-light);
+      color: var(--blue);
+      font-size: .72rem;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 20px;
+    }
+    .amend-badge {
+      background: var(--orange);
+      color: #fff;
+      font-size: .7rem;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 20px;
+      display: none;
+    }
+    .amend-badge.visible { display: inline-block; }
+
+    /* ── EMPTY STATE ── */
+    .empty {
+      text-align: center;
+      padding: 30px 16px;
+      color: var(--muted);
+    }
+    .empty .ico { font-size: 2.6rem; margin-bottom: 10px; }
+    .empty p { font-size: .85rem; }
+
+    /* ── BOTTOM BAR ── */
+    .bottom-bar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: var(--surface);
+      padding: 10px 16px;
+      padding-bottom: max(10px, env(safe-area-inset-bottom));
+      box-shadow: 0 -2px 16px rgba(0,0,0,.1);
+      display: none;
+      gap: 10px;
+      z-index: 100;
+      max-width: 100%;
+    }
+    .bottom-bar.active { display: flex; }
+    .bottom-bar .btn { flex: 1; }
+
+    /* ── TOAST ── */
+    .toast {
+      position: fixed;
+      bottom: 90px;
+      left: 50%;
+      transform: translateX(-50%) translateY(12px);
+      background: #1F2937;
+      color: #fff;
+      padding: 11px 20px;
+      border-radius: var(--radius-sm);
+      font-size: .88rem;
+      font-weight: 500;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .28s, transform .28s;
+      z-index: 300;
+      white-space: nowrap;
+      max-width: calc(100vw - 32px);
+    }
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* ── DIVIDER ── */
+    hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
+  </style>
+</head>
+<body>
+
+<!-- ══ APP BAR ══ -->
+<div class="app-bar">
+  <div class="app-bar-icon">📋</div>
+  <div class="app-bar-text">
+    <h1>Visite des Lieux</h1>
+    <p>Fiche de présences — Soumissionnaires</p>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════
+     ÉCRAN 1 — INFORMATIONS DU PROJET
+══════════════════════════════════════ -->
+<div class="screen active" id="screen-setup">
+
+  <div class="card" style="margin-top:16px;">
+    <div class="card-title">📁 Informations du projet</div>
+
+    <div class="form-group">
+      <label>Date de visite</label>
+      <input type="text" id="setup-date" readonly>
+    </div>
+
+    <div class="form-group">
+      <label>Nom du projet *</label>
+      <input type="text" id="setup-projet"
+             placeholder="Ex : Réfection toiture — École XYZ"
+             autocomplete="off" inputmode="text">
+    </div>
+
+    <div class="form-group">
+      <label>Chargé de projet *</label>
+      <input type="text" id="setup-charge"
+             placeholder="Ex : Marie Côté"
+             autocomplete="off" inputmode="text">
+    </div>
+
+    <button class="btn btn-primary" onclick="startSession()">
+      Commencer la saisie &nbsp;→
+    </button>
+  </div>
+
+</div>
+
+
+<!-- ══════════════════════════════════════
+     ÉCRAN 2 — LISTE DES VISITEURS
+══════════════════════════════════════ -->
+<div class="screen" id="screen-visitors">
+
+  <!-- Bannière projet -->
+  <div class="project-banner" id="project-banner" style="margin-top:16px;">
+    <div class="row">
+      <span class="lbl">📅 Date</span>
+      <span class="val" id="disp-date"></span>
+    </div>
+    <div class="row">
+      <span class="lbl">📁 Projet</span>
+      <span class="val" id="disp-projet"></span>
+    </div>
+    <div class="row">
+      <span class="lbl">👤 Chargé</span>
+      <span class="val" id="disp-charge"></span>
+    </div>
+  </div>
+
+  <!-- Formulaire ajout visiteur -->
+  <div class="card">
+    <div class="card-title">➕ Nouveau visiteur</div>
+
+    <div class="form-group">
+      <label>Nom complet *</label>
+      <input type="text" id="v-nom"
+             placeholder="Prénom Nom"
+             autocomplete="off" inputmode="text">
+    </div>
+
+    <div class="form-group">
+      <label>Entreprise *</label>
+      <input type="text" id="v-entreprise"
+             placeholder="Nom de l'entreprise"
+             autocomplete="off" inputmode="text">
+    </div>
+
+    <div class="form-group">
+      <label>Courriel</label>
+      <input type="email" id="v-courriel"
+             placeholder="nom@entreprise.com"
+             autocomplete="off" inputmode="email">
+    </div>
+
+    <button class="btn btn-primary" onclick="addVisitor()">
+      + Ajouter à la liste
+    </button>
+  </div>
+
+  <!-- Liste des présences -->
+  <div class="card">
+    <div class="section-header">
+      <div class="card-title" style="margin-bottom:0;">
+        👥 Présences
+        <span class="count-badge" id="visitor-count">0</span>
+      </div>
+      <span class="amend-badge" id="amend-badge"></span>
+    </div>
+
+    <div id="visitor-list">
+      <div class="empty">
+        <div class="ico">👥</div>
+        <p>Aucun visiteur ajouté.<br>Remplissez le formulaire ci-dessus.</p>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+
+<!-- ══ BARRE D'ACTIONS (bas de page) ══ -->
+<div class="bottom-bar" id="bottom-bar">
+  <button class="btn btn-outline" onclick="showSetup()">
+    ✏️ Modifier
+  </button>
+  <button class="btn btn-success" onclick="generateExcel()">
+    📊 Générer Excel
+  </button>
+</div>
+
+
+<!-- ══ TOAST ══ -->
+<div class="toast" id="toast"></div>
+
+
+<script>
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   STATE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+let visitors   = [];
+let exportRev  = 0;   // 0 = jamais exporté, 1+ = révision
+let project    = {};
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   DATE FRANÇAISE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+function dateFr(d) {
+  const DAYS   = ['dimanche','lundi','mardi','mercredi','jeudi','vendredi','samedi'];
+  const MONTHS = ['janvier','février','mars','avril','mai','juin','juillet',
+                  'août','septembre','octobre','novembre','décembre'];
+  return `${DAYS[d.getDay()]} ${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+}
+
+const TODAY = dateFr(new Date());
+document.getElementById('setup-date').value = TODAY;
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   NAVIGATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+function showScreen(name) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + name).classList.add('active');
+  document.getElementById('bottom-bar').classList.toggle('active', name === 'visitors');
+  window.scrollTo({ top: 0, behavior: 'instant' });
+}
+
+function showSetup() { showScreen('setup'); }
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   DÉMARRER SESSION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+function startSession() {
+  const projet = document.getElementById('setup-projet').value.trim();
+  const charge = document.getElementById('setup-charge').value.trim();
+
+  if (!projet || !charge) {
+    toast('⚠️ Veuillez remplir tous les champs obligatoires');
+    return;
+  }
+
+  project = { date: TODAY, projet, charge };
+
+  document.getElementById('disp-date').textContent   = TODAY;
+  document.getElementById('disp-projet').textContent = projet;
+  document.getElementById('disp-charge').textContent = charge;
+
+  showScreen('visitors');
+  document.getElementById('v-nom').focus();
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   GESTION DES VISITEURS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+function addVisitor() {
+  const nom       = document.getElementById('v-nom').value.trim();
+  const entreprise = document.getElementById('v-entreprise').value.trim();
+  const courriel  = document.getElementById('v-courriel').value.trim();
+
+  if (!nom || !entreprise) {
+    toast('⚠️ Nom complet et entreprise sont requis');
+    return;
+  }
+
+  visitors.push({ nom, entreprise, courriel });
+
+  document.getElementById('v-nom').value       = '';
+  document.getElementById('v-entreprise').value = '';
+  document.getElementById('v-courriel').value  = '';
+  document.getElementById('v-nom').focus();
+
+  renderList();
+  toast(`✅ ${nom} ajouté(e)`);
+}
+
+function removeVisitor(idx) {
+  const nom = visitors[idx].nom;
+  visitors.splice(idx, 1);
+  renderList();
+  toast(`🗑️ ${nom} retiré(e)`);
+}
+
+function renderList() {
+  const count = visitors.length;
+  document.getElementById('visitor-count').textContent = count;
+
+  const list = document.getElementById('visitor-list');
+
+  if (count === 0) {
+    list.innerHTML = `
+      <div class="empty">
+        <div class="ico">👥</div>
+        <p>Aucun visiteur ajouté.<br>Remplissez le formulaire ci-dessus.</p>
+      </div>`;
+    return;
+  }
+
+  list.innerHTML = visitors.map((v, i) => `
+    <div class="visitor-row">
+      <div class="num-badge">${i + 1}</div>
+      <div class="v-info">
+        <div class="v-name">${esc(v.nom)}</div>
+        <div class="v-co">${esc(v.entreprise)}</div>
+        ${v.courriel ? `<div class="v-mail">${esc(v.courriel)}</div>` : ''}
+      </div>
+      <button class="btn-del" onclick="removeVisitor(${i})" title="Retirer">✕</button>
+    </div>
+  `).join('');
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   GÉNÉRATION EXCEL
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+function generateExcel() {
+  if (visitors.length === 0) {
+    toast('⚠️ Aucun visiteur à exporter');
+    return;
+  }
+
+  exportRev++;
+  const isAmended = exportRev > 1;
+  const revLabel  = isAmended ? `AMENDÉE — Rév. ${exportRev - 1}` : '';
+
+  // Mise à jour badge révision dans l'interface
+  const badge = document.getElementById('amend-badge');
+  if (isAmended) {
+    badge.textContent = `Rév. ${exportRev - 1}`;
+    badge.classList.add('visible');
+  }
+
+  /* ── Construction de la feuille ── */
+  const ws_data = [];
+
+  // Ligne titre
+  ws_data.push([`FICHE DE PRÉSENCES — VISITE DES LIEUX${isAmended ? '  ·  ' + revLabel : ''}`]);
+  ws_data.push([]);
+
+  // Infos projet
+  ws_data.push(['Date :', project.date]);
+  ws_data.push(['Projet :', project.projet]);
+  ws_data.push(['Chargé de projet :', project.charge]);
+  ws_data.push([]);
+
+  // En-têtes du tableau
+  ws_data.push(['No.', 'Nom complet', 'Entreprise', 'Courriel']);
+
+  // Visiteurs
+  visitors.forEach((v, i) => {
+    ws_data.push([i + 1, v.nom, v.entreprise, v.courriel || '']);
+  });
+
+  const ws = XLSX.utils.aoa_to_sheet(ws_data);
+
+  // Largeurs des colonnes
+  ws['!cols'] = [
+    { wch: 5  },   // No.
+    { wch: 30 },   // Nom complet
+    { wch: 32 },   // Entreprise
+    { wch: 38 },   // Courriel
+  ];
+
+  // Fusion ligne titre (colonnes A→D)
+  ws['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 3 } }];
+
+  // Styles (via write option styleLib)
+  const styleTitle = {
+    font:      { bold: true, sz: 14, color: { rgb: 'FFFFFFFF' } },
+    fill:      { fgColor: { rgb: 'FF1565C0' } },
+    alignment: { horizontal: 'center', vertical: 'center' },
+  };
+  const styleHeader = {
+    font:      { bold: true, color: { rgb: 'FFFFFFFF' } },
+    fill:      { fgColor: { rgb: 'FF1565C0' } },
+    alignment: { horizontal: 'center' },
+    border: {
+      bottom: { style: 'medium', color: { rgb: 'FF0D47A1' } },
+    },
+  };
+  const styleLabel = {
+    font: { bold: true, color: { rgb: 'FF1565C0' } },
+  };
+  const styleAmend = {
+    font: { bold: true, color: { rgb: 'FFE65100' }, sz: 13 },
+    fill: { fgColor: { rgb: 'FFFFF3E0' } },
+    alignment: { horizontal: 'center' },
+  };
+
+  // Appliquer styles
+  if (ws['A1']) ws['A1'].s = isAmended ? styleAmend : styleTitle;
+  ['A7','B7','C7','D7'].forEach(ref => { if (ws[ref]) ws[ref].s = styleHeader; });
+  ['A3','A4','A5'].forEach(ref => { if (ws[ref]) ws[ref].s = styleLabel; });
+
+  // Rows hauteur
+  ws['!rows'] = [
+    { hpt: 30 },  // titre
+    { hpt: 6  },  // vide
+    {},           // date
+    {},           // projet
+    {},           // chargé
+    { hpt: 6  },  // vide
+    { hpt: 22 },  // headers
+  ];
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Présences');
+
+  /* ── Nom du fichier ── */
+  const today  = new Date().toISOString().slice(0, 10);
+  const slug   = project.projet.replace(/[^a-zA-ZÀ-ÿ0-9]/g, '_').replace(/_+/g, '_').slice(0, 30);
+  const suffix = isAmended ? `_Rev${exportRev - 1}` : '';
+  const fname  = `VisiteLieux_${slug}_${today}${suffix}.xlsx`;
+
+  XLSX.writeFile(wb, fname);
+  toast(`📊 Fichier généré${isAmended ? ' — Rév. ' + (exportRev - 1) : ''}`);
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   UTILITAIRES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+function esc(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+let toastTimer;
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 3000);
+}
+
+/* ── Enter sur le champ courriel → ajouter ── */
+document.getElementById('v-courriel')
+  .addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); addVisitor(); } });
+
+/* ── Service Worker ── */
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+</script>
+
+</body>
+</html>
