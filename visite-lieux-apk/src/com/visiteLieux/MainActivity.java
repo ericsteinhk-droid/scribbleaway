@@ -1,6 +1,7 @@
 package com.visiteLieux;
 
 import android.app.Activity;
+import android.content.ClipData;
 import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
@@ -102,11 +103,23 @@ public class MainActivity extends Activity {
 
     private void openShareDialog(File file, String mimeType) {
         Uri contentUri = ShareProvider.uriForFile(file);
+
         Intent intent = new Intent(Intent.ACTION_SEND);
         intent.setType(mimeType);
         intent.putExtra(Intent.EXTRA_STREAM, contentUri);
         intent.putExtra(Intent.EXTRA_SUBJECT, "Fiche de présences — Visite des lieux");
+
+        // ClipData is mandatory so that FLAG_GRANT_READ_URI_PERMISSION propagates
+        // through createChooser() to whichever app the user picks (Outlook, Drive…).
+        // Without it, the receiving app gets the URI but the permission grant is lost.
+        ClipData clip = new ClipData(
+            file.getName(),
+            new String[]{ mimeType },
+            new ClipData.Item(contentUri)
+        );
+        intent.setClipData(clip);
         intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+
         startActivity(Intent.createChooser(intent, "Partager par…"));
     }
 }
