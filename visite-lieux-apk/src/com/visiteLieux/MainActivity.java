@@ -101,9 +101,10 @@ public class MainActivity extends Activity {
     }
 
     private void openShareDialog(File file, String mimeType) {
+        Uri contentUri = ShareProvider.uriForFile(file);
         Intent intent = new Intent(Intent.ACTION_SEND);
         intent.setType(mimeType);
-        intent.putExtra(Intent.EXTRA_STREAM, Uri.fromFile(file));
+        intent.putExtra(Intent.EXTRA_STREAM, contentUri);
         intent.putExtra(Intent.EXTRA_SUBJECT, "Fiche de présences — Visite des lieux");
         intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
         startActivity(Intent.createChooser(intent, "Partager par…"));
