@@ -6,6 +6,8 @@
   <meta name="theme-color" content="#1565C0">
   <title>Visite des Lieux — Présences</title>
   <script src="xlsx.full.min.js"></script>
+  <script src="jspdf.umd.min.js"></script>
+  <script src="jspdf.plugin.autotable.min.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -928,18 +930,19 @@ function generateExcel() {
   var fname  = 'VisiteLieux_' + slug + '_' + today + suffix + '.xlsx';
 
   var wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'base64' });
+  var mime  = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 
-  if (typeof AndroidBridge !== 'undefined' && AndroidBridge.saveExcel) {
-    AndroidBridge.saveExcel(wbout, fname);
+  if (typeof AndroidBridge !== 'undefined' && AndroidBridge.shareFile) {
+    AndroidBridge.shareFile(wbout, fname, mime);
   } else {
     XLSX.writeFile(wb, fname);
   }
 
-  toast('📊 Excel généré' + (isAmended ? ' — Rév. ' + (exportRev - 1) : ''));
+  toast('📊 Excel prêt à partager' + (isAmended ? ' — Rév. ' + (exportRev - 1) : ''));
 }
 
 /* ═══════════════════════════════════════════════════════
-   EXPORT PDF
+   EXPORT PDF  (jsPDF → partage natif)
 ═══════════════════════════════════════════════════════ */
 function generatePdf() {
   exportRev++;
@@ -948,46 +951,109 @@ function generatePdf() {
   updateAmendBadge();
   syncSession();
 
-  /* Remplir le gabarit d'impression */
-  document.getElementById('pv-date').textContent   = currentSession.date;
-  document.getElementById('pv-projet').textContent = currentSession.projet;
-  document.getElementById('pv-charge').textContent = currentSession.charge;
+  var BLUE   = [21,  101, 192];
+  var ORANGE = [230,  81,   0];
+  var GREY   = [107, 114, 128];
+  var LGREY  = [243, 244, 246];
+  var BORDER = [229, 231, 235];
 
-  var amendEl = document.getElementById('pv-amend');
+  var doc = new jspdf.jsPDF({ orientation: 'portrait', unit: 'mm', format: 'letter' });
+  var W  = doc.internal.pageSize.getWidth();
+  var mg = 18;
+  var y  = 18;
+
+  /* Titre */
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(14);
+  doc.setTextColor(BLUE[0], BLUE[1], BLUE[2]);
+  doc.text('FICHE DE PRÉSENCES — VISITE DES LIEUX', W / 2, y, { align: 'center' });
+  y += 5;
+  doc.setDrawColor(BLUE[0], BLUE[1], BLUE[2]);
+  doc.setLineWidth(0.7);
+  doc.line(mg, y, W - mg, y);
+  y += 6;
+
   if (isAmended) {
-    amendEl.textContent  = 'AMENDÉE — Révision ' + (exportRev - 1);
-    amendEl.style.display = 'inline-block';
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(ORANGE[0], ORANGE[1], ORANGE[2]);
+    doc.text('AMENDÉE — Révision ' + (exportRev - 1), W / 2, y, { align: 'center' });
+    y += 7;
+  }
+
+  /* Infos projet */
+  doc.autoTable({
+    startY: y,
+    margin: { left: mg, right: mg },
+    body: [
+      ['Date de visite',   currentSession.date],
+      ['Projet',           currentSession.projet],
+      ['Chargé de projet', currentSession.charge]
+    ],
+    styles:       { fontSize: 9, cellPadding: { top: 3, bottom: 3, left: 5, right: 5 } },
+    columnStyles: { 0: { fontStyle: 'bold', fillColor: LGREY, textColor: GREY, cellWidth: 46 } },
+    theme:        'plain',
+    tableLineColor: BORDER,
+    tableLineWidth: 0.3
+  });
+  y = doc.lastAutoTable.finalY + 8;
+
+  /* Tableau des présences */
+  var rows = visitors.map(function(v, i) {
+    return [i + 1, v.nom, v.co, v.mail || ''];
+  });
+  doc.autoTable({
+    startY: y,
+    margin: { left: mg, right: mg },
+    head:   [['No.', 'Nom complet', 'Entreprise', 'Courriel']],
+    body:   rows,
+    styles:             { fontSize: 9, cellPadding: { top: 4, bottom: 4, left: 5, right: 5 } },
+    headStyles:         { fillColor: BLUE, textColor: [255,255,255], fontStyle: 'bold' },
+    columnStyles:       {
+      0: { cellWidth: 12, halign: 'center', fontStyle: 'bold', textColor: BLUE },
+      1: { cellWidth: 52 },
+      2: { cellWidth: 52 }
+    },
+    alternateRowStyles: { fillColor: [249, 250, 251] },
+    theme: 'striped'
+  });
+  y = doc.lastAutoTable.finalY + 14;
+
+  /* Bloc signature */
+  doc.setFontSize(7.5);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(GREY[0], GREY[1], GREY[2]);
+  doc.text('SIGNATURE DU CHARGÉ DE PROJET', mg, y);
+  doc.text('DATE', W / 2 + 6, y);
+  y += 12;
+  doc.setDrawColor(55, 65, 81);
+  doc.setLineWidth(0.35);
+  doc.line(mg, y, mg + 78, y);
+  doc.line(W / 2 + 6, y, W - mg, y);
+
+  /* Pied de page */
+  var pageH = doc.internal.pageSize.getHeight();
+  doc.setFontSize(7);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(180, 180, 180);
+  var rev = isAmended ? ' — Rév. ' + (exportRev - 1) : '';
+  doc.text('Visite des lieux · ' + currentSession.projet, mg, pageH - 10);
+  doc.text('Généré le ' + dateFr(new Date()) + rev, W - mg, pageH - 10, { align: 'right' });
+
+  /* Partage */
+  var today  = new Date().toISOString().slice(0, 10);
+  var slug   = currentSession.projet.replace(/[^a-zA-ZÀ-ž0-9]/g, '_').replace(/_+/g, '_').slice(0, 30);
+  var suffix = isAmended ? '_Rev' + (exportRev - 1) : '';
+  var fname  = 'VisiteLieux_' + slug + '_' + today + suffix + '.pdf';
+  var b64    = doc.output('datauristring').split(',')[1];
+
+  if (typeof AndroidBridge !== 'undefined' && AndroidBridge.shareFile) {
+    AndroidBridge.shareFile(b64, fname, 'application/pdf');
   } else {
-    amendEl.style.display = 'none';
+    doc.save(fname);
   }
 
-  var rows = '';
-  for (var i = 0; i < visitors.length; i++) {
-    var v = visitors[i];
-    rows += '<tr>' +
-      '<td>' + (i + 1) + '</td>' +
-      '<td>' + esc(v.nom) + '</td>' +
-      '<td>' + esc(v.co)  + '</td>' +
-      '<td>' + esc(v.mail || '') + '</td>' +
-    '</tr>';
-  }
-  document.getElementById('pv-rows').innerHTML = rows;
-
-  var today = new Date();
-  document.getElementById('pv-footer-title').textContent =
-    'Visite des lieux · ' + currentSession.projet;
-  document.getElementById('pv-footer-date').textContent =
-    'Généré le ' + dateFr(today) + (isAmended ? ' — Rév. ' + (exportRev - 1) : '');
-
-  var jobName = 'VisiteLieux_' + currentSession.projet.slice(0, 30).replace(/\s/g, '_');
-
-  if (typeof AndroidBridge !== 'undefined' && AndroidBridge.printDocument) {
-    AndroidBridge.printDocument(jobName);
-  } else {
-    window.print();
-  }
-
-  toast('📄 PDF — dialogue d\'impression ouvert' + (isAmended ? ' (Rév. ' + (exportRev-1) + ')' : ''));
+  toast('📄 PDF prêt à partager' + (isAmended ? ' — Rév. ' + (exportRev - 1) : ''));
 }
 
 /* ═══════════════════════════════════════════════════════

@@ -6,9 +6,6 @@ import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
-import android.print.PrintAttributes;
-import android.print.PrintDocumentAdapter;
-import android.print.PrintManager;
 import android.util.Base64;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebChromeClient;
@@ -53,9 +50,14 @@ public class MainActivity extends Activity {
     /* ───────────── JavaScript Bridge ───────────── */
     class Bridge {
 
-        /** Save Excel base64 to disk and open the share sheet. */
+        /**
+         * Save any file (Excel, PDF…) from base64 and open the system share dialog.
+         * Called from JavaScript: AndroidBridge.shareFile(base64, filename, mimeType)
+         */
         @JavascriptInterface
-        public void saveExcel(final String base64Data, final String filename) {
+        public void shareFile(final String base64Data,
+                              final String filename,
+                              final String mimeType) {
             try {
                 byte[] data = Base64.decode(base64Data, Base64.DEFAULT);
                 File dir = getOutputDir();
@@ -68,10 +70,7 @@ public class MainActivity extends Activity {
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
-                        Toast.makeText(MainActivity.this,
-                            "Fichier enregistré :\n" + file.getAbsolutePath(),
-                            Toast.LENGTH_LONG).show();
-                        shareFile(file);
+                        openShareDialog(file, mimeType);
                     }
                 });
             } catch (final IOException e) {
@@ -83,23 +82,6 @@ public class MainActivity extends Activity {
                     }
                 });
             }
-        }
-
-        /** Open the Android print dialog (PDF output). */
-        @JavascriptInterface
-        public void printDocument(final String jobName) {
-            runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    PrintManager pm = (PrintManager) getSystemService(Context.PRINT_SERVICE);
-                    if (pm != null) {
-                        PrintDocumentAdapter adapter =
-                            webView.createPrintDocumentAdapter(jobName);
-                        pm.print(jobName, adapter,
-                            new PrintAttributes.Builder().build());
-                    }
-                }
-            });
         }
 
         /** Let the JavaScript close the app cleanly (home-screen back press). */
@@ -118,13 +100,12 @@ public class MainActivity extends Activity {
         return ext != null ? ext : new File(getFilesDir(), "documents");
     }
 
-    private void shareFile(File file) {
+    private void openShareDialog(File file, String mimeType) {
         Intent intent = new Intent(Intent.ACTION_SEND);
-        intent.setType(
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        intent.setType(mimeType);
         intent.putExtra(Intent.EXTRA_STREAM, Uri.fromFile(file));
         intent.putExtra(Intent.EXTRA_SUBJECT, "Fiche de présences — Visite des lieux");
         intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-        startActivity(Intent.createChooser(intent, "Partager le fichier Excel"));
+        startActivity(Intent.createChooser(intent, "Partager par…"));
     }
 }
