@@ -1,5 +1,6 @@
 package com.scribbleaway.meetingrecorder.repository
 
+import android.content.Context
 import com.google.gson.Gson
 import com.scribbleaway.meetingrecorder.db.ChunkDao
 import com.scribbleaway.meetingrecorder.db.MeetingDao
@@ -8,9 +9,12 @@ import com.scribbleaway.meetingrecorder.model.Meeting
 import com.scribbleaway.meetingrecorder.model.MeetingStatus
 import com.scribbleaway.meetingrecorder.model.TranscriptSegment
 import com.scribbleaway.meetingrecorder.summary.SummaryService
+import com.scribbleaway.meetingrecorder.util.backupToDownloads
 import kotlinx.coroutines.flow.Flow
+import java.io.File
 
 class MeetingRepository(
+    private val context: Context,
     private val meetingDao: MeetingDao,
     private val chunkDao: ChunkDao,
     private val transcriptionRepo: TranscriptionRepository,
@@ -38,6 +42,25 @@ class MeetingRepository(
         if (chunks.isEmpty()) {
             meetingDao.updateStatus(meetingId, MeetingStatus.ERROR)
             throw RuntimeException("Aucun fichier audio trouvé. L'enregistrement n'a pas été sauvegardé correctement.")
+        }
+
+        // Back up all chunks to Downloads/ScribbleAway/ before touching the network,
+        // so the raw audio survives even if transcription fails or the app crashes.
+        onProgress("Sauvegarde audio…")
+        val meeting = meetingDao.getById(meetingId)
+        val safeTitle = meeting?.title
+            ?.replace(Regex("[^\\w\\s-]"), "")
+            ?.trim()
+            ?.replace(' ', '_')
+            ?.take(40)
+            ?: "reunion"
+        chunks.forEach { chunk ->
+            backupToDownloads(
+                context = context,
+                file = File(chunk.filePath),
+                folderName = "ScribbleAway",
+                displayName = "${safeTitle}_chunk_${chunk.index}.m4a"
+            )
         }
 
         val allSegments = mutableListOf<TranscriptSegment>()

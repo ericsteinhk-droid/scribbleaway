@@ -23,6 +23,7 @@ object AppModule {
         val transcriptionRepo = TranscriptionRepository(openAiClient, diarizationService, db.chunkDao())
         val summaryService = SummaryService(anthropicClient)
         return MeetingRepository(
+            context.applicationContext,
             db.meetingDao(),
             db.chunkDao(),
             transcriptionRepo,
