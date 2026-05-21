@@ -66,6 +66,7 @@ jobs:
           git push origin ${{ steps.version.outputs.tag }} --force
 
       - name: Create GitHub Release
+        id: release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.version.outputs.tag }}
@@ -95,3 +96,14 @@ jobs:
             3. Activer **Installer depuis des sources inconnues** si requis
             4. Ouvrir le fichier APK pour installer
             5. Aller dans **Paramètres** et entrer les clés API
+
+      - name: Print download link
+        run: |
+          echo "## ✅ Build successful" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Direct APK download:**" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "[ScribbleAway-${{ steps.version.outputs.tag }}.apk](https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag }}/ScribbleAway-${{ steps.version.outputs.tag }}.apk)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Latest release page:**" >> $GITHUB_STEP_SUMMARY
+          echo "https://github.com/${{ github.repository }}/releases/latest" >> $GITHUB_STEP_SUMMARY
