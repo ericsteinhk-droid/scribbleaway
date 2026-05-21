@@ -4,6 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <meta name="theme-color" content="#1565C0">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Présences">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icon-192.png">
   <title>Visite des Lieux — Présences</title>
   <script src="https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
@@ -947,13 +952,14 @@ function generateExcel() {
   var suffix = exportRev > 1 ? '_Rev' + (exportRev - 1) : '';
   var fname  = 'VisiteLieux_' + slug + '_' + today + suffix + '.xlsx';
 
-  var wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'base64' });
-  var mime  = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+  var mime = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 
   if (typeof AndroidBridge !== 'undefined' && AndroidBridge.shareFile) {
+    var wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'base64' });
     AndroidBridge.shareFile(wbout, fname, mime);
   } else {
-    XLSX.writeFile(wb, fname);
+    var arr = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+    shareBlob(new Blob([arr], { type: mime }), fname);
   }
 
   toast('📊 Excel prêt à partager' + (isAmended ? ' — Rév. ' + (exportRev - 1) : ''));
@@ -1072,12 +1078,11 @@ function generatePdf() {
   var slug   = currentSession.projet.replace(/[^a-zA-ZÀ-ž0-9]/g, '_').replace(/_+/g, '_').slice(0, 30);
   var suffix = isAmended ? '_Rev' + (exportRev - 1) : '';
   var fname  = 'VisiteLieux_' + slug + '_' + today + suffix + '.pdf';
-  var b64    = doc.output('datauristring').split(',')[1];
-
   if (typeof AndroidBridge !== 'undefined' && AndroidBridge.shareFile) {
+    var b64 = doc.output('datauristring').split(',')[1];
     AndroidBridge.shareFile(b64, fname, 'application/pdf');
   } else {
-    doc.save(fname);
+    shareBlob(new Blob([doc.output('arraybuffer')], { type: 'application/pdf' }), fname);
   }
 
   toast('📄 PDF prêt à partager' + (isAmended ? ' — Rév. ' + (exportRev - 1) : ''));
@@ -1098,6 +1103,34 @@ function toast(msg) {
   el.classList.add('show');
   clearTimeout(_toastTimer);
   _toastTimer = setTimeout(function() { el.classList.remove('show'); }, 3200);
+}
+
+/* ═══════════════════════════════════════════════════════
+   PARTAGE NATIF (iOS / navigateur)
+═══════════════════════════════════════════════════════ */
+function shareBlob(blob, filename) {
+  var file = new File([blob], filename, { type: blob.type });
+  if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+    navigator.share({
+      files: [file],
+      title: 'Fiche de présences',
+      text:  'Visite des lieux' + (currentSession ? ' — ' + currentSession.projet : '')
+    }).catch(function(err) {
+      if (err.name !== 'AbortError') downloadBlob(blob, filename);
+    });
+  } else {
+    downloadBlob(blob, filename);
+  }
+}
+
+function downloadBlob(blob, filename) {
+  var url = URL.createObjectURL(blob);
+  var a   = document.createElement('a');
+  a.href  = url; a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(function() { URL.revokeObjectURL(url); }, 1000);
 }
 
 /* ═══════════════════════════════════════════════════════
@@ -1125,6 +1158,11 @@ showHome();
 document.getElementById('v-mail').addEventListener('keydown', function(e) {
   if (e.key === 'Enter') { e.preventDefault(); addVisitor(); }
 });
+
+/* Service Worker */
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js').catch(function() {});
+}
 </script>
 </body>
 </html>
