@@ -51,7 +51,7 @@ jobs:
           if [[ -n "${{ inputs.release_version }}" ]]; then
             echo "tag=${{ inputs.release_version }}" >> $GITHUB_OUTPUT
           else
-            echo "tag=scribbleaway-v1.0.0" >> $GITHUB_OUTPUT
+            echo "tag=scribbleaway-$(date -u +'%Y%m%d-%H%M')" >> $GITHUB_OUTPUT
           fi
 
       - name: Rename APK
@@ -60,10 +60,10 @@ jobs:
           cp MeetingRecorder/app/build/outputs/apk/debug/app-debug.apk \
              dist/ScribbleAway-${{ steps.version.outputs.tag }}.apk
 
-      - name: Move tag to current commit
+      - name: Tag current commit
         run: |
-          git tag -f ${{ steps.version.outputs.tag }}
-          git push origin ${{ steps.version.outputs.tag }} --force
+          git tag ${{ steps.version.outputs.tag }}
+          git push origin ${{ steps.version.outputs.tag }}
 
       - name: Create GitHub Release
         id: release
