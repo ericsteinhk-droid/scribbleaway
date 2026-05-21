@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#1565C0">
+  <title>Visite des Lieux — Présences</title>
+  <script src="xlsx.full.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --blue:       #1565C0;
+      --blue-dark:  #0D47A1;
+      --blue-light: #E3F2FD;
+      --orange:     #E65100;
+      --green:      #2E7D32;
+      --red:        #C62828;
+      --surface:    #FFFFFF;
+      --bg:         #F0F4F8;
+      --text:       #1A1A2E;
+      --muted:      #6B7280;
+      --border:     #D1D5DB;
+      --shadow:     0 2px 8px rgba(0,0,0,.12);
+      --r:          12px;
+      --r-sm:       8px;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      -webkit-tap-highlight-color: transparent;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .app-bar {
+      background: var(--blue);
+      color: #fff;
+      padding: 16px 20px;
+      position: sticky;
+      top: 0;
+      z-index: 200;
+      box-shadow: 0 2px 8px rgba(0,0,0,.25);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .app-bar h1 { font-size: 1rem; font-weight: 700; }
+    .app-bar p  { font-size: .7rem; opacity: .8; margin-top: 2px; }
+
+    .screen { display: none; padding: 14px; padding-bottom: 100px; }
+    .screen.active { display: block; }
+
+    .card {
+      background: var(--surface);
+      border-radius: var(--r);
+      box-shadow: var(--shadow);
+      padding: 18px;
+      margin-bottom: 12px;
+    }
+    .card-title {
+      font-size: .7rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 1px;
+      color: var(--blue); margin-bottom: 14px;
+    }
+
+    .banner {
+      background: linear-gradient(135deg, var(--blue), var(--blue-dark));
+      color: #fff; border-radius: var(--r);
+      padding: 16px 18px; margin-bottom: 12px;
+      box-shadow: var(--shadow);
+    }
+    .banner .row { display: flex; gap: 10px; margin-bottom: 8px; }
+    .banner .row:last-child { margin-bottom: 0; }
+    .banner .lbl { font-size: .68rem; font-weight: 700; text-transform: uppercase;
+                   letter-spacing: .8px; opacity: .75; min-width: 80px; margin-top: 2px; }
+    .banner .val { font-size: .88rem; font-weight: 600; line-height: 1.3; }
+
+    .form-group { margin-bottom: 14px; }
+    .form-group:last-child { margin-bottom: 0; }
+
+    label {
+      display: block; font-size: .68rem; font-weight: 700;
+      color: var(--muted); text-transform: uppercase;
+      letter-spacing: .8px; margin-bottom: 6px;
+    }
+
+    input {
+      width: 100%; padding: 13px 15px;
+      border: 2px solid var(--border); border-radius: var(--r-sm);
+      font-size: .95rem; color: var(--text); background: var(--surface);
+      transition: border-color .18s, background .18s;
+      -webkit-appearance: none;
+    }
+    input:focus { outline: none; border-color: var(--blue); background: var(--blue-light); }
+    input[readonly] { background: #F3F4F6; color: var(--muted); }
+
+    .btn {
+      display: flex; align-items: center; justify-content: center;
+      gap: 8px; width: 100%; padding: 14px 18px;
+      border: none; border-radius: var(--r-sm);
+      font-size: .95rem; font-weight: 600; cursor: pointer;
+      transition: transform .1s, filter .15s;
+      -webkit-appearance: none; user-select: none;
+    }
+    .btn:active { transform: scale(.97); filter: brightness(.92); }
+    .btn-primary { background: var(--blue);  color: #fff; }
+    .btn-success { background: var(--green); color: #fff; }
+    .btn-outline  {
+      background: transparent; border: 2px solid var(--blue);
+      color: var(--blue); padding: 12px 18px;
+    }
+
+    .visitor-row {
+      display: flex; align-items: center; gap: 10px;
+      padding: 12px 0; border-bottom: 1px solid var(--border);
+    }
+    .visitor-row:last-child { border-bottom: none; }
+    .num {
+      width: 32px; height: 32px; border-radius: 50%;
+      background: var(--blue); color: #fff;
+      font-size: .8rem; font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .vi { flex: 1; min-width: 0; }
+    .vi-name { font-weight: 600; font-size: .9rem; }
+    .vi-co   { font-size: .76rem; color: var(--muted); margin-top: 1px; }
+    .vi-mail { font-size: .7rem; color: var(--blue); margin-top: 2px; }
+    .btn-del {
+      background: none; border: none; color: var(--red);
+      font-size: 1.1rem; cursor: pointer; padding: 8px;
+      border-radius: 50%; transition: background .15s;
+    }
+    .btn-del:active { background: #FCE4E4; }
+
+    .empty { text-align: center; padding: 28px 12px; color: var(--muted); }
+    .empty .ico { font-size: 2.4rem; margin-bottom: 8px; }
+    .empty p { font-size: .82rem; }
+
+    .section-hdr { display: flex; align-items: center; justify-content: space-between; }
+    .count { background: var(--blue-light); color: var(--blue);
+             font-size: .7rem; font-weight: 700; padding: 3px 9px; border-radius: 20px; }
+    .amend { background: var(--orange); color: #fff;
+             font-size: .68rem; font-weight: 700; padding: 3px 9px;
+             border-radius: 20px; display: none; }
+    .amend.on { display: inline-block; }
+
+    .bottom-bar {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      background: var(--surface); padding: 10px 14px;
+      box-shadow: 0 -2px 12px rgba(0,0,0,.1);
+      display: none; gap: 10px; z-index: 100;
+    }
+    .bottom-bar.on { display: flex; }
+    .bottom-bar .btn { flex: 1; }
+
+    .toast {
+      position: fixed; bottom: 85px; left: 50%;
+      transform: translateX(-50%) translateY(12px);
+      background: #1F2937; color: #fff;
+      padding: 10px 18px; border-radius: var(--r-sm);
+      font-size: .86rem; font-weight: 500;
+      opacity: 0; pointer-events: none;
+      transition: opacity .26s, transform .26s; z-index: 300;
+      white-space: nowrap; max-width: calc(100vw - 28px);
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  </style>
+</head>
+<body>
+
+<div class="app-bar">
+  <div style="font-size:1.3rem">📋</div>
+  <div>
+    <h1>Visite des Lieux</h1>
+    <p>Fiche de présences — Soumissionnaires</p>
+  </div>
+</div>
+
+<!-- ÉCRAN 1 : PROJET -->
+<div class="screen active" id="s-setup">
+  <div class="card" style="margin-top:14px">
+    <div class="card-title">📁 Informations du projet</div>
+    <div class="form-group">
+      <label>Date de visite</label>
+      <input type="text" id="setup-date" readonly>
+    </div>
+    <div class="form-group">
+      <label>Nom du projet *</label>
+      <input type="text" id="setup-projet" placeholder="Ex : Réfection toiture — École XYZ"
+             autocomplete="off" inputmode="text">
+    </div>
+    <div class="form-group">
+      <label>Chargé de projet *</label>
+      <input type="text" id="setup-charge" placeholder="Ex : Marie Côté"
+             autocomplete="off" inputmode="text">
+    </div>
+    <button class="btn btn-primary" onclick="startSession()">
+      Commencer la saisie &nbsp;→
+    </button>
+  </div>
+</div>
+
+<!-- ÉCRAN 2 : VISITEURS -->
+<div class="screen" id="s-visitors">
+  <div class="banner" style="margin-top:14px">
+    <div class="row"><span class="lbl">📅 Date</span><span class="val" id="d-date"></span></div>
+    <div class="row"><span class="lbl">📁 Projet</span><span class="val" id="d-projet"></span></div>
+    <div class="row"><span class="lbl">👤 Chargé</span><span class="val" id="d-charge"></span></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">➕ Nouveau visiteur</div>
+    <div class="form-group">
+      <label>Nom complet *</label>
+      <input type="text" id="v-nom" placeholder="Prénom Nom"
+             autocomplete="off" inputmode="text">
+    </div>
+    <div class="form-group">
+      <label>Entreprise *</label>
+      <input type="text" id="v-co" placeholder="Nom de l'entreprise"
+             autocomplete="off" inputmode="text">
+    </div>
+    <div class="form-group">
+      <label>Courriel</label>
+      <input type="email" id="v-mail" placeholder="nom@entreprise.com"
+             autocomplete="off" inputmode="email">
+    </div>
+    <button class="btn btn-primary" onclick="addVisitor()">+ Ajouter à la liste</button>
+  </div>
+
+  <div class="card">
+    <div class="section-hdr">
+      <div class="card-title" style="margin-bottom:0">
+        👥 Présences <span class="count" id="v-count">0</span>
+      </div>
+      <span class="amend" id="amend-badge"></span>
+    </div>
+    <div id="v-list">
+      <div class="empty">
+        <div class="ico">👥</div>
+        <p>Aucun visiteur ajouté.<br>Remplissez le formulaire ci-dessus.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="bottom-bar" id="bottom-bar">
+  <button class="btn btn-outline" onclick="showSetup()">✏️ Modifier</button>
+  <button class="btn btn-success" onclick="generateExcel()">📊 Générer Excel</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+var visitors  = [];
+var exportRev = 0;
+var project   = {};
+
+var DAYS   = ['dimanche','lundi','mardi','mercredi','jeudi','vendredi','samedi'];
+var MONTHS = ['janvier','février','mars','avril','mai','juin','juillet',
+              'août','septembre','octobre','novembre','décembre'];
+
+function dateFr(d) {
+  return DAYS[d.getDay()] + ' ' + d.getDate() + ' ' + MONTHS[d.getMonth()] + ' ' + d.getFullYear();
+}
+
+var TODAY = dateFr(new Date());
+document.getElementById('setup-date').value = TODAY;
+
+function showScreen(name) {
+  var screens = document.querySelectorAll('.screen');
+  for (var i = 0; i < screens.length; i++) screens[i].classList.remove('active');
+  document.getElementById('s-' + name).classList.add('active');
+  var bar = document.getElementById('bottom-bar');
+  if (name === 'visitors') bar.classList.add('on');
+  else bar.classList.remove('on');
+  window.scrollTo(0, 0);
+}
+
+function showSetup() { showScreen('setup'); }
+
+function startSession() {
+  var projet = document.getElementById('setup-projet').value.trim();
+  var charge = document.getElementById('setup-charge').value.trim();
+  if (!projet || !charge) { toast('⚠️ Veuillez remplir tous les champs'); return; }
+  project = { date: TODAY, projet: projet, charge: charge };
+  document.getElementById('d-date').textContent   = TODAY;
+  document.getElementById('d-projet').textContent = projet;
+  document.getElementById('d-charge').textContent = charge;
+  showScreen('visitors');
+  document.getElementById('v-nom').focus();
+}
+
+function addVisitor() {
+  var nom  = document.getElementById('v-nom').value.trim();
+  var co   = document.getElementById('v-co').value.trim();
+  var mail = document.getElementById('v-mail').value.trim();
+  if (!nom || !co) { toast('⚠️ Nom complet et entreprise sont requis'); return; }
+  visitors.push({ nom: nom, co: co, mail: mail });
+  document.getElementById('v-nom').value  = '';
+  document.getElementById('v-co').value   = '';
+  document.getElementById('v-mail').value = '';
+  document.getElementById('v-nom').focus();
+  renderList();
+  toast('✅ ' + nom + ' ajouté(e)');
+}
+
+function removeVisitor(idx) {
+  var nom = visitors[idx].nom;
+  visitors.splice(idx, 1);
+  renderList();
+  toast('🗑️ ' + nom + ' retiré(e)');
+}
+
+function renderList() {
+  document.getElementById('v-count').textContent = visitors.length;
+  var list = document.getElementById('v-list');
+  if (visitors.length === 0) {
+    list.innerHTML = '<div class="empty"><div class="ico">👥</div>' +
+      '<p>Aucun visiteur ajouté.<br>Remplissez le formulaire ci-dessus.</p></div>';
+    return;
+  }
+  var html = '';
+  for (var i = 0; i < visitors.length; i++) {
+    var v = visitors[i];
+    html += '<div class="visitor-row">' +
+      '<div class="num">' + (i + 1) + '</div>' +
+      '<div class="vi">' +
+        '<div class="vi-name">' + esc(v.nom) + '</div>' +
+        '<div class="vi-co">' + esc(v.co) + '</div>' +
+        (v.mail ? '<div class="vi-mail">' + esc(v.mail) + '</div>' : '') +
+      '</div>' +
+      '<button class="btn-del" onclick="removeVisitor(' + i + ')">✕</button>' +
+    '</div>';
+  }
+  list.innerHTML = html;
+}
+
+function generateExcel() {
+  if (visitors.length === 0) { toast('⚠️ Aucun visiteur à exporter'); return; }
+
+  exportRev++;
+  var isAmended = exportRev > 1;
+  var revLabel  = isAmended ? 'AMENDÉE — Rév. ' + (exportRev - 1) : '';
+
+  var badge = document.getElementById('amend-badge');
+  if (isAmended) {
+    badge.textContent = 'Rév. ' + (exportRev - 1);
+    badge.classList.add('on');
+  }
+
+  var wb = XLSX.utils.book_new();
+  var wsData = [];
+
+  wsData.push(['FICHE DE PRÉSENCES — VISITE DES LIEUX' + (isAmended ? '  ·  ' + revLabel : '')]);
+  wsData.push([]);
+  wsData.push(['Date :', project.date]);
+  wsData.push(['Projet :', project.projet]);
+  wsData.push(['Chargé de projet :', project.charge]);
+  wsData.push([]);
+  wsData.push(['No.', 'Nom complet', 'Entreprise', 'Courriel']);
+
+  for (var i = 0; i < visitors.length; i++) {
+    var v = visitors[i];
+    wsData.push([i + 1, v.nom, v.co, v.mail || '']);
+  }
+
+  var ws = XLSX.utils.aoa_to_sheet(wsData);
+  ws['!cols'] = [{ wch: 5 }, { wch: 30 }, { wch: 32 }, { wch: 38 }];
+  ws['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 3 } }];
+
+  XLSX.utils.book_append_sheet(wb, ws, 'Présences');
+
+  var today  = new Date().toISOString().slice(0, 10);
+  var slug   = project.projet.replace(/[^a-zA-ZÀ-ž0-9]/g, '_').replace(/_+/g, '_').slice(0, 30);
+  var suffix = isAmended ? '_Rev' + (exportRev - 1) : '';
+  var fname  = 'VisiteLieux_' + slug + '_' + today + suffix + '.xlsx';
+
+  // Write as base64
+  var wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'base64' });
+
+  if (typeof AndroidBridge !== 'undefined' && AndroidBridge.saveExcel) {
+    // Native Android: delegate save + share to Java
+    AndroidBridge.saveExcel(wbout, fname);
+  } else {
+    // Browser / PWA fallback
+    XLSX.writeFile(wb, fname);
+  }
+
+  toast('📊 Fichier généré' + (isAmended ? ' — Rév. ' + (exportRev - 1) : ''));
+}
+
+function esc(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+var _toastTimer;
+function toast(msg) {
+  var el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(function() { el.classList.remove('show'); }, 3000);
+}
+
+document.getElementById('v-mail').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') { e.preventDefault(); addVisitor(); }
+});
+</script>
+</body>
+</html>
