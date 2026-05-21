@@ -4,41 +4,34 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <meta name="theme-color" content="#1565C0">
-  <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="Présences">
   <title>Visite des Lieux — Présences</title>
-  <link rel="manifest" href="manifest.json">
   <script src="https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --blue:        #1565C0;
-      --blue-dark:   #0D47A1;
-      --blue-light:  #E3F2FD;
-      --orange:      #E65100;
-      --green:       #2E7D32;
-      --red:         #C62828;
-      --surface:     #FFFFFF;
-      --bg:          #F0F4F8;
-      --text:        #1A1A2E;
-      --muted:       #6B7280;
-      --border:      #D1D5DB;
-      --shadow-sm:   0 1px 3px rgba(0,0,0,.12), 0 1px 2px rgba(0,0,0,.08);
-      --shadow:      0 4px 12px rgba(0,0,0,.12);
-      --radius:      14px;
-      --radius-sm:   8px;
+      --blue:       #1565C0;
+      --blue-dk:    #0D47A1;
+      --blue-lt:    #E3F2FD;
+      --orange:     #E65100;
+      --green:      #2E7D32;
+      --red:        #C62828;
+      --surface:    #FFFFFF;
+      --bg:         #F0F4F8;
+      --text:       #1A1A2E;
+      --muted:      #6B7280;
+      --border:     #D1D5DB;
+      --shadow:     0 2px 8px rgba(0,0,0,.12);
+      --r:          12px;
+      --r-sm:       8px;
     }
 
     html { scroll-behavior: smooth; }
-
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       background: var(--bg);
       color: var(--text);
-      min-height: 100dvh;
+      min-height: 100vh;
       -webkit-tap-highlight-color: transparent;
       -webkit-font-smoothing: antialiased;
     }
@@ -47,375 +40,396 @@
     .app-bar {
       background: var(--blue);
       color: #fff;
-      padding: 14px 20px 14px;
-      padding-top: max(14px, env(safe-area-inset-top));
-      position: sticky;
-      top: 0;
-      z-index: 200;
+      padding: 14px 16px;
+      position: sticky; top: 0; z-index: 200;
       box-shadow: 0 2px 8px rgba(0,0,0,.25);
-      display: flex;
-      align-items: center;
-      gap: 12px;
+      display: flex; align-items: center; gap: 10px;
     }
-    .app-bar-icon { font-size: 1.4rem; }
-    .app-bar-text h1 { font-size: 1rem; font-weight: 700; letter-spacing: .3px; }
-    .app-bar-text p  { font-size: .72rem; opacity: .8; margin-top: 1px; }
+    .back-btn {
+      background: none; border: none; color: #fff;
+      font-size: 1.3rem; cursor: pointer;
+      padding: 4px 8px 4px 2px;
+      display: none; align-items: center;
+    }
+    .app-bar-text h1 { font-size: 1rem; font-weight: 700; }
+    .app-bar-text p  { font-size: .7rem; opacity: .8; margin-top: 1px; }
 
     /* ── SCREENS ── */
-    .screen { display: none; padding: 16px; padding-bottom: 110px; max-width: 640px; margin: 0 auto; }
+    .screen { display: none; padding: 14px; padding-bottom: 100px; }
     .screen.active { display: block; }
 
     /* ── CARD ── */
     .card {
-      background: var(--surface);
-      border-radius: var(--radius);
-      box-shadow: var(--shadow-sm);
-      padding: 20px;
-      margin-bottom: 14px;
+      background: var(--surface); border-radius: var(--r);
+      box-shadow: var(--shadow); padding: 18px; margin-bottom: 12px;
     }
     .card-title {
-      font-size: .72rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      color: var(--blue);
-      margin-bottom: 16px;
-      display: flex;
-      align-items: center;
-      gap: 6px;
+      font-size: .7rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 1px;
+      color: var(--blue); margin-bottom: 14px;
     }
 
     /* ── PROJECT BANNER ── */
-    .project-banner {
-      background: linear-gradient(135deg, var(--blue) 0%, var(--blue-dark) 100%);
-      color: #fff;
-      border-radius: var(--radius);
-      padding: 18px 20px;
-      margin-bottom: 14px;
-      box-shadow: var(--shadow);
+    .banner {
+      background: linear-gradient(135deg, var(--blue), var(--blue-dk));
+      color: #fff; border-radius: var(--r);
+      padding: 16px 18px; margin-bottom: 12px; box-shadow: var(--shadow);
     }
-    .project-banner .row {
-      display: flex;
-      align-items: flex-start;
-      gap: 10px;
-      margin-bottom: 10px;
-    }
-    .project-banner .row:last-child { margin-bottom: 0; }
-    .project-banner .lbl {
-      font-size: .7rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: .8px;
-      opacity: .75;
-      min-width: 90px;
-      margin-top: 2px;
-    }
-    .project-banner .val { font-size: .92rem; font-weight: 600; line-height: 1.3; }
+    .banner .row  { display: flex; gap: 10px; margin-bottom: 8px; }
+    .banner .row:last-child { margin-bottom: 0; }
+    .banner .lbl  { font-size: .68rem; font-weight: 700; text-transform: uppercase;
+                    letter-spacing: .7px; opacity: .75; min-width: 78px; margin-top: 2px; }
+    .banner .val  { font-size: .88rem; font-weight: 600; line-height: 1.3; }
 
     /* ── FORM ── */
-    .form-group { margin-bottom: 16px; }
+    .form-group { margin-bottom: 14px; }
     .form-group:last-child { margin-bottom: 0; }
-
     label {
-      display: block;
-      font-size: .72rem;
-      font-weight: 700;
-      color: var(--muted);
-      text-transform: uppercase;
-      letter-spacing: .8px;
-      margin-bottom: 7px;
+      display: block; font-size: .68rem; font-weight: 700;
+      color: var(--muted); text-transform: uppercase; letter-spacing: .8px; margin-bottom: 6px;
     }
-
-    input[type="text"],
-    input[type="email"] {
-      width: 100%;
-      padding: 14px 16px;
-      border: 2px solid var(--border);
-      border-radius: var(--radius-sm);
-      font-size: .97rem;
-      color: var(--text);
-      background: var(--surface);
-      transition: border-color .18s, background .18s;
-      -webkit-appearance: none;
+    input {
+      width: 100%; padding: 13px 15px;
+      border: 2px solid var(--border); border-radius: var(--r-sm);
+      font-size: .95rem; color: var(--text); background: var(--surface);
+      transition: border-color .18s, background .18s; -webkit-appearance: none;
     }
-    input:focus {
-      outline: none;
-      border-color: var(--blue);
-      background: var(--blue-light);
-    }
-    input[readonly] {
-      background: #F3F4F6;
-      color: var(--muted);
-      cursor: default;
-    }
+    input:focus { outline: none; border-color: var(--blue); background: var(--blue-lt); }
+    input[readonly] { background: #F3F4F6; color: var(--muted); }
 
     /* ── BUTTONS ── */
     .btn {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      width: 100%;
-      padding: 15px 20px;
-      border: none;
-      border-radius: var(--radius-sm);
-      font-size: .97rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: transform .1s, filter .15s;
-      -webkit-appearance: none;
-      user-select: none;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      width: 100%; padding: 14px 18px; border: none; border-radius: var(--r-sm);
+      font-size: .95rem; font-weight: 600; cursor: pointer;
+      transition: transform .1s, filter .15s; -webkit-appearance: none; user-select: none;
     }
-    .btn:active { transform: scale(.97); filter: brightness(.93); }
+    .btn:active   { transform: scale(.97); filter: brightness(.92); }
+    .btn-primary  { background: var(--blue);  color: #fff; }
+    .btn-success  { background: var(--green); color: #fff; }
+    .btn-pdf      { background: var(--orange);color: #fff; }
+    .btn-outline  {
+      background: transparent; border: 2px solid var(--blue);
+      color: var(--blue); padding: 12px 18px;
+    }
 
-    .btn-primary { background: var(--blue);   color: #fff; }
-    .btn-success { background: var(--green);  color: #fff; }
-    .btn-outline {
-      background: transparent;
-      border: 2px solid var(--blue);
-      color: var(--blue);
-      padding: 13px 20px;
+    /* ── HOME — SESSION CARDS ── */
+    .home-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 14px; margin-top: 16px;
+    }
+    .home-header h2 { font-size: .85rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .8px; }
+
+    .session-card {
+      background: var(--surface); border-radius: var(--r);
+      box-shadow: var(--shadow); margin-bottom: 10px;
+      display: flex; align-items: stretch; overflow: hidden;
+      cursor: pointer; transition: transform .1s;
+    }
+    .session-card:active { transform: scale(.99); }
+    .sc-accent { width: 5px; background: var(--blue); flex-shrink: 0; }
+    .sc-body    { flex: 1; padding: 14px 12px; min-width: 0; }
+    .sc-projet  { font-weight: 700; font-size: .92rem; margin-bottom: 5px;
+                  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .sc-meta    { display: flex; gap: 8px; flex-wrap: wrap; font-size: .74rem; color: var(--muted); }
+    .sc-meta + .sc-meta { margin-top: 4px; }
+    .sc-pill    { background: var(--blue-lt); color: var(--blue);
+                  font-size: .68rem; font-weight: 700;
+                  padding: 2px 8px; border-radius: 20px; }
+    .sc-pill.orange { background: #FFF3E0; color: var(--orange); }
+    .sc-del {
+      background: none; border: none; color: var(--red);
+      font-size: 1rem; cursor: pointer;
+      padding: 0 14px; transition: background .15s; flex-shrink: 0;
+    }
+    .sc-del:active { background: #FCE4E4; }
+
+    .new-btn {
+      margin-bottom: 4px;
+      background: var(--blue); color: #fff;
     }
 
     /* ── VISITOR LIST ── */
+    .section-hdr {
+      display: flex; align-items: center; justify-content: space-between; margin-bottom: 0;
+    }
+    .count { background: var(--blue-lt); color: var(--blue);
+             font-size: .7rem; font-weight: 700; padding: 3px 9px; border-radius: 20px; }
+    .amend { background: var(--orange); color: #fff;
+             font-size: .68rem; font-weight: 700;
+             padding: 3px 9px; border-radius: 20px; display: none; }
+    .amend.on { display: inline-block; }
+
     .visitor-row {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 13px 0;
-      border-bottom: 1px solid var(--border);
-      animation: slideIn .2s ease;
+      display: flex; align-items: center; gap: 10px;
+      padding: 12px 0; border-bottom: 1px solid var(--border);
     }
     .visitor-row:last-child { border-bottom: none; }
-
-    @keyframes slideIn {
-      from { opacity: 0; transform: translateY(-8px); }
-      to   { opacity: 1; transform: translateY(0); }
+    .num {
+      width: 32px; height: 32px; border-radius: 50%;
+      background: var(--blue); color: #fff;
+      font-size: .8rem; font-weight: 700;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
     }
-
-    .num-badge {
-      width: 34px;
-      height: 34px;
-      border-radius: 50%;
-      background: var(--blue);
-      color: #fff;
-      font-size: .82rem;
-      font-weight: 700;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-    }
-    .v-info { flex: 1; min-width: 0; }
-    .v-name  { font-weight: 600; font-size: .93rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .v-co    { font-size: .78rem; color: var(--muted); margin-top: 1px; }
-    .v-mail  { font-size: .72rem; color: var(--blue);  margin-top: 2px; }
-
+    .vi { flex: 1; min-width: 0; }
+    .vi-name { font-weight: 600; font-size: .9rem; }
+    .vi-co   { font-size: .76rem; color: var(--muted); margin-top: 1px; }
+    .vi-mail { font-size: .7rem;  color: var(--blue);  margin-top: 2px; }
     .btn-del {
-      background: none;
-      border: none;
-      color: var(--red);
-      font-size: 1.15rem;
-      cursor: pointer;
-      padding: 8px;
-      border-radius: 50%;
-      transition: background .15s;
-      flex-shrink: 0;
+      background: none; border: none; color: var(--red);
+      font-size: 1.1rem; cursor: pointer; padding: 8px;
+      border-radius: 50%; transition: background .15s;
     }
     .btn-del:active { background: #FCE4E4; }
 
-    /* ── SECTION HEADER ── */
-    .section-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 0;
-    }
-
-    /* ── BADGES ── */
-    .count-badge {
-      background: var(--blue-light);
-      color: var(--blue);
-      font-size: .72rem;
-      font-weight: 700;
-      padding: 3px 10px;
-      border-radius: 20px;
-    }
-    .amend-badge {
-      background: var(--orange);
-      color: #fff;
-      font-size: .7rem;
-      font-weight: 700;
-      padding: 3px 10px;
-      border-radius: 20px;
-      display: none;
-    }
-    .amend-badge.visible { display: inline-block; }
-
     /* ── EMPTY STATE ── */
-    .empty {
-      text-align: center;
-      padding: 30px 16px;
-      color: var(--muted);
-    }
-    .empty .ico { font-size: 2.6rem; margin-bottom: 10px; }
-    .empty p { font-size: .85rem; }
+    .empty { text-align: center; padding: 28px 12px; color: var(--muted); }
+    .empty .ico { font-size: 2.4rem; margin-bottom: 8px; }
+    .empty p    { font-size: .82rem; }
 
     /* ── BOTTOM BAR ── */
     .bottom-bar {
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      background: var(--surface);
-      padding: 10px 16px;
-      padding-bottom: max(10px, env(safe-area-inset-bottom));
-      box-shadow: 0 -2px 16px rgba(0,0,0,.1);
-      display: none;
-      gap: 10px;
-      z-index: 100;
-      max-width: 100%;
+      position: fixed; bottom: 0; left: 0; right: 0;
+      background: var(--surface); padding: 10px 14px;
+      box-shadow: 0 -2px 12px rgba(0,0,0,.1);
+      display: none; gap: 10px; z-index: 100;
     }
-    .bottom-bar.active { display: flex; }
-    .bottom-bar .btn { flex: 1; }
+    .bottom-bar.on { display: flex; }
+    .bottom-bar .btn { flex: 1; font-size: .88rem; padding: 13px; }
+
+    /* ── FORMAT PICKER (bottom sheet) ── */
+    .fmt-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,.45);
+      z-index: 400; display: flex; align-items: flex-end;
+      opacity: 0; pointer-events: none; transition: opacity .25s;
+    }
+    .fmt-overlay.on { opacity: 1; pointer-events: all; }
+    .fmt-sheet {
+      background: var(--surface); border-radius: var(--r) var(--r) 0 0;
+      padding: 12px 16px 24px; width: 100%;
+      transform: translateY(100%); transition: transform .28s cubic-bezier(.4,0,.2,1);
+    }
+    .fmt-overlay.on .fmt-sheet { transform: translateY(0); }
+    .fmt-handle {
+      width: 40px; height: 4px; background: var(--border);
+      border-radius: 2px; margin: 0 auto 18px;
+    }
+    .fmt-title {
+      font-size: .72rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 1px; color: var(--muted); margin-bottom: 14px;
+    }
+    .fmt-opt {
+      display: flex; align-items: center; gap: 14px;
+      padding: 14px; border-radius: var(--r-sm);
+      border: 2px solid var(--border); margin-bottom: 10px;
+      cursor: pointer; background: var(--surface); width: 100%;
+      transition: border-color .15s, background .15s;
+    }
+    .fmt-opt:active { background: var(--blue-lt); border-color: var(--blue); }
+    .fmt-opt-icon { font-size: 1.8rem; flex-shrink: 0; }
+    .fmt-opt-text strong { display: block; font-size: .93rem; }
+    .fmt-opt-text small  { font-size: .75rem; color: var(--muted); }
+    .fmt-cancel {
+      width: 100%; padding: 13px; margin-top: 4px;
+      background: none; border: none; font-size: .9rem;
+      color: var(--red); font-weight: 600; cursor: pointer;
+    }
+
+    /* ── CONFIRMATION DIALOG ── */
+    .confirm-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,.5);
+      z-index: 500; display: flex; align-items: center; justify-content: center;
+      opacity: 0; pointer-events: none; transition: opacity .2s;
+    }
+    .confirm-overlay.on { opacity: 1; pointer-events: all; }
+    .confirm-box {
+      background: var(--surface); border-radius: var(--r);
+      padding: 24px 20px; max-width: 300px; width: calc(100% - 48px);
+    }
+    .confirm-box h3 { font-size: 1rem; margin-bottom: 10px; }
+    .confirm-box p  { font-size: .85rem; color: var(--muted); margin-bottom: 20px; }
+    .confirm-btns   { display: flex; gap: 10px; }
+    .confirm-btns button {
+      flex: 1; padding: 12px; border: none; border-radius: var(--r-sm);
+      font-size: .9rem; font-weight: 600; cursor: pointer;
+    }
+    .confirm-ok     { background: var(--red); color: #fff; }
+    .confirm-cancel { background: var(--border); color: var(--text); }
 
     /* ── TOAST ── */
     .toast {
-      position: fixed;
-      bottom: 90px;
-      left: 50%;
+      position: fixed; bottom: 85px; left: 50%;
       transform: translateX(-50%) translateY(12px);
-      background: #1F2937;
-      color: #fff;
-      padding: 11px 20px;
-      border-radius: var(--radius-sm);
-      font-size: .88rem;
-      font-weight: 500;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity .28s, transform .28s;
-      z-index: 300;
-      white-space: nowrap;
-      max-width: calc(100vw - 32px);
+      background: #1F2937; color: #fff;
+      padding: 10px 18px; border-radius: var(--r-sm);
+      font-size: .86rem; font-weight: 500;
+      opacity: 0; pointer-events: none;
+      transition: opacity .26s, transform .26s; z-index: 300;
+      white-space: nowrap; max-width: calc(100vw - 28px);
     }
-    .toast.show {
-      opacity: 1;
-      transform: translateX(-50%) translateY(0);
-    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
-    /* ── DIVIDER ── */
-    hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
+    /* ══════════════════════════════════════════
+       PRINT STYLES — PDF
+    ══════════════════════════════════════════ */
+    #print-view { display: none; }
+
+    @media print {
+      * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      body > *:not(#print-view) { display: none !important; }
+      #print-view { display: block !important; font-family: 'Arial', sans-serif; }
+
+      .pv-page { padding: 15mm 18mm; }
+
+      .pv-top {
+        display: flex; justify-content: space-between; align-items: flex-start;
+        border-bottom: 3px solid #1565C0; padding-bottom: 10pt; margin-bottom: 14pt;
+      }
+      .pv-logo-box {
+        width: 140pt; height: 50pt; border: 1.5pt dashed #D1D5DB;
+        display: flex; align-items: center; justify-content: center;
+        color: #9CA3AF; font-size: 8pt;
+      }
+      .pv-title-block { text-align: right; }
+      .pv-title       { font-size: 14pt; font-weight: 800; color: #1565C0; letter-spacing: .5pt; }
+      .pv-subtitle    { font-size: 9pt; color: #6B7280; margin-top: 3pt; }
+      .pv-amend       {
+        display: inline-block; background: #E65100; color: #fff;
+        font-size: 8pt; font-weight: 700; padding: 3pt 8pt;
+        border-radius: 4pt; margin-top: 6pt;
+      }
+
+      .pv-meta        { margin-bottom: 14pt; }
+      .pv-meta table  { border-collapse: collapse; width: 100%; }
+      .pv-meta th     { text-align: left; font-size: 8pt; color: #6B7280; font-weight: 600;
+                        text-transform: uppercase; letter-spacing: .5pt;
+                        padding: 5pt 8pt; background: #F3F4F6; width: 120pt; }
+      .pv-meta td     { font-size: 9.5pt; padding: 5pt 8pt; font-weight: 500; }
+      .pv-meta tr     { border-bottom: 1pt solid #E5E7EB; }
+
+      .pv-visitors            { width: 100%; border-collapse: collapse; margin-bottom: 18pt; }
+      .pv-visitors thead th   {
+        background: #1565C0; color: #fff;
+        font-size: 8.5pt; font-weight: 700; padding: 7pt 8pt;
+        text-align: left;
+      }
+      .pv-visitors thead th:first-child { width: 30pt; text-align: center; }
+      .pv-visitors tbody td   { font-size: 9pt; padding: 7pt 8pt; border-bottom: 1pt solid #E5E7EB; }
+      .pv-visitors tbody tr:nth-child(even) td { background: #F9FAFB; }
+      .pv-visitors tbody td:first-child { text-align: center; font-weight: 700; color: #1565C0; }
+
+      .pv-sig-row   { display: flex; gap: 30pt; margin-top: 20pt; }
+      .pv-sig       { flex: 1; }
+      .pv-sig-label { font-size: 8pt; color: #6B7280; font-weight: 600;
+                      text-transform: uppercase; letter-spacing: .5pt; margin-bottom: 18pt; }
+      .pv-sig-line  { border-bottom: 1pt solid #374151; }
+
+      .pv-footer    {
+        margin-top: 16pt; padding-top: 8pt; border-top: 1pt solid #E5E7EB;
+        font-size: 7.5pt; color: #9CA3AF; display: flex; justify-content: space-between;
+      }
+    }
   </style>
 </head>
 <body>
 
 <!-- ══ APP BAR ══ -->
 <div class="app-bar">
-  <div class="app-bar-icon">📋</div>
+  <button class="back-btn" id="back-btn" onclick="goBack()">←</button>
   <div class="app-bar-text">
-    <h1>Visite des Lieux</h1>
-    <p>Fiche de présences — Soumissionnaires</p>
+    <h1 id="bar-title">Visite des Lieux</h1>
+    <p id="bar-sub">Fiche de présences — Soumissionnaires</p>
   </div>
 </div>
 
 
-<!-- ══════════════════════════════════════
+<!-- ═══════════════════════════════════════════
+     ÉCRAN 0 — ACCUEIL
+═══════════════════════════════════════════ -->
+<div class="screen active" id="s-home">
+  <button class="btn btn-primary new-btn" style="margin-top:16px" onclick="newSession()">
+    ＋ Nouvelle liste de présences
+  </button>
+
+  <div class="home-header">
+    <h2>Listes récentes</h2>
+  </div>
+
+  <div id="sessions-list">
+    <div class="empty">
+      <div class="ico">📋</div>
+      <p>Aucune liste de présences.<br>Créez votre première liste.</p>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════
      ÉCRAN 1 — INFORMATIONS DU PROJET
-══════════════════════════════════════ -->
-<div class="screen active" id="screen-setup">
-
-  <div class="card" style="margin-top:16px;">
+═══════════════════════════════════════════ -->
+<div class="screen" id="s-setup">
+  <div class="card" style="margin-top:16px">
     <div class="card-title">📁 Informations du projet</div>
-
     <div class="form-group">
       <label>Date de visite</label>
       <input type="text" id="setup-date" readonly>
     </div>
-
     <div class="form-group">
       <label>Nom du projet *</label>
-      <input type="text" id="setup-projet"
-             placeholder="Ex : Réfection toiture — École XYZ"
+      <input type="text" id="setup-projet" placeholder="Ex : Réfection toiture — École XYZ"
              autocomplete="off" inputmode="text">
     </div>
-
     <div class="form-group">
       <label>Chargé de projet *</label>
-      <input type="text" id="setup-charge"
-             placeholder="Ex : Marie Côté"
+      <input type="text" id="setup-charge" placeholder="Ex : Marie Côté"
              autocomplete="off" inputmode="text">
     </div>
-
-    <button class="btn btn-primary" onclick="startSession()">
-      Commencer la saisie &nbsp;→
+    <button class="btn btn-primary" onclick="saveSetup()">
+      Enregistrer et continuer →
     </button>
   </div>
-
 </div>
 
 
-<!-- ══════════════════════════════════════
-     ÉCRAN 2 — LISTE DES VISITEURS
-══════════════════════════════════════ -->
-<div class="screen" id="screen-visitors">
+<!-- ═══════════════════════════════════════════
+     ÉCRAN 2 — LISTE DES PRÉSENCES
+═══════════════════════════════════════════ -->
+<div class="screen" id="s-visitors">
 
-  <!-- Bannière projet -->
-  <div class="project-banner" id="project-banner" style="margin-top:16px;">
-    <div class="row">
-      <span class="lbl">📅 Date</span>
-      <span class="val" id="disp-date"></span>
-    </div>
-    <div class="row">
-      <span class="lbl">📁 Projet</span>
-      <span class="val" id="disp-projet"></span>
-    </div>
-    <div class="row">
-      <span class="lbl">👤 Chargé</span>
-      <span class="val" id="disp-charge"></span>
-    </div>
+  <div class="banner" style="margin-top:14px">
+    <div class="row"><span class="lbl">📅 Date</span><span class="val" id="d-date"></span></div>
+    <div class="row"><span class="lbl">📁 Projet</span><span class="val" id="d-projet"></span></div>
+    <div class="row"><span class="lbl">👤 Chargé</span><span class="val" id="d-charge"></span></div>
   </div>
 
-  <!-- Formulaire ajout visiteur -->
   <div class="card">
     <div class="card-title">➕ Nouveau visiteur</div>
-
     <div class="form-group">
       <label>Nom complet *</label>
-      <input type="text" id="v-nom"
-             placeholder="Prénom Nom"
+      <input type="text" id="v-nom" placeholder="Prénom Nom"
              autocomplete="off" inputmode="text">
     </div>
-
     <div class="form-group">
       <label>Entreprise *</label>
-      <input type="text" id="v-entreprise"
-             placeholder="Nom de l'entreprise"
+      <input type="text" id="v-co" placeholder="Nom de l'entreprise"
              autocomplete="off" inputmode="text">
     </div>
-
     <div class="form-group">
       <label>Courriel</label>
-      <input type="email" id="v-courriel"
-             placeholder="nom@entreprise.com"
+      <input type="email" id="v-mail" placeholder="nom@entreprise.com"
              autocomplete="off" inputmode="email">
     </div>
-
-    <button class="btn btn-primary" onclick="addVisitor()">
-      + Ajouter à la liste
-    </button>
+    <button class="btn btn-primary" onclick="addVisitor()">+ Ajouter à la liste</button>
   </div>
 
-  <!-- Liste des présences -->
   <div class="card">
-    <div class="section-header">
-      <div class="card-title" style="margin-bottom:0;">
-        👥 Présences
-        <span class="count-badge" id="visitor-count">0</span>
+    <div class="section-hdr" style="margin-bottom:4px">
+      <div class="card-title" style="margin-bottom:0">
+        👥 Présences <span class="count" id="v-count">0</span>
       </div>
-      <span class="amend-badge" id="amend-badge"></span>
+      <span class="amend" id="amend-badge"></span>
     </div>
-
-    <div id="visitor-list">
+    <div id="v-list">
       <div class="empty">
         <div class="ico">👥</div>
         <p>Aucun visiteur ajouté.<br>Remplissez le formulaire ci-dessus.</p>
@@ -426,14 +440,50 @@
 </div>
 
 
-<!-- ══ BARRE D'ACTIONS (bas de page) ══ -->
+<!-- ══ BARRE D'ACTIONS ══ -->
 <div class="bottom-bar" id="bottom-bar">
-  <button class="btn btn-outline" onclick="showSetup()">
-    ✏️ Modifier
-  </button>
-  <button class="btn btn-success" onclick="generateExcel()">
-    📊 Générer Excel
-  </button>
+  <button class="btn btn-outline" onclick="editSetup()">✏️ Modifier</button>
+  <button class="btn btn-success"  onclick="openFmt()">📄 Exporter</button>
+</div>
+
+
+<!-- ══ FORMAT PICKER (bottom sheet) ══ -->
+<div class="fmt-overlay" id="fmt-overlay" onclick="closeFmt()">
+  <div class="fmt-sheet" onclick="event.stopPropagation()">
+    <div class="fmt-handle"></div>
+    <div class="fmt-title">Choisir le format d'export</div>
+
+    <button class="fmt-opt" onclick="doExport('xlsx')">
+      <span class="fmt-opt-icon">📊</span>
+      <div class="fmt-opt-text">
+        <strong>Excel (.xlsx)</strong>
+        <small>Ouvrir dans Microsoft Excel ou Google Sheets</small>
+      </div>
+    </button>
+
+    <button class="fmt-opt" onclick="doExport('pdf')">
+      <span class="fmt-opt-icon">📄</span>
+      <div class="fmt-opt-text">
+        <strong>PDF</strong>
+        <small>Imprimer ou enregistrer en PDF</small>
+      </div>
+    </button>
+
+    <button class="fmt-cancel" onclick="closeFmt()">Annuler</button>
+  </div>
+</div>
+
+
+<!-- ══ CONFIRMATION DELETE ══ -->
+<div class="confirm-overlay" id="confirm-overlay">
+  <div class="confirm-box">
+    <h3>Supprimer la liste ?</h3>
+    <p id="confirm-msg">Cette action est irréversible.</p>
+    <div class="confirm-btns">
+      <button class="confirm-cancel" onclick="closeConfirm()">Annuler</button>
+      <button class="confirm-ok"     id="confirm-ok-btn">Supprimer</button>
+    </div>
+  </div>
 </div>
 
 
@@ -441,251 +491,531 @@
 <div class="toast" id="toast"></div>
 
 
+<!-- ═══════════════════════════════════════════
+     VUE IMPRESSION (PDF)
+     Invisible à l'écran, visible uniquement en impression
+═══════════════════════════════════════════ -->
+<div id="print-view">
+  <div class="pv-page">
+    <div class="pv-top">
+      <div class="pv-logo-box">Logo / En-tête</div>
+      <div class="pv-title-block">
+        <div class="pv-title">FICHE DE PRÉSENCES</div>
+        <div class="pv-subtitle">VISITE DES LIEUX — SOUMISSIONNAIRES</div>
+        <div class="pv-amend" id="pv-amend" style="display:none"></div>
+      </div>
+    </div>
+
+    <div class="pv-meta">
+      <table>
+        <tr><th>Date de visite</th><td id="pv-date"></td></tr>
+        <tr><th>Projet</th><td id="pv-projet"></td></tr>
+        <tr><th>Chargé de projet</th><td id="pv-charge"></td></tr>
+      </table>
+    </div>
+
+    <table class="pv-visitors">
+      <thead>
+        <tr>
+          <th>No.</th>
+          <th>Nom complet</th>
+          <th>Entreprise</th>
+          <th>Courriel</th>
+        </tr>
+      </thead>
+      <tbody id="pv-rows"></tbody>
+    </table>
+
+    <div class="pv-sig-row">
+      <div class="pv-sig">
+        <div class="pv-sig-label">Signature du chargé de projet</div>
+        <div class="pv-sig-line"></div>
+      </div>
+      <div class="pv-sig">
+        <div class="pv-sig-label">Date</div>
+        <div class="pv-sig-line"></div>
+      </div>
+    </div>
+
+    <div class="pv-footer">
+      <span id="pv-footer-title"></span>
+      <span id="pv-footer-date"></span>
+    </div>
+  </div>
+</div>
+
+
 <script>
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   STATE
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-let visitors   = [];
-let exportRev  = 0;   // 0 = jamais exporté, 1+ = révision
-let project    = {};
+/* ═══════════════════════════════════════════════════════
+   CONSTANTES & UTILITAIRES
+═══════════════════════════════════════════════════════ */
+var STORE_KEY = 'visite-lieux-sessions';
 
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   DATE FRANÇAISE
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+var DAYS   = ['dimanche','lundi','mardi','mercredi','jeudi','vendredi','samedi'];
+var MONTHS = ['janvier','février','mars','avril','mai','juin','juillet',
+              'août','septembre','octobre','novembre','décembre'];
+
 function dateFr(d) {
-  const DAYS   = ['dimanche','lundi','mardi','mercredi','jeudi','vendredi','samedi'];
-  const MONTHS = ['janvier','février','mars','avril','mai','juin','juillet',
-                  'août','septembre','octobre','novembre','décembre'];
-  return `${DAYS[d.getDay()]} ${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+  return DAYS[d.getDay()] + ' ' + d.getDate() + ' ' + MONTHS[d.getMonth()] + ' ' + d.getFullYear();
 }
 
-const TODAY = dateFr(new Date());
-document.getElementById('setup-date').value = TODAY;
+var TODAY = dateFr(new Date());
 
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function esc(s) {
+  if (!s) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+/* ═══════════════════════════════════════════════════════
+   STATE
+═══════════════════════════════════════════════════════ */
+var sessions       = [];
+var currentSession = null;
+var visitors       = [];
+var exportRev      = 0;
+
+var _pendingDeleteId = null;
+var _toastTimer      = null;
+
+/* ═══════════════════════════════════════════════════════
+   PERSISTANCE
+═══════════════════════════════════════════════════════ */
+function loadSessions() {
+  try {
+    var raw = localStorage.getItem(STORE_KEY);
+    sessions = raw ? JSON.parse(raw) : [];
+  } catch(e) { sessions = []; }
+}
+
+function saveSessions() {
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(sessions)); } catch(e) {}
+}
+
+function syncSession() {
+  if (!currentSession) return;
+  currentSession.visitors  = visitors.slice();
+  currentSession.exportRev = exportRev;
+  currentSession.updatedAt = new Date().toISOString();
+  var found = false;
+  for (var i = 0; i < sessions.length; i++) {
+    if (sessions[i].id === currentSession.id) { sessions[i] = currentSession; found = true; break; }
+  }
+  if (!found) sessions.unshift(currentSession);
+  saveSessions();
+}
+
+/* ═══════════════════════════════════════════════════════
    NAVIGATION
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+═══════════════════════════════════════════════════════ */
 function showScreen(name) {
-  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  document.getElementById('screen-' + name).classList.add('active');
-  document.getElementById('bottom-bar').classList.toggle('active', name === 'visitors');
-  window.scrollTo({ top: 0, behavior: 'instant' });
+  var all = document.querySelectorAll('.screen');
+  for (var i = 0; i < all.length; i++) all[i].classList.remove('active');
+  document.getElementById('s-' + name).classList.add('active');
+  document.getElementById('bottom-bar').classList.toggle('on', name === 'visitors');
+  window.scrollTo(0, 0);
+
+  var bb  = document.getElementById('back-btn');
+  var tit = document.getElementById('bar-title');
+  var sub = document.getElementById('bar-sub');
+  if (name === 'home') {
+    bb.style.display = 'none';
+    tit.textContent  = 'Visite des Lieux';
+    sub.textContent  = 'Fiche de présences — Soumissionnaires';
+  } else if (name === 'setup') {
+    bb.style.display  = 'flex';
+    tit.textContent   = currentSession ? 'Modifier le projet' : 'Nouveau projet';
+    sub.textContent   = '';
+  } else if (name === 'visitors') {
+    bb.style.display  = 'flex';
+    tit.textContent   = 'Liste des présences';
+    sub.textContent   = currentSession ? currentSession.projet : '';
+  }
 }
 
-function showSetup() { showScreen('setup'); }
+function goBack() {
+  var active = document.querySelector('.screen.active');
+  var id = active ? active.id : 's-home';
+  if (id === 's-setup') {
+    if (currentSession) showScreen('visitors');
+    else showHome();
+  } else if (id === 's-visitors') {
+    showHome();
+  } else {
+    showHome();
+  }
+}
 
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   DÉMARRER SESSION
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-function startSession() {
-  const projet = document.getElementById('setup-projet').value.trim();
-  const charge = document.getElementById('setup-charge').value.trim();
+/* Called by Android back button via evaluateJavascript */
+function handleAndroidBack() {
+  var active = document.querySelector('.screen.active');
+  var id = active ? active.id : 's-home';
+  if (id === 's-home') {
+    if (typeof AndroidBridge !== 'undefined' && AndroidBridge.exitApp) {
+      AndroidBridge.exitApp();
+    }
+  } else {
+    goBack();
+  }
+}
 
-  if (!projet || !charge) {
-    toast('⚠️ Veuillez remplir tous les champs obligatoires');
+/* ═══════════════════════════════════════════════════════
+   ÉCRAN ACCUEIL
+═══════════════════════════════════════════════════════ */
+function showHome() {
+  loadSessions();
+  renderSessions();
+  showScreen('home');
+}
+
+function renderSessions() {
+  var el = document.getElementById('sessions-list');
+  if (!sessions || sessions.length === 0) {
+    el.innerHTML = '<div class="empty"><div class="ico">📋</div>' +
+      '<p>Aucune liste de présences.<br>Créez votre première liste.</p></div>';
     return;
   }
 
-  project = { date: TODAY, projet, charge };
+  var sorted = sessions.slice().sort(function(a, b) {
+    var ta = a.updatedAt || a.createdAt || '';
+    var tb = b.updatedAt || b.createdAt || '';
+    return tb > ta ? 1 : -1;
+  });
 
-  document.getElementById('disp-date').textContent   = TODAY;
-  document.getElementById('disp-projet').textContent = projet;
-  document.getElementById('disp-charge').textContent = charge;
-
-  showScreen('visitors');
-  document.getElementById('v-nom').focus();
+  var html = '';
+  for (var i = 0; i < sorted.length; i++) {
+    var s   = sorted[i];
+    var cnt = s.visitors ? s.visitors.length : 0;
+    var rev = s.exportRev || 0;
+    html += '<div class="session-card" onclick="openSession(\'' + s.id + '\')">' +
+      '<div class="sc-accent"></div>' +
+      '<div class="sc-body">' +
+        '<div class="sc-projet">' + esc(s.projet) + '</div>' +
+        '<div class="sc-meta">' +
+          '<span>📅 ' + esc(s.date) + '</span>' +
+          '<span> · 👤 ' + esc(s.charge) + '</span>' +
+        '</div>' +
+        '<div class="sc-meta" style="margin-top:5px">' +
+          '<span class="sc-pill">🧑 ' + cnt + ' visiteur' + (cnt !== 1 ? 's' : '') + '</span>' +
+          (rev > 0 ? ' <span class="sc-pill orange">Rév. ' + rev + '</span>' : '') +
+        '</div>' +
+      '</div>' +
+      '<button class="sc-del" onclick="askDelete(event,\'' + s.id + '\')">🗑️</button>' +
+    '</div>';
+  }
+  el.innerHTML = html;
 }
 
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   GESTION DES VISITEURS
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-function addVisitor() {
-  const nom       = document.getElementById('v-nom').value.trim();
-  const entreprise = document.getElementById('v-entreprise').value.trim();
-  const courriel  = document.getElementById('v-courriel').value.trim();
-
-  if (!nom || !entreprise) {
-    toast('⚠️ Nom complet et entreprise sont requis');
-    return;
+function openSession(id) {
+  loadSessions();
+  var s = null;
+  for (var i = 0; i < sessions.length; i++) {
+    if (sessions[i].id === id) { s = sessions[i]; break; }
   }
+  if (!s) return;
+  currentSession = JSON.parse(JSON.stringify(s));
+  visitors  = s.visitors ? s.visitors.slice() : [];
+  exportRev = s.exportRev || 0;
 
-  visitors.push({ nom, entreprise, courriel });
+  document.getElementById('d-date').textContent   = s.date;
+  document.getElementById('d-projet').textContent = s.projet;
+  document.getElementById('d-charge').textContent = s.charge;
 
-  document.getElementById('v-nom').value       = '';
-  document.getElementById('v-entreprise').value = '';
-  document.getElementById('v-courriel').value  = '';
-  document.getElementById('v-nom').focus();
+  var badge = document.getElementById('amend-badge');
+  if (exportRev > 0) {
+    badge.textContent = 'Rév. ' + exportRev;
+    badge.classList.add('on');
+  } else {
+    badge.textContent = '';
+    badge.classList.remove('on');
+  }
 
   renderList();
-  toast(`✅ ${nom} ajouté(e)`);
+  showScreen('visitors');
+}
+
+/* ═══════════════════════════════════════════════════════
+   SUPPRESSION SESSION
+═══════════════════════════════════════════════════════ */
+function askDelete(evt, id) {
+  evt.stopPropagation();
+  _pendingDeleteId = id;
+  var s = null;
+  for (var i = 0; i < sessions.length; i++) { if (sessions[i].id === id) { s = sessions[i]; break; } }
+  document.getElementById('confirm-msg').textContent =
+    s ? ('Supprimer "' + s.projet + '" ?') : 'Cette action est irréversible.';
+  document.getElementById('confirm-overlay').classList.add('on');
+}
+
+function closeConfirm() {
+  _pendingDeleteId = null;
+  document.getElementById('confirm-overlay').classList.remove('on');
+}
+
+document.getElementById('confirm-ok-btn').onclick = function() {
+  if (!_pendingDeleteId) return;
+  sessions = sessions.filter(function(s) { return s.id !== _pendingDeleteId; });
+  saveSessions();
+  closeConfirm();
+  renderSessions();
+  toast('🗑️ Liste supprimée');
+};
+
+/* ═══════════════════════════════════════════════════════
+   ÉCRAN SETUP
+═══════════════════════════════════════════════════════ */
+function newSession() {
+  currentSession = null;
+  document.getElementById('setup-date').value   = TODAY;
+  document.getElementById('setup-projet').value = '';
+  document.getElementById('setup-charge').value = '';
+  showScreen('setup');
+  setTimeout(function() { document.getElementById('setup-projet').focus(); }, 200);
+}
+
+function editSetup() {
+  document.getElementById('setup-date').value   = currentSession ? currentSession.date   : TODAY;
+  document.getElementById('setup-projet').value = currentSession ? currentSession.projet : '';
+  document.getElementById('setup-charge').value = currentSession ? currentSession.charge : '';
+  showScreen('setup');
+}
+
+function saveSetup() {
+  var projet = document.getElementById('setup-projet').value.trim();
+  var charge = document.getElementById('setup-charge').value.trim();
+  if (!projet || !charge) { toast('⚠️ Veuillez remplir tous les champs'); return; }
+
+  if (currentSession) {
+    /* Mise à jour d'une session existante */
+    currentSession.projet = projet;
+    currentSession.charge = charge;
+    syncSession();
+    document.getElementById('d-projet').textContent = projet;
+    document.getElementById('d-charge').textContent = charge;
+    showScreen('visitors');
+    toast('✅ Projet mis à jour');
+  } else {
+    /* Nouvelle session */
+    currentSession = {
+      id:        Date.now().toString(),
+      date:      TODAY,
+      dateISO:   new Date().toISOString().slice(0, 10),
+      projet:    projet,
+      charge:    charge,
+      visitors:  [],
+      exportRev: 0,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    visitors  = [];
+    exportRev = 0;
+
+    document.getElementById('d-date').textContent   = TODAY;
+    document.getElementById('d-projet').textContent = projet;
+    document.getElementById('d-charge').textContent = charge;
+
+    var badge = document.getElementById('amend-badge');
+    badge.textContent = ''; badge.classList.remove('on');
+
+    sessions.unshift(currentSession);
+    saveSessions();
+    renderList();
+    showScreen('visitors');
+    setTimeout(function() { document.getElementById('v-nom').focus(); }, 200);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════
+   GESTION DES VISITEURS
+═══════════════════════════════════════════════════════ */
+function addVisitor() {
+  var nom  = document.getElementById('v-nom').value.trim();
+  var co   = document.getElementById('v-co').value.trim();
+  var mail = document.getElementById('v-mail').value.trim();
+  if (!nom || !co) { toast('⚠️ Nom complet et entreprise sont requis'); return; }
+  visitors.push({ nom: nom, co: co, mail: mail });
+  document.getElementById('v-nom').value  = '';
+  document.getElementById('v-co').value   = '';
+  document.getElementById('v-mail').value = '';
+  document.getElementById('v-nom').focus();
+  renderList();
+  syncSession();
+  toast('✅ ' + nom + ' ajouté(e)');
 }
 
 function removeVisitor(idx) {
-  const nom = visitors[idx].nom;
+  var nom = visitors[idx].nom;
   visitors.splice(idx, 1);
   renderList();
-  toast(`🗑️ ${nom} retiré(e)`);
+  syncSession();
+  toast('🗑️ ' + nom + ' retiré(e)');
 }
 
 function renderList() {
-  const count = visitors.length;
-  document.getElementById('visitor-count').textContent = count;
-
-  const list = document.getElementById('visitor-list');
-
-  if (count === 0) {
-    list.innerHTML = `
-      <div class="empty">
-        <div class="ico">👥</div>
-        <p>Aucun visiteur ajouté.<br>Remplissez le formulaire ci-dessus.</p>
-      </div>`;
+  document.getElementById('v-count').textContent = visitors.length;
+  var list = document.getElementById('v-list');
+  if (visitors.length === 0) {
+    list.innerHTML = '<div class="empty"><div class="ico">👥</div>' +
+      '<p>Aucun visiteur ajouté.<br>Remplissez le formulaire ci-dessus.</p></div>';
     return;
   }
-
-  list.innerHTML = visitors.map((v, i) => `
-    <div class="visitor-row">
-      <div class="num-badge">${i + 1}</div>
-      <div class="v-info">
-        <div class="v-name">${esc(v.nom)}</div>
-        <div class="v-co">${esc(v.entreprise)}</div>
-        ${v.courriel ? `<div class="v-mail">${esc(v.courriel)}</div>` : ''}
-      </div>
-      <button class="btn-del" onclick="removeVisitor(${i})" title="Retirer">✕</button>
-    </div>
-  `).join('');
+  var html = '';
+  for (var i = 0; i < visitors.length; i++) {
+    var v = visitors[i];
+    html += '<div class="visitor-row">' +
+      '<div class="num">' + (i + 1) + '</div>' +
+      '<div class="vi">' +
+        '<div class="vi-name">' + esc(v.nom) + '</div>' +
+        '<div class="vi-co">' + esc(v.co) + '</div>' +
+        (v.mail ? '<div class="vi-mail">' + esc(v.mail) + '</div>' : '') +
+      '</div>' +
+      '<button class="btn-del" onclick="removeVisitor(' + i + ')">✕</button>' +
+    '</div>';
+  }
+  list.innerHTML = html;
 }
 
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   GÉNÉRATION EXCEL
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+/* ═══════════════════════════════════════════════════════
+   FORMAT PICKER
+═══════════════════════════════════════════════════════ */
+function openFmt() {
+  if (visitors.length === 0) { toast('⚠️ Aucun visiteur à exporter'); return; }
+  document.getElementById('fmt-overlay').classList.add('on');
+}
+function closeFmt() {
+  document.getElementById('fmt-overlay').classList.remove('on');
+}
+function doExport(fmt) {
+  closeFmt();
+  if (fmt === 'xlsx') generateExcel();
+  else if (fmt === 'pdf') generatePdf();
+}
+
+/* ═══════════════════════════════════════════════════════
+   EXPORT EXCEL
+═══════════════════════════════════════════════════════ */
 function generateExcel() {
-  if (visitors.length === 0) {
-    toast('⚠️ Aucun visiteur à exporter');
-    return;
-  }
-
   exportRev++;
-  const isAmended = exportRev > 1;
-  const revLabel  = isAmended ? `AMENDÉE — Rév. ${exportRev - 1}` : '';
+  var isAmended = exportRev > 1;
+  var revSuffix = isAmended ? '  ·  AMENDÉE — Rév. ' + (exportRev - 1) : '';
 
-  // Mise à jour badge révision dans l'interface
-  const badge = document.getElementById('amend-badge');
-  if (isAmended) {
-    badge.textContent = `Rév. ${exportRev - 1}`;
-    badge.classList.add('visible');
+  updateAmendBadge();
+  syncSession();
+
+  var wb     = XLSX.utils.book_new();
+  var wsData = [];
+
+  wsData.push(['FICHE DE PRÉSENCES — VISITE DES LIEUX' + revSuffix]);
+  wsData.push([]);
+  wsData.push(['Date :', currentSession.date]);
+  wsData.push(['Projet :', currentSession.projet]);
+  wsData.push(['Chargé de projet :', currentSession.charge]);
+  wsData.push([]);
+  wsData.push(['No.', 'Nom complet', 'Entreprise', 'Courriel']);
+
+  for (var i = 0; i < visitors.length; i++) {
+    wsData.push([i + 1, visitors[i].nom, visitors[i].co, visitors[i].mail || '']);
   }
 
-  /* ── Construction de la feuille ── */
-  const ws_data = [];
-
-  // Ligne titre
-  ws_data.push([`FICHE DE PRÉSENCES — VISITE DES LIEUX${isAmended ? '  ·  ' + revLabel : ''}`]);
-  ws_data.push([]);
-
-  // Infos projet
-  ws_data.push(['Date :', project.date]);
-  ws_data.push(['Projet :', project.projet]);
-  ws_data.push(['Chargé de projet :', project.charge]);
-  ws_data.push([]);
-
-  // En-têtes du tableau
-  ws_data.push(['No.', 'Nom complet', 'Entreprise', 'Courriel']);
-
-  // Visiteurs
-  visitors.forEach((v, i) => {
-    ws_data.push([i + 1, v.nom, v.entreprise, v.courriel || '']);
-  });
-
-  const ws = XLSX.utils.aoa_to_sheet(ws_data);
-
-  // Largeurs des colonnes
-  ws['!cols'] = [
-    { wch: 5  },   // No.
-    { wch: 30 },   // Nom complet
-    { wch: 32 },   // Entreprise
-    { wch: 38 },   // Courriel
-  ];
-
-  // Fusion ligne titre (colonnes A→D)
+  var ws = XLSX.utils.aoa_to_sheet(wsData);
+  ws['!cols']   = [{ wch: 5 }, { wch: 30 }, { wch: 32 }, { wch: 38 }];
   ws['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 3 } }];
 
-  // Styles (via write option styleLib)
-  const styleTitle = {
-    font:      { bold: true, sz: 14, color: { rgb: 'FFFFFFFF' } },
-    fill:      { fgColor: { rgb: 'FF1565C0' } },
-    alignment: { horizontal: 'center', vertical: 'center' },
-  };
-  const styleHeader = {
-    font:      { bold: true, color: { rgb: 'FFFFFFFF' } },
-    fill:      { fgColor: { rgb: 'FF1565C0' } },
-    alignment: { horizontal: 'center' },
-    border: {
-      bottom: { style: 'medium', color: { rgb: 'FF0D47A1' } },
-    },
-  };
-  const styleLabel = {
-    font: { bold: true, color: { rgb: 'FF1565C0' } },
-  };
-  const styleAmend = {
-    font: { bold: true, color: { rgb: 'FFE65100' }, sz: 13 },
-    fill: { fgColor: { rgb: 'FFFFF3E0' } },
-    alignment: { horizontal: 'center' },
-  };
-
-  // Appliquer styles
-  if (ws['A1']) ws['A1'].s = isAmended ? styleAmend : styleTitle;
-  ['A7','B7','C7','D7'].forEach(ref => { if (ws[ref]) ws[ref].s = styleHeader; });
-  ['A3','A4','A5'].forEach(ref => { if (ws[ref]) ws[ref].s = styleLabel; });
-
-  // Rows hauteur
-  ws['!rows'] = [
-    { hpt: 30 },  // titre
-    { hpt: 6  },  // vide
-    {},           // date
-    {},           // projet
-    {},           // chargé
-    { hpt: 6  },  // vide
-    { hpt: 22 },  // headers
-  ];
-
-  const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Présences');
 
-  /* ── Nom du fichier ── */
-  const today  = new Date().toISOString().slice(0, 10);
-  const slug   = project.projet.replace(/[^a-zA-ZÀ-ÿ0-9]/g, '_').replace(/_+/g, '_').slice(0, 30);
-  const suffix = isAmended ? `_Rev${exportRev - 1}` : '';
-  const fname  = `VisiteLieux_${slug}_${today}${suffix}.xlsx`;
+  var today  = new Date().toISOString().slice(0, 10);
+  var slug   = currentSession.projet.replace(/[^a-zA-ZÀ-ž0-9]/g, '_').replace(/_+/g, '_').slice(0, 30);
+  var suffix = exportRev > 1 ? '_Rev' + (exportRev - 1) : '';
+  var fname  = 'VisiteLieux_' + slug + '_' + today + suffix + '.xlsx';
 
-  XLSX.writeFile(wb, fname);
-  toast(`📊 Fichier généré${isAmended ? ' — Rév. ' + (exportRev - 1) : ''}`);
+  var wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'base64' });
+
+  if (typeof AndroidBridge !== 'undefined' && AndroidBridge.saveExcel) {
+    AndroidBridge.saveExcel(wbout, fname);
+  } else {
+    XLSX.writeFile(wb, fname);
+  }
+
+  toast('📊 Excel généré' + (isAmended ? ' — Rév. ' + (exportRev - 1) : ''));
 }
 
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   UTILITAIRES
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-function esc(s) {
-  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+/* ═══════════════════════════════════════════════════════
+   EXPORT PDF
+═══════════════════════════════════════════════════════ */
+function generatePdf() {
+  exportRev++;
+  var isAmended = exportRev > 1;
+
+  updateAmendBadge();
+  syncSession();
+
+  /* Remplir le gabarit d'impression */
+  document.getElementById('pv-date').textContent   = currentSession.date;
+  document.getElementById('pv-projet').textContent = currentSession.projet;
+  document.getElementById('pv-charge').textContent = currentSession.charge;
+
+  var amendEl = document.getElementById('pv-amend');
+  if (isAmended) {
+    amendEl.textContent  = 'AMENDÉE — Révision ' + (exportRev - 1);
+    amendEl.style.display = 'inline-block';
+  } else {
+    amendEl.style.display = 'none';
+  }
+
+  var rows = '';
+  for (var i = 0; i < visitors.length; i++) {
+    var v = visitors[i];
+    rows += '<tr>' +
+      '<td>' + (i + 1) + '</td>' +
+      '<td>' + esc(v.nom) + '</td>' +
+      '<td>' + esc(v.co)  + '</td>' +
+      '<td>' + esc(v.mail || '') + '</td>' +
+    '</tr>';
+  }
+  document.getElementById('pv-rows').innerHTML = rows;
+
+  var today = new Date();
+  document.getElementById('pv-footer-title').textContent =
+    'Visite des lieux · ' + currentSession.projet;
+  document.getElementById('pv-footer-date').textContent =
+    'Généré le ' + dateFr(today) + (isAmended ? ' — Rév. ' + (exportRev - 1) : '');
+
+  var jobName = 'VisiteLieux_' + currentSession.projet.slice(0, 30).replace(/\s/g, '_');
+
+  if (typeof AndroidBridge !== 'undefined' && AndroidBridge.printDocument) {
+    AndroidBridge.printDocument(jobName);
+  } else {
+    window.print();
+  }
+
+  toast('📄 PDF — dialogue d\'impression ouvert' + (isAmended ? ' (Rév. ' + (exportRev-1) + ')' : ''));
 }
 
-let toastTimer;
+/* ═══════════════════════════════════════════════════════
+   UTILITAIRES UI
+═══════════════════════════════════════════════════════ */
+function updateAmendBadge() {
+  var badge = document.getElementById('amend-badge');
+  badge.textContent = 'Rév. ' + exportRev;
+  badge.classList.add('on');
+}
+
 function toast(msg) {
-  const el = document.getElementById('toast');
+  var el = document.getElementById('toast');
   el.textContent = msg;
   el.classList.add('show');
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => el.classList.remove('show'), 3000);
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(function() { el.classList.remove('show'); }, 3200);
 }
 
-/* ── Enter sur le champ courriel → ajouter ── */
-document.getElementById('v-courriel')
-  .addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); addVisitor(); } });
+/* ═══════════════════════════════════════════════════════
+   INIT
+═══════════════════════════════════════════════════════ */
+document.getElementById('setup-date').value = TODAY;
+showHome();
 
-/* ── Service Worker ── */
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw.js').catch(() => {});
-}
+document.getElementById('v-mail').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') { e.preventDefault(); addVisitor(); }
+});
 </script>
-
 </body>
 </html>

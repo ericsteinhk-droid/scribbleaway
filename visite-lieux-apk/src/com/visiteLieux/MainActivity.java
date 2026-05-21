@@ -1,14 +1,17 @@
 package com.visiteLieux;
 
 import android.app.Activity;
+import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
-import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
+import android.print.PrintAttributes;
+import android.print.PrintDocumentAdapter;
+import android.print.PrintManager;
 import android.util.Base64;
-import android.view.View;
 import android.webkit.JavascriptInterface;
+import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
@@ -38,20 +41,19 @@ public class MainActivity extends Activity {
 
         webView.addJavascriptInterface(new Bridge(), "AndroidBridge");
         webView.setWebViewClient(new WebViewClient());
+        webView.setWebChromeClient(new WebChromeClient());
         webView.loadUrl("file:///android_asset/index.html");
     }
 
     @Override
     public void onBackPressed() {
-        if (webView.canGoBack()) {
-            webView.goBack();
-        } else {
-            super.onBackPressed();
-        }
+        webView.evaluateJavascript("handleAndroidBack()", null);
     }
 
+    /* ───────────── JavaScript Bridge ───────────── */
     class Bridge {
 
+        /** Save Excel base64 to disk and open the share sheet. */
         @JavascriptInterface
         public void saveExcel(final String base64Data, final String filename) {
             try {
@@ -67,38 +69,62 @@ public class MainActivity extends Activity {
                     @Override
                     public void run() {
                         Toast.makeText(MainActivity.this,
-                            "Fichier sauvegardé :\n" + file.getAbsolutePath(),
+                            "Fichier enregistré :\n" + file.getAbsolutePath(),
                             Toast.LENGTH_LONG).show();
                         shareFile(file);
                     }
                 });
-
             } catch (final IOException e) {
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
                         Toast.makeText(MainActivity.this,
-                            "Erreur : " + e.getMessage(),
-                            Toast.LENGTH_LONG).show();
+                            "Erreur : " + e.getMessage(), Toast.LENGTH_LONG).show();
                     }
                 });
             }
         }
+
+        /** Open the Android print dialog (PDF output). */
+        @JavascriptInterface
+        public void printDocument(final String jobName) {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    PrintManager pm = (PrintManager) getSystemService(Context.PRINT_SERVICE);
+                    if (pm != null) {
+                        PrintDocumentAdapter adapter =
+                            webView.createPrintDocumentAdapter(jobName);
+                        pm.print(jobName, adapter,
+                            new PrintAttributes.Builder().build());
+                    }
+                }
+            });
+        }
+
+        /** Let the JavaScript close the app cleanly (home-screen back press). */
+        @JavascriptInterface
+        public void exitApp() {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() { finish(); }
+            });
+        }
     }
 
+    /* ───────────── Helpers ───────────── */
     private File getOutputDir() {
-        // App-specific external dir — no permission required
         File ext = getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS);
-        if (ext != null) return ext;
-        return new File(getFilesDir(), "documents");
+        return ext != null ? ext : new File(getFilesDir(), "documents");
     }
 
     private void shareFile(File file) {
-        Intent share = new Intent(Intent.ACTION_SEND);
-        share.setType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-        share.putExtra(Intent.EXTRA_STREAM, Uri.fromFile(file));
-        share.putExtra(Intent.EXTRA_SUBJECT, "Fiche de présences — Visite des lieux");
-        share.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-        startActivity(Intent.createChooser(share, "Enregistrer / Partager le fichier Excel"));
+        Intent intent = new Intent(Intent.ACTION_SEND);
+        intent.setType(
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        intent.putExtra(Intent.EXTRA_STREAM, Uri.fromFile(file));
+        intent.putExtra(Intent.EXTRA_SUBJECT, "Fiche de présences — Visite des lieux");
+        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        startActivity(Intent.createChooser(intent, "Partager le fichier Excel"));
     }
 }
