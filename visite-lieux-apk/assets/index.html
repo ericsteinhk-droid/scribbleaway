@@ -53,8 +53,13 @@
       padding: 4px 8px 4px 2px;
       display: none; align-items: center;
     }
+    .app-bar-text { flex: 1; min-width: 0; }
     .app-bar-text h1 { font-size: 1rem; font-weight: 700; }
     .app-bar-text p  { font-size: .7rem; opacity: .8; margin-top: 1px; }
+    .app-bar-logo {
+      height: 26px; width: auto; max-width: 96px;
+      object-fit: contain; flex-shrink: 0; margin-left: 8px;
+    }
 
     /* ── SCREENS ── */
     .screen { display: none; padding: 14px; padding-bottom: 100px; }
@@ -114,6 +119,15 @@
       background: transparent; border: 2px solid var(--blue);
       color: var(--blue); padding: 12px 18px;
     }
+
+    /* ── EVOQ LOGO CARD ── */
+    .evoq-card {
+      background: var(--surface); border-radius: var(--r);
+      box-shadow: var(--shadow); padding: 16px 24px;
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 12px;
+    }
+    .evoq-card img { height: 38px; width: auto; max-width: 160px; object-fit: contain; }
 
     /* ── HOME — SESSION CARDS ── */
     .home-header {
@@ -342,6 +356,7 @@
     <h1 id="bar-title">Visite des Lieux</h1>
     <p id="bar-sub">Fiche de présences — Soumissionnaires</p>
   </div>
+  <img src="evoq_logo.png" class="app-bar-logo" alt="EVOQ">
 </div>
 
 
@@ -349,7 +364,10 @@
      ÉCRAN 0 — ACCUEIL
 ═══════════════════════════════════════════ -->
 <div class="screen active" id="s-home">
-  <button class="btn btn-primary new-btn" style="margin-top:16px" onclick="newSession()">
+  <div class="evoq-card" style="margin-top:16px">
+    <img src="evoq_logo.png" alt="EVOQ">
+  </div>
+  <button class="btn btn-primary new-btn" onclick="newSession()">
     ＋ Nouvelle liste de présences
   </button>
 
@@ -962,12 +980,21 @@ function generatePdf() {
   var mg = 18;
   var y  = 18;
 
-  /* Titre */
+  /* Logo EVOQ à gauche + titre à droite */
+  var logoH = 14;  /* hauteur mm — ratio 1920:455 ≈ 4.22 */
+  var logoW = Math.round(logoH * (1920 / 455));
+  if (LOGO_B64) {
+    doc.addImage(LOGO_B64, 'PNG', mg, y - 3, logoW, logoH);
+  }
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(14);
+  doc.setFontSize(11);
   doc.setTextColor(BLUE[0], BLUE[1], BLUE[2]);
-  doc.text('FICHE DE PRÉSENCES — VISITE DES LIEUX', W / 2, y, { align: 'center' });
-  y += 5;
+  doc.text('FICHE DE PRÉSENCES', W - mg, y - 1, { align: 'right' });
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  doc.setTextColor(107, 114, 128);
+  doc.text('VISITE DES LIEUX — SOUMISSIONNAIRES', W - mg, y + 5, { align: 'right' });
+  y += logoH;
   doc.setDrawColor(BLUE[0], BLUE[1], BLUE[2]);
   doc.setLineWidth(0.7);
   doc.line(mg, y, W - mg, y);
@@ -1072,6 +1099,22 @@ function toast(msg) {
   clearTimeout(_toastTimer);
   _toastTimer = setTimeout(function() { el.classList.remove('show'); }, 3200);
 }
+
+/* ═══════════════════════════════════════════════════════
+   PRÉCHARGEMENT LOGO (pour PDF)
+═══════════════════════════════════════════════════════ */
+var LOGO_B64 = null;
+(function() {
+  var img = new Image();
+  img.onload = function() {
+    var c = document.createElement('canvas');
+    c.width = img.naturalWidth; c.height = img.naturalHeight;
+    c.getContext('2d').drawImage(img, 0, 0);
+    LOGO_B64 = c.toDataURL('image/png');
+  };
+  img.onerror = function() {};
+  img.src = 'evoq_logo.png';
+})();
 
 /* ═══════════════════════════════════════════════════════
    INIT
