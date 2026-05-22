@@ -1,66 +1,88 @@
 # Rapports de Chantier
 
-Progressive Web App (PWA) for architects to write and manage field reports ("rapports de chantier"), optimized for Android and iOS tablets and phones.
+Application mobile pour architectes — rédaction et gestion des rapports de chantier.
+Fonctionne sur iPhone, iPad, Android, et navigateur web.
 
-## Features
+---
 
-- **Authentication** — Firebase Auth (email + password)
-- **Projects** — Create and manage multiple projects with shared team access
-- **Reports** — Numbered, chronological site visit reports per project
-- **Entries** — Four types: Observation, Avancement des travaux, Discussion, Directive
-- **Voice input** — Web Speech API (primary) + OpenAI Whisper (fallback)
-- **AI reformatting** — Claude claude-sonnet-4-20250514 reformats transcribed or typed text into professional architectural French
-- **Photos** — Camera/gallery capture, auto-compressed, inline per entry with captions
-- **PDF export** — Letter format via @react-pdf/renderer
-- **Word export** — .docx via docx.js
-- **Share** — Web Share API (iOS Share Sheet / Android Sharesheet) with download fallback
-- **Offline-first** — Firestore offline persistence + Service Worker (Workbox)
-- **Sync indicator** — Live status: Synchronisé / En cours / Hors ligne
-- **Dark/light mode** — Automatic + manual toggle
+## Déploiement rapide (première fois)
 
-## Tech Stack
+> **Durée estimée : 20–30 minutes**
+> Vous aurez besoin d'un compte Google (Gmail) et d'une carte de crédit pour Anthropic (usage à la demande, très faible coût).
 
-- React + Vite 8
-- Tailwind CSS 3
-- Firebase (Auth, Firestore, Storage)
-- Workbox (via vite-plugin-pwa)
-- @react-pdf/renderer
-- docx.js
-- Anthropic Claude API
-- OpenAI Whisper API
+### Ce dont vous avez besoin
 
-## Setup
+| Outil | Pour quoi | Gratuit ? |
+|-------|-----------|-----------|
+| [Node.js](https://nodejs.org) (v18+) | Faire tourner le code | ✅ Oui |
+| [Compte Google](https://accounts.google.com) | Firebase (base de données) | ✅ Oui |
+| [Compte Anthropic](https://console.anthropic.com) | IA de reformatage de texte | 💳 Paiement à l'usage |
+| [Compte OpenAI](https://platform.openai.com) *(optionnel)* | Transcription vocale de secours | 💳 Paiement à l'usage |
 
-### 1. Firebase Project
+---
 
-1. Create a project at [console.firebase.google.com](https://console.firebase.google.com)
-2. Enable **Authentication** → Email/Password
-3. Enable **Firestore Database** (start in production mode)
-4. Enable **Storage**
-5. Copy your web app configuration
+## Option A — Script automatique (recommandé)
 
-### 2. API Keys
+Le script vous pose des questions et fait tout à votre place.
 
-Copy `.env.example` to `.env` and fill in your keys:
+**1. Ouvrez un terminal** (sur Mac : `Cmd+Espace` → "Terminal" ; sur Windows : installez [Git Bash](https://gitforwindows.org))
 
+**2. Naviguez dans le dossier du projet :**
 ```bash
-cp .env.example .env
+cd chemin/vers/scribbleaway
 ```
 
-Edit `.env`:
-```
-VITE_FIREBASE_API_KEY=...
-VITE_FIREBASE_AUTH_DOMAIN=...
-VITE_FIREBASE_PROJECT_ID=...
-VITE_FIREBASE_STORAGE_BUCKET=...
-VITE_FIREBASE_MESSAGING_SENDER_ID=...
-VITE_FIREBASE_APP_ID=...
-VITE_ANTHROPIC_API_KEY=...   # https://console.anthropic.com
-VITE_OPENAI_API_KEY=...      # Only needed if Web Speech API unavailable
+**3. Lancez le script :**
+```bash
+bash setup.sh
 ```
 
-### 3. Firestore Security Rules
+Le script vous guidera pour :
+- créer votre projet Firebase
+- copier vos clés API
+- construire et déployer l'application
 
+**C'est tout.** À la fin, votre URL est affichée.
+
+---
+
+## Option B — Étapes manuelles
+
+Si vous préférez faire chaque étape vous-même :
+
+### Étape 1 — Installer Node.js
+
+Allez sur **https://nodejs.org** → téléchargez la version **LTS** → installez-la.
+
+Vérifiez dans un terminal :
+```bash
+node --version   # doit afficher v18 ou plus
+```
+
+### Étape 2 — Créer votre projet Firebase
+
+1. Allez sur **https://console.firebase.google.com**
+2. Cliquez **"Créer un projet"**
+3. Donnez-lui un nom (ex: `rapports-chantier`)
+4. Désactivez Google Analytics → Cliquez **"Créer le projet"**
+
+Puis dans votre nouveau projet :
+
+5. Cliquez l'icône **`</>`** (Web) sur la page d'accueil
+6. Donnez un surnom (ex: `app`) → cochez **"Firebase Hosting"** → **"Enregistrer"**
+7. Notez les valeurs dans la section `firebaseConfig` (vous en aurez besoin après)
+
+### Étape 3 — Activer les services Firebase
+
+Dans le panneau gauche de la console Firebase :
+
+**Authentication :**
+> Authentication → Sign-in method → Email/Mot de passe → Activer → Enregistrer
+
+**Firestore Database :**
+> Firestore Database → Créer une base de données → Mode production → Choisir une région → Activer
+
+Ensuite, allez dans **Règles** et remplacez tout par :
 ```
 rules_version = '2';
 service cloud.firestore {
@@ -75,14 +97,18 @@ service cloud.firestore {
     }
     match /projects/{projectId}/reports/{reportId} {
       allow read, write: if request.auth != null
-        && request.auth.uid in get(/databases/$(database)/documents/projects/$(projectId)).data.members;
+        && request.auth.uid in get(
+          /databases/$(database)/documents/projects/$(projectId)
+        ).data.members;
     }
   }
 }
 ```
 
-### 4. Storage Security Rules
+**Storage :**
+> Storage → Commencer → Mode production → Choisir une région → Terminer
 
+Ensuite, allez dans **Règles** et remplacez tout par :
 ```
 rules_version = '2';
 service firebase.storage {
@@ -94,25 +120,117 @@ service firebase.storage {
 }
 ```
 
-### 5. Run locally
+### Étape 4 — Obtenir vos clés API
+
+**Clé Anthropic (IA) :**
+1. Allez sur **https://console.anthropic.com**
+2. Créez un compte → allez dans **API Keys** → **Create Key**
+3. Copiez la clé (commence par `sk-ant-…`)
+
+**Clé OpenAI (optionnel) :**
+1. Allez sur **https://platform.openai.com/api-keys**
+2. **Create new secret key** → copiez-la
+
+### Étape 5 — Configurer le fichier .env
+
+Dans le dossier du projet, copiez le fichier d'exemple :
+```bash
+cp .env.example .env
+```
+
+Ouvrez `.env` dans un éditeur de texte (ex: Bloc-notes) et remplissez chaque ligne avec vos valeurs :
+```
+VITE_FIREBASE_API_KEY=AIza...
+VITE_FIREBASE_AUTH_DOMAIN=monprojet.firebaseapp.com
+VITE_FIREBASE_PROJECT_ID=monprojet
+VITE_FIREBASE_STORAGE_BUCKET=monprojet.appspot.com
+VITE_FIREBASE_MESSAGING_SENDER_ID=123456789
+VITE_FIREBASE_APP_ID=1:123456789:web:abc123
+VITE_ANTHROPIC_API_KEY=sk-ant-...
+VITE_OPENAI_API_KEY=sk-...
+```
+
+### Étape 6 — Installer Firebase CLI
+
+```bash
+npm install -g firebase-tools
+firebase login
+```
+
+Un navigateur s'ouvre — connectez-vous avec votre compte Google.
+
+### Étape 7 — Construire et déployer
 
 ```bash
 npm install
-npm run dev
-```
-
-### 6. Build & deploy
-
-```bash
 npm run build
-# Deploy dist/ to Firebase Hosting, Vercel, Netlify, etc.
+firebase deploy --only hosting
 ```
 
-## PWA Installation
+À la fin, vous verrez :
+```
+✔  Deploy complete!
+Hosting URL: https://monprojet.web.app
+```
 
-On mobile: open in browser → "Add to Home Screen" (iOS) or install banner (Android).
+**Ouvrez cette URL sur votre téléphone.** 🎉
 
-## Notes
+---
 
-- API keys are exposed to the browser (Anthropic, OpenAI). For production, proxy these through a backend function to avoid key leakage.
-- The `VITE_ANTHROPIC_API_KEY` call uses `anthropic-dangerous-direct-browser-access: true` header — acceptable for internal/enterprise tools; use a proxy for public apps.
+## Installer l'app sur votre téléphone
+
+Une fois l'URL ouverte dans le navigateur :
+
+**iPhone/iPad (Safari) :**
+> Appuyez sur le bouton Partager ⬆ → "Sur l'écran d'accueil"
+
+**Android (Chrome) :**
+> Menu ⋮ → "Installer l'application" (ou une bannière apparaît automatiquement)
+
+L'app s'installe comme une vraie application et fonctionne même sans connexion internet.
+
+---
+
+## Mises à jour (après la première installation)
+
+Pour mettre à jour l'application après des modifications de code :
+```bash
+npm run build && firebase deploy --only hosting
+```
+
+---
+
+## Déploiement automatique via GitHub Actions
+
+Si votre code est sur GitHub, chaque `git push` sur `main` peut déclencher un déploiement automatique.
+
+### Configuration une seule fois :
+
+**1. Générez une clé de service Firebase :**
+> Console Firebase → Paramètres du projet ⚙ → Comptes de service → Générer une nouvelle clé privée
+
+Téléchargez le fichier JSON.
+
+**2. Ajoutez vos secrets dans GitHub :**
+> Dépôt GitHub → Settings → Secrets and variables → Actions → New repository secret
+
+Ajoutez un secret pour chaque variable du fichier `.env` (mêmes noms), plus :
+- `FIREBASE_SERVICE_ACCOUNT` → collez le contenu entier du fichier JSON téléchargé
+
+**3. C'est tout.** Chaque `git push` sur `main` déploie automatiquement.
+
+---
+
+## Questions fréquentes
+
+**L'app dit "Configuration Firebase manquante" ?**
+→ Votre fichier `.env` n'est pas rempli correctement. Vérifiez que chaque ligne a une valeur.
+
+**La dictée vocale ne fonctionne pas ?**
+→ Sur iOS/Android, l'app utilise automatiquement le micro du système. Sur certains navigateurs de bureau, elle bascule sur Whisper (clé OpenAI nécessaire).
+
+**Les photos ne s'envoient pas hors ligne ?**
+→ Normal — elles sont mises en file d'attente et s'envoient automatiquement dès que la connexion revient.
+
+**Comment ajouter un collègue ?**
+→ Il doit créer son propre compte dans l'app. Ensuite, la fonctionnalité d'invitation de membres sera ajoutée dans une prochaine version.
