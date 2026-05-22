@@ -58,7 +58,7 @@ class MeetingRepository(
             backupToDownloads(
                 context = context,
                 file = File(chunk.filePath),
-                folderName = "ScribbleAway",
+                folderName = "EVOQ-meet",
                 displayName = "${safeTitle}_chunk_${chunk.index}.m4a"
             )
         }

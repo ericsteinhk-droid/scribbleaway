@@ -1,4 +1,4 @@
-name: Build ScribbleAway APK
+name: Build EVOQ-meet APK
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       release_version:
-        description: 'Version tag (e.g. scribbleaway-v1.0.0). Leave blank to use default.'
+        description: 'Version tag (e.g. evoqmeet-20260521-1400). Leave blank to use default.'
         required: false
         default: ''
 
@@ -51,14 +51,14 @@ jobs:
           if [[ -n "${{ inputs.release_version }}" ]]; then
             echo "tag=${{ inputs.release_version }}" >> $GITHUB_OUTPUT
           else
-            echo "tag=scribbleaway-$(date -u +'%Y%m%d-%H%M')" >> $GITHUB_OUTPUT
+            echo "tag=evoqmeet-$(date -u +'%Y%m%d-%H%M')" >> $GITHUB_OUTPUT
           fi
 
       - name: Rename APK
         run: |
           mkdir -p dist
           cp MeetingRecorder/app/build/outputs/apk/debug/app-debug.apk \
-             dist/ScribbleAway-${{ steps.version.outputs.tag }}.apk
+             dist/EVOQ-meet-${{ steps.version.outputs.tag }}.apk
 
       - name: Tag current commit
         run: |
@@ -70,11 +70,11 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.version.outputs.tag }}
-          name: ScribbleAway ${{ steps.version.outputs.tag }}
+          name: EVOQ-meet ${{ steps.version.outputs.tag }}
           make_latest: true
-          files: dist/ScribbleAway-${{ steps.version.outputs.tag }}.apk
+          files: dist/EVOQ-meet-${{ steps.version.outputs.tag }}.apk
           body: |
-            ## ScribbleAway ${{ steps.version.outputs.tag }}
+            ## EVOQ-meet ${{ steps.version.outputs.tag }}
 
             Application Android pour l'enregistrement de réunions de chantier en français canadien.
 
@@ -85,13 +85,14 @@ jobs:
             - **Résumé structuré** : Anthropic Claude — résumé exécutif, points discutés, décisions, actions, points en suspens
             - **Export** : DOCX complet (résumé + transcription diarisée), aperçu avant export
             - **Partage audio** : partage des fichiers M4A directement depuis l'écran d'aperçu
+            - **Sauvegarde automatique** : copie dans Downloads/EVOQ-meet/ avant transcription
 
             ### Clés API requises
             - **OpenAI** (platform.openai.com) — transcription Whisper + diarisation GPT-4o
             - **Anthropic** (console.anthropic.com) — résumé intelligent (optionnel)
 
             ### Installation
-            1. Télécharger `ScribbleAway-${{ steps.version.outputs.tag }}.apk`
+            1. Télécharger `EVOQ-meet-${{ steps.version.outputs.tag }}.apk`
             2. Transférer sur l'appareil Android (API 26 / Android 8.0+)
             3. Activer **Installer depuis des sources inconnues** si requis
             4. Ouvrir le fichier APK pour installer
@@ -103,7 +104,7 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Direct APK download:**" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "[ScribbleAway-${{ steps.version.outputs.tag }}.apk](https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag }}/ScribbleAway-${{ steps.version.outputs.tag }}.apk)" >> $GITHUB_STEP_SUMMARY
+          echo "[EVOQ-meet-${{ steps.version.outputs.tag }}.apk](https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag }}/EVOQ-meet-${{ steps.version.outputs.tag }}.apk)" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Latest release page:**" >> $GITHUB_STEP_SUMMARY
           echo "https://github.com/${{ github.repository }}/releases/latest" >> $GITHUB_STEP_SUMMARY
