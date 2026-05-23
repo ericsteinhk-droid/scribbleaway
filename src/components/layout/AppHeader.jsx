@@ -17,12 +17,20 @@ export function AppHeader({ title, backTo, actions }) {
             <ChevronLeft size={20} />
           </button>
         )}
-        <div className="flex-1 min-w-0">
-          <h1 className="text-sm font-semibold text-gray-900 dark:text-white truncate leading-tight">
-            {title || 'Rapports de Chantier'}
-          </h1>
-          <div className="mt-0.5">
-            <SyncBadge />
+        <div className="flex-1 min-w-0 flex items-center gap-3">
+          <img
+            src="/evoq_logo.png"
+            alt="EVOQ"
+            className="h-6 w-auto object-contain shrink-0 dark:brightness-90"
+            draggable={false}
+          />
+          <div className="min-w-0">
+            <h1 className="text-sm font-semibold text-gray-900 dark:text-white truncate leading-tight">
+              {title || 'Rapports de Chantier'}
+            </h1>
+            <div className="mt-0.5">
+              <SyncBadge />
+            </div>
           </div>
         </div>
         <div className="flex items-center gap-1">

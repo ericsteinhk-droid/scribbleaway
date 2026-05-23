@@ -41,12 +41,13 @@ export function LoginPage() {
       <div className="w-full max-w-sm">
         {/* Logo / branding */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-primary-600 rounded-2xl mb-4 shadow-lg">
-            <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <rect x="4" y="20" width="24" height="4" rx="2" fill="white"/>
-              <rect x="8" y="12" width="16" height="4" rx="2" fill="white" opacity="0.8"/>
-              <rect x="12" y="4" width="8" height="4" rx="2" fill="white" opacity="0.6"/>
-            </svg>
+          <div className="flex justify-center mb-5">
+            <img
+              src="/evoq_logo.png"
+              alt="EVOQ"
+              className="h-14 w-auto object-contain dark:brightness-90"
+              draggable={false}
+            />
           </div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">Rapports de Chantier</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400">Gestion professionnelle pour architectes</p>
