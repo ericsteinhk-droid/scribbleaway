@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react'
-import { Pencil, Trash2, Camera, X, Plus } from 'lucide-react'
+import { Pencil, Trash2, Camera, Images, X, Plus } from 'lucide-react'
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'
 import { storage } from '../../services/firebase'
 import { compressImage } from '../../services/voice'
@@ -12,7 +12,8 @@ import { v4 as uuidv4 } from 'uuid'
 export function EntryCard({ entry, projectId, reportId, onEdit, onDelete, onUpdatePhotos }) {
   const toast = useToast()
   const { user } = useAuth()
-  const fileInputRef = useRef(null)
+  const cameraInputRef = useRef(null)
+  const galleryInputRef = useRef(null)
   const [uploading, setUploading] = useState(false)
   const [captionEdit, setCaptionEdit] = useState(null)
   const [captionValue, setCaptionValue] = useState('')
@@ -131,26 +132,33 @@ export function EntryCard({ entry, projectId, reportId, onEdit, onDelete, onUpda
         )}
 
         {/* Add photo */}
-        <div className="mt-3">
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            multiple
-            className="hidden"
-            onChange={handlePhotoAdd}
-          />
+        <div className="mt-3 flex items-center gap-3">
+          <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handlePhotoAdd} />
+          <input ref={galleryInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handlePhotoAdd} />
           <button
             type="button"
-            onClick={() => fileInputRef.current?.click()}
+            onClick={() => cameraInputRef.current?.click()}
             disabled={uploading}
             className="btn-ghost text-xs gap-1.5 -ml-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
           >
-            {uploading
-              ? <span className="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin" />
-              : <Camera size={14} />}
-            {uploading ? 'Envoi…' : 'Ajouter des photos'}
+            <Camera size={14} />
+            Caméra
           </button>
+          <button
+            type="button"
+            onClick={() => galleryInputRef.current?.click()}
+            disabled={uploading}
+            className="btn-ghost text-xs gap-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+          >
+            <Images size={14} />
+            Galerie
+          </button>
+          {uploading && (
+            <span className="flex items-center gap-1 text-xs text-gray-400">
+              <span className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
+              Envoi…
+            </span>
+          )}
         </div>
       </div>
 

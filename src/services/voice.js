@@ -37,7 +37,7 @@ export async function recordAudio() {
 }
 
 export function compressImage(file, maxWidth = 1200, quality = 0.75) {
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     const img = new Image()
     const url = URL.createObjectURL(file)
     img.onload = () => {
@@ -45,14 +45,21 @@ export function compressImage(file, maxWidth = 1200, quality = 0.75) {
       const canvas = document.createElement('canvas')
       let { width, height } = img
       if (width > maxWidth) {
-        height = (height * maxWidth) / width
+        height = Math.round((height * maxWidth) / width)
         width = maxWidth
       }
       canvas.width = width
       canvas.height = height
-      const ctx = canvas.getContext('2d')
-      ctx.drawImage(img, 0, 0, width, height)
-      canvas.toBlob((blob) => resolve(blob), 'image/jpeg', quality)
+      canvas.getContext('2d').drawImage(img, 0, 0, width, height)
+      canvas.toBlob(
+        (blob) => (blob ? resolve(blob) : reject(new Error('Compression échouée'))),
+        'image/jpeg',
+        quality,
+      )
+    }
+    img.onerror = () => {
+      URL.revokeObjectURL(url)
+      reject(new Error('Impossible de charger l\'image'))
     }
     img.src = url
   })
