@@ -34,7 +34,7 @@ export function EntryCard({ entry, projectId, reportId, onEdit, onDelete, onUpda
         const storageRef = ref(storage, path)
         const snap = await uploadBytes(storageRef, compressed)
         const url = await getDownloadURL(snap.ref)
-        newPhotos.push({ id: photoId, url, caption: '' })
+        newPhotos.push({ id: photoId, url, storagePath: path, caption: '' })
       }
       await onUpdatePhotos(newPhotos)
       toast('Photo(s) ajoutée(s).', 'success')
