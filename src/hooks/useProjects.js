@@ -29,6 +29,9 @@ export function useProjects() {
     const unsub = onSnapshot(q, (snap) => {
       setProjects(snap.docs.map((d) => ({ id: d.id, ...d.data() })))
       setLoading(false)
+    }, (err) => {
+      console.error('Firestore projects:', err.message)
+      setLoading(false)
     })
     return unsub
   }, [user])

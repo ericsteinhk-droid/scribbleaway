@@ -28,6 +28,9 @@ export function useReports(projectId) {
     const unsub = onSnapshot(q, (snap) => {
       setReports(snap.docs.map((d) => ({ id: d.id, ...d.data() })))
       setLoading(false)
+    }, (err) => {
+      console.error('Firestore reports:', err.message)
+      setLoading(false)
     })
     return unsub
   }, [projectId])
