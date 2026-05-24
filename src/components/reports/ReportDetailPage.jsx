@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { doc, getDoc, onSnapshot } from 'firebase/firestore'
 import { db } from '../../services/firebase'
-import { Plus, Download, Share2, FileText, FileType2, Pencil, Users } from 'lucide-react'
+import { Plus, Download, Share2, FileText, FileType2, Pencil, Users, Images } from 'lucide-react'
 import { pdf } from '@react-pdf/renderer'
 import { useReports } from '../../hooks/useReports'
 import { useToast } from '../ui/Toast'
@@ -13,6 +13,7 @@ import { EntryForm } from '../entries/EntryForm'
 import { ReportForm } from './ReportForm'
 import { ReportPDF } from '../../services/pdfGenerator'
 import { generateDocx } from '../../services/docxGenerator'
+import { buildPhotosZip } from '../../services/photoZip'
 import { ENTRY_TYPES, ENTRY_TYPE_ORDER } from '../../utils/constants'
 import { formatDate, formatReportNumber } from '../../utils/format'
 import { v4 as uuidv4 } from 'uuid'
@@ -112,6 +113,20 @@ export function ReportDetailPage() {
     }
   }
 
+  async function exportPhotos() {
+    if (!report || !project) return
+    setExporting('photos')
+    try {
+      const blob = await buildPhotosZip(report, project)
+      const fileName = `Photos-Rapport-${formatReportNumber(report.number)}-${project.name.replace(/\s+/g, '-')}.zip`
+      await shareOrDownload(blob, fileName, 'application/zip')
+    } catch (err) {
+      toast(`Erreur photos: ${err.message}`, 'error')
+    } finally {
+      setExporting(null)
+    }
+  }
+
   async function shareOrDownload(blob, fileName, mimeType) {
     const file = new File([blob], fileName, { type: mimeType })
     if (navigator.canShare?.({ files: [file] })) {
@@ -144,6 +159,8 @@ export function ReportDetailPage() {
       </div>
     )
   }
+
+  const totalPhotos = (report.entries || []).reduce((n, e) => n + (e.photos?.length || 0), 0)
 
   const groupedEntries = ENTRY_TYPE_ORDER.reduce((acc, type) => {
     const typed = (report.entries || []).filter((e) => e.type === type)
@@ -186,6 +203,19 @@ export function ReportDetailPage() {
                 : <FileType2 size={15} />}
               <span className="hidden sm:inline">Word</span>
             </button>
+            {totalPhotos > 0 && (
+              <button
+                onClick={exportPhotos}
+                disabled={!!exporting}
+                className="btn-ghost px-2.5 py-2 rounded-xl flex items-center gap-1.5 text-xs font-medium"
+                aria-label="Télécharger les photos"
+              >
+                {exporting === 'photos'
+                  ? <span className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                  : <Images size={15} />}
+                <span className="hidden sm:inline">Photos</span>
+              </button>
+            )}
           </div>
         }
       />
