@@ -96,7 +96,7 @@ export function EntryCard({ entry, projectId, reportId, onEdit, onDelete, onUpda
                   alt={photo.caption || 'Photo de chantier'}
                   className="w-full h-32 object-cover"
                 />
-                <div className="absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="absolute top-1.5 right-1.5">
                   <button
                     onClick={() => setConfirmDeletePhoto(photo.id)}
                     className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center text-white shadow"
@@ -137,7 +137,6 @@ export function EntryCard({ entry, projectId, reportId, onEdit, onDelete, onUpda
             type="file"
             accept="image/*"
             multiple
-            capture="environment"
             className="hidden"
             onChange={handlePhotoAdd}
           />
