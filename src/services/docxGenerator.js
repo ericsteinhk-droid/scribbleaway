@@ -16,23 +16,17 @@ import {
   Footer,
   Header,
 } from 'docx'
+import { ref, getBlob } from 'firebase/storage'
+import { storage } from './firebase'
 import { ENTRY_TYPES, ENTRY_TYPE_ORDER } from '../utils/constants'
 import { formatDate, formatReportNumber } from '../utils/format'
 
 const COLORS = {
-  primary: '6172f3',
+  primary: '00a99e',
   observation: { bg: 'DBEAFE', text: '1E40AF' },
   avancement: { bg: 'DCFCE7', text: '166534' },
   discussion: { bg: 'FEF9C3', text: '854D0E' },
   directive: { bg: 'FEE2E2', text: '991B1B' },
-}
-
-function heading(text, level = 1) {
-  return new Paragraph({
-    text,
-    heading: level === 1 ? HeadingLevel.HEADING_1 : HeadingLevel.HEADING_2,
-    spacing: { before: level === 1 ? 400 : 240, after: 120 },
-  })
 }
 
 function para(text, options = {}) {
@@ -52,14 +46,35 @@ function sectionHeader(label, color) {
   })
 }
 
-async function fetchImageAsBuffer(url) {
+// Use Firebase Storage SDK (bypasses CORS) when storagePath is available,
+// otherwise fall back to fetch (works if CORS is configured on the bucket).
+async function fetchImageAsBuffer(url, storagePath) {
   try {
+    if (storagePath) {
+      const blob = await getBlob(ref(storage, storagePath))
+      return blob.arrayBuffer()
+    }
     const res = await fetch(url)
-    const buf = await res.arrayBuffer()
-    return buf
+    if (!res.ok) return null
+    return res.arrayBuffer()
   } catch {
     return null
   }
+}
+
+// Load image from buffer to get real dimensions; scale to max width preserving ratio.
+function getImageTransformation(buf, maxWidth = 420) {
+  return new Promise((resolve) => {
+    const objectUrl = URL.createObjectURL(new Blob([buf], { type: 'image/jpeg' }))
+    const img = new Image()
+    img.onload = () => {
+      URL.revokeObjectURL(objectUrl)
+      const scale = Math.min(1, maxWidth / img.naturalWidth)
+      resolve({ width: Math.round(img.naturalWidth * scale), height: Math.round(img.naturalHeight * scale) })
+    }
+    img.onerror = () => { URL.revokeObjectURL(objectUrl); resolve({ width: maxWidth, height: 250 }) }
+    img.src = objectUrl
+  })
 }
 
 export async function generateDocx(report, project) {
@@ -149,9 +164,7 @@ export async function generateDocx(report, project) {
         new Paragraph({
           children: [new TextRun({ text: entry.text || '', size: 20, color: '1F2937' })],
           spacing: { after: 120 },
-          border: {
-            left: { style: BorderStyle.SINGLE, size: 12, color: COLORS.primary },
-          },
+          border: { left: { style: BorderStyle.SINGLE, size: 12, color: COLORS.primary } },
           indent: { left: 240 },
         }),
       )
@@ -159,11 +172,12 @@ export async function generateDocx(report, project) {
       // Photos
       if (entry.photos?.length > 0) {
         for (const photo of entry.photos) {
-          const buf = await fetchImageAsBuffer(photo.url)
+          const buf = await fetchImageAsBuffer(photo.url, photo.storagePath)
           if (buf) {
+            const transformation = await getImageTransformation(buf)
             children.push(
               new Paragraph({
-                children: [new ImageRun({ data: buf, type: 'jpg', transformation: { width: 400, height: 250 } })],
+                children: [new ImageRun({ data: buf, type: 'jpg', transformation })],
                 spacing: { after: 60 },
               }),
             )
