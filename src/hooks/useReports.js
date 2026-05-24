@@ -59,6 +59,10 @@ export function useReports(projectId) {
 
   async function deleteReport(projectId, reportId) {
     await deleteDoc(doc(db, 'projects', projectId, 'reports', reportId))
+    await updateDoc(doc(db, 'projects', projectId), {
+      reportCount: increment(-1),
+      updatedAt: serverTimestamp(),
+    })
   }
 
   return { reports, loading, createReport, updateReport, deleteReport }

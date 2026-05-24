@@ -136,8 +136,11 @@ export function ReportDetailPage() {
 
   if (!report) {
     return (
-      <div className="min-h-svh bg-gray-50 dark:bg-gray-950 flex items-center justify-center">
-        <p className="text-gray-500">Rapport introuvable.</p>
+      <div className="min-h-svh bg-gray-50 dark:bg-gray-950 flex flex-col items-center justify-center gap-4 p-8">
+        <p className="text-gray-500 dark:text-gray-400 text-sm">Rapport introuvable.</p>
+        <button onClick={() => navigate(`/projects/${projectId}`)} className="btn-secondary">
+          ← Retour aux rapports
+        </button>
       </div>
     )
   }
@@ -154,31 +157,34 @@ export function ReportDetailPage() {
     <div className="min-h-svh bg-gray-50 dark:bg-gray-950">
       <AppHeader
         title={`Rapport #${formatReportNumber(report.number)}`}
+        subtitle={project?.name}
         backTo={`/projects/${projectId}`}
         actions={
           <div className="flex items-center gap-1">
-            <button onClick={() => setShowEditReport(true)} className="btn-ghost p-2 rounded-xl" aria-label="Modifier">
+            <button onClick={() => setShowEditReport(true)} className="btn-ghost p-2 rounded-xl" aria-label="Modifier le rapport">
               <Pencil size={16} />
             </button>
             <button
               onClick={exportPDF}
               disabled={!!exporting}
-              className="btn-ghost p-2 rounded-xl"
+              className="btn-ghost px-2.5 py-2 rounded-xl flex items-center gap-1.5 text-xs font-medium"
               aria-label="Exporter PDF"
             >
               {exporting === 'pdf'
                 ? <span className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                : <FileText size={16} />}
+                : <FileText size={15} />}
+              <span className="hidden sm:inline">PDF</span>
             </button>
             <button
               onClick={exportDocx}
               disabled={!!exporting}
-              className="btn-ghost p-2 rounded-xl"
+              className="btn-ghost px-2.5 py-2 rounded-xl flex items-center gap-1.5 text-xs font-medium"
               aria-label="Exporter Word"
             >
               {exporting === 'docx'
                 ? <span className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                : <FileType2 size={16} />}
+                : <FileType2 size={15} />}
+              <span className="hidden sm:inline">Word</span>
             </button>
           </div>
         }

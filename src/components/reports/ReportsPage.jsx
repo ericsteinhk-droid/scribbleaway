@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Plus, FileText, Calendar, User, Trash2, ChevronRight } from 'lucide-react'
+import { Plus, FileText, User, Trash2, ChevronRight, Users } from 'lucide-react'
 import { doc, getDoc } from 'firebase/firestore'
 import { db } from '../../services/firebase'
 import { useReports } from '../../hooks/useReports'
@@ -54,6 +54,7 @@ export function ReportsPage() {
     <div className="min-h-svh bg-gray-50 dark:bg-gray-950">
       <AppHeader
         title={project?.name || 'Rapports'}
+        subtitle="Mes projets"
         backTo="/"
         actions={
           <button onClick={() => setShowCreate(true)} className="btn-primary px-3 py-2 text-sm">
@@ -112,6 +113,12 @@ export function ReportsPage() {
                           <FileText size={11} />
                           {(report.entries || []).length} entrée{(report.entries || []).length !== 1 ? 's' : ''}
                         </span>
+                        {report.attendees?.length > 0 && (
+                          <span className="flex items-center gap-1">
+                            <Users size={11} />
+                            {report.attendees.length} présent{report.attendees.length !== 1 ? 's' : ''}
+                          </span>
+                        )}
                       </div>
                     </div>
                     <button

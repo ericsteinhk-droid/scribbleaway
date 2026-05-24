@@ -16,6 +16,8 @@ export function EntryCard({ entry, projectId, reportId, onEdit, onDelete, onUpda
   const [uploading, setUploading] = useState(false)
   const [captionEdit, setCaptionEdit] = useState(null)
   const [captionValue, setCaptionValue] = useState('')
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const [confirmDeletePhoto, setConfirmDeletePhoto] = useState(null)
 
   const typeConfig = ENTRY_TYPES[entry.type] || ENTRY_TYPES.observation
 
@@ -47,6 +49,7 @@ export function EntryCard({ entry, projectId, reportId, onEdit, onDelete, onUpda
   async function handleRemovePhoto(photoId) {
     const photos = (entry.photos || []).filter((p) => p.id !== photoId)
     await onUpdatePhotos(photos)
+    setConfirmDeletePhoto(null)
   }
 
   async function handleSaveCaption(photoId) {
@@ -66,11 +69,15 @@ export function EntryCard({ entry, projectId, reportId, onEdit, onDelete, onUpda
             {typeConfig.label}
           </span>
           <div className="flex items-center gap-1 shrink-0">
-            <button onClick={onEdit} className="btn-ghost p-1.5 rounded-lg" aria-label="Modifier">
-              <Pencil size={14} />
+            <button onClick={onEdit} className="btn-ghost p-2.5 rounded-lg min-w-[44px] min-h-[44px] flex items-center justify-center" aria-label="Modifier">
+              <Pencil size={16} />
             </button>
-            <button onClick={onDelete} className="btn-ghost p-1.5 rounded-lg text-red-400 hover:text-red-500" aria-label="Supprimer">
-              <Trash2 size={14} />
+            <button
+              onClick={() => setConfirmDelete(true)}
+              className="btn-ghost p-2.5 rounded-lg min-w-[44px] min-h-[44px] flex items-center justify-center text-red-400 hover:text-red-500"
+              aria-label="Supprimer"
+            >
+              <Trash2 size={16} />
             </button>
           </div>
         </div>
@@ -86,16 +93,16 @@ export function EntryCard({ entry, projectId, reportId, onEdit, onDelete, onUpda
               <div key={photo.id} className="relative group rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800">
                 <img
                   src={photo.url}
-                  alt={photo.caption || 'Photo'}
+                  alt={photo.caption || 'Photo de chantier'}
                   className="w-full h-32 object-cover"
                 />
-                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-start justify-end p-1.5 opacity-0 group-hover:opacity-100">
+                <div className="absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
                   <button
-                    onClick={() => handleRemovePhoto(photo.id)}
-                    className="w-6 h-6 bg-red-500 rounded-full flex items-center justify-center text-white"
+                    onClick={() => setConfirmDeletePhoto(photo.id)}
+                    className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center text-white shadow"
                     aria-label="Supprimer la photo"
                   >
-                    <X size={12} />
+                    <X size={14} />
                   </button>
                 </div>
                 {captionEdit === photo.id ? (
@@ -147,6 +154,28 @@ export function EntryCard({ entry, projectId, reportId, onEdit, onDelete, onUpda
           </button>
         </div>
       </div>
+
+      {/* Confirm delete entry */}
+      {confirmDelete && (
+        <div className="border-t border-gray-100 dark:border-gray-800 bg-red-50 dark:bg-red-950/30 p-3">
+          <p className="text-xs text-red-700 dark:text-red-300 mb-2 font-medium">Supprimer cette entrée ? Action irréversible.</p>
+          <div className="flex gap-2">
+            <button onClick={() => setConfirmDelete(false)} className="btn-secondary py-1.5 text-xs flex-1">Annuler</button>
+            <button onClick={onDelete} className="btn-danger py-1.5 text-xs flex-1">Supprimer</button>
+          </div>
+        </div>
+      )}
+
+      {/* Confirm delete photo */}
+      {confirmDeletePhoto && (
+        <div className="border-t border-gray-100 dark:border-gray-800 bg-red-50 dark:bg-red-950/30 p-3">
+          <p className="text-xs text-red-700 dark:text-red-300 mb-2 font-medium">Supprimer cette photo ? Action irréversible.</p>
+          <div className="flex gap-2">
+            <button onClick={() => setConfirmDeletePhoto(null)} className="btn-secondary py-1.5 text-xs flex-1">Annuler</button>
+            <button onClick={() => handleRemovePhoto(confirmDeletePhoto)} className="btn-danger py-1.5 text-xs flex-1">Supprimer</button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

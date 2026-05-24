@@ -6,7 +6,7 @@ import { useTheme } from '../../context/ThemeContext'
 import { SyncBadge } from '../ui/SyncBadge'
 import { SettingsModal } from '../settings/SettingsModal'
 
-export function AppHeader({ title, backTo, actions }) {
+export function AppHeader({ title, subtitle, backTo, actions }) {
   const { logout } = useAuth()
   const { isDark, toggle } = useTheme()
   const navigate = useNavigate()
@@ -14,7 +14,7 @@ export function AppHeader({ title, backTo, actions }) {
 
   return (
     <>
-      <header className="sticky top-0 z-40 bg-white/90 dark:bg-gray-900/90 backdrop-blur-md border-b border-gray-100 dark:border-gray-800">
+      <header className="sticky top-0 z-40 bg-white/90 dark:bg-gray-900/90 backdrop-blur-md border-b border-gray-100 dark:border-gray-800" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
         <div className="max-w-2xl mx-auto px-4 h-14 flex items-center gap-3">
           {backTo && (
             <button onClick={() => navigate(backTo)} className="btn-ghost p-2 -ml-2 rounded-xl">
@@ -29,6 +29,9 @@ export function AppHeader({ title, backTo, actions }) {
               draggable={false}
             />
             <div className="min-w-0">
+              {subtitle && (
+                <p className="text-xs text-gray-400 dark:text-gray-500 truncate leading-none mb-0.5">{subtitle}</p>
+              )}
               <h1 className="text-sm font-semibold text-gray-900 dark:text-white truncate leading-tight">
                 {title || 'Rapports de Chantier'}
               </h1>
