@@ -163,7 +163,7 @@ export async function generateDocx(report, project) {
           if (buf) {
             children.push(
               new Paragraph({
-                children: [new ImageRun({ data: buf, transformation: { width: 400, height: 250 } })],
+                children: [new ImageRun({ data: buf, type: 'jpg', transformation: { width: 400, height: 250 } })],
                 spacing: { after: 60 },
               }),
             )
@@ -236,7 +236,11 @@ export async function generateDocx(report, project) {
                       }),
                       new TableCell({
                         children: [new Paragraph({
-                          children: [new TextRun({ children: [PageNumber.CURRENT], size: 16, color: '9CA3AF' }), new TextRun({ text: ' / ', size: 16, color: '9CA3AF' }), new TextRun({ children: [PageNumber.TOTAL_PAGES], size: 16, color: '9CA3AF' })],
+                          children: [
+                            new TextRun({ children: [PageNumber.CURRENT] }),
+                            new TextRun({ text: ' / ', size: 16, color: '9CA3AF' }),
+                            new TextRun({ children: [PageNumber.TOTAL_PAGES] }),
+                          ],
                           alignment: AlignmentType.RIGHT,
                         })],
                       }),

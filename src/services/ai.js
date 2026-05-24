@@ -1,9 +1,20 @@
 const CLAUDE_API_URL = 'https://api.anthropic.com/v1/messages'
 const CLAUDE_MODEL = 'claude-sonnet-4-20250514'
 
+function getStoredKey(service) {
+  try {
+    const saved = localStorage.getItem('rdc_api_keys')
+    if (saved) {
+      const keys = JSON.parse(saved)
+      if (keys[service]) return keys[service]
+    }
+  } catch { /* ignore */ }
+  return import.meta.env[`VITE_${service.toUpperCase()}_API_KEY`] || ''
+}
+
 export async function reformatWithClaude(rawText, entryType) {
-  const apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY
-  if (!apiKey) throw new Error('Clé API Anthropic manquante')
+  const apiKey = getStoredKey('anthropic')
+  if (!apiKey) throw new Error('Clé API Anthropic manquante — configurez-la dans Paramètres ⚙')
 
   const typeLabels = {
     observation: 'Observation',
@@ -56,8 +67,8 @@ ${rawText}`,
 }
 
 export async function transcribeWithWhisper(audioBlob) {
-  const apiKey = import.meta.env.VITE_OPENAI_API_KEY
-  if (!apiKey) throw new Error('Clé API OpenAI manquante')
+  const apiKey = getStoredKey('openai')
+  if (!apiKey) throw new Error('Clé API OpenAI manquante — configurez-la dans Paramètres ⚙')
 
   const formData = new FormData()
   formData.append('file', audioBlob, 'recording.webm')

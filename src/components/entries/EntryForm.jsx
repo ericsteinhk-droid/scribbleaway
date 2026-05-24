@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { Mic, MicOff, Wand2, Check, X } from 'lucide-react'
 import { useVoice } from '../../hooks/useVoice'
@@ -16,9 +16,16 @@ export function EntryForm({ initialValues, onSubmit, onCancel }) {
   const [reformatting, setReformatting] = useState(false)
   const [selectedType, setSelectedType] = useState(initialValues?.type || 'observation')
 
-  const { register, handleSubmit, setValue, watch, formState: { errors, isSubmitting } } = useForm({
+  const { register, handleSubmit, setValue, watch, reset, formState: { errors, isSubmitting } } = useForm({
     defaultValues: initialValues || { type: 'observation', text: '' },
   })
+
+  useEffect(() => {
+    if (initialValues) {
+      reset({ type: initialValues.type, text: initialValues.text })
+      setSelectedType(initialValues.type || 'observation')
+    }
+  }, [initialValues, reset])
 
   const currentText = watch('text')
 

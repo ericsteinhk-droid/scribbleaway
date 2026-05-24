@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { ThemeProvider } from './context/ThemeContext'
 import { SyncProvider } from './context/SyncContext'
+import { ApiKeysProvider } from './context/ApiKeysContext'
 import { ToastProvider } from './components/ui/Toast'
 import { LoginPage } from './components/auth/LoginPage'
 import { ProjectsPage } from './components/projects/ProjectsPage'
@@ -38,13 +39,15 @@ export default function App() {
   return (
     <BrowserRouter>
       <ThemeProvider>
-        <SyncProvider>
-          <AuthProvider>
-            <ToastProvider>
-              <AppRoutes />
-            </ToastProvider>
-          </AuthProvider>
-        </SyncProvider>
+        <ApiKeysProvider>
+          <SyncProvider>
+            <AuthProvider>
+              <ToastProvider>
+                <AppRoutes />
+              </ToastProvider>
+            </AuthProvider>
+          </SyncProvider>
+        </ApiKeysProvider>
       </ThemeProvider>
     </BrowserRouter>
   )
