@@ -24,6 +24,7 @@ export function EntryCard({ entry, projectId, reportId, onEdit, onDelete, onUpda
 
   async function handlePhotoAdd(e) {
     const files = Array.from(e.target.files || [])
+    const inputEl = e.target  // capture before async — event may be recycled
     if (!files.length) return
     setUploading(true)
     try {
@@ -33,17 +34,23 @@ export function EntryCard({ entry, projectId, reportId, onEdit, onDelete, onUpda
         const photoId = uuidv4()
         const path = `photos/${user.uid}/${projectId}/${reportId}/${photoId}.jpg`
         const storageRef = ref(storage, path)
-        const snap = await uploadBytes(storageRef, compressed)
+
+        // 30-second hard timeout — uploadBytes hangs forever if Storage isn't enabled or storageBucket is misconfigured
+        const timeout = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Délai dépassé (30s) — vérifiez que Firebase Storage est activé et que STORAGEBUCKET est configuré')), 30000)
+        )
+        const snap = await Promise.race([uploadBytes(storageRef, compressed), timeout])
         const url = await getDownloadURL(snap.ref)
         newPhotos.push({ id: photoId, url, storagePath: path, caption: '' })
       }
       await onUpdatePhotos(newPhotos)
       toast('Photo(s) ajoutée(s).', 'success')
     } catch (err) {
-      toast(`Erreur lors de l'upload: ${err.message}`, 'error')
+      console.error('Photo upload error:', err)
+      toast(`Erreur photo: ${err.message}`, 'error')
     } finally {
       setUploading(false)
-      e.target.value = ''
+      try { inputEl.value = '' } catch { /* ignore */ }
     }
   }
 

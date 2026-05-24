@@ -22,6 +22,10 @@ export const auth = getAuth(app)
 export const db = getFirestore(app)
 export const storage = getStorage(app)
 
+if (!firebaseConfig.storageBucket) {
+  console.error('Firebase Storage: VITE_FIREBASE_STORAGE_BUCKET is not set — photo uploads will fail')
+}
+
 enableIndexedDbPersistence(db).catch((err) => {
   if (err.code === 'failed-precondition') {
     console.warn('Firestore persistence: multiple tabs open')
