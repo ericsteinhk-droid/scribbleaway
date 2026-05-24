@@ -25,7 +25,7 @@ export default defineConfig({
         name: 'Rapports de Chantier',
         short_name: 'Chantier',
         description: 'Application de gestion des rapports de chantier pour architectes',
-        theme_color: '#6172f3',
+        theme_color: '#00a99e',
         background_color: '#ffffff',
         display: 'standalone',
         orientation: 'any',
@@ -36,6 +36,8 @@ export default defineConfig({
         ],
       },
       workbox: {
+        skipWaiting: true,
+        clientsClaim: true,
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
         runtimeCaching: [
