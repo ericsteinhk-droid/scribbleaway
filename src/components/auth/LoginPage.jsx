@@ -49,8 +49,8 @@ export function LoginPage() {
               draggable={false}
             />
           </div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">Rapports de Chantier</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400">Gestion professionnelle pour architectes</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">Rapports de visite</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400">Revue et rédaction assistée par IA</p>
         </div>
 
         <div className="card p-6">

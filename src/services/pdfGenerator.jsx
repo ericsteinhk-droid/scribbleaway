@@ -16,7 +16,7 @@ const styles = StyleSheet.create({
   header: { marginBottom: 16, paddingBottom: 12, borderBottom: '2pt solid #00a99e' },
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   firmBlock: { flex: 1 },
-  evoqLogo: { height: 22, width: 'auto', objectFit: 'contain', marginBottom: 4 },
+  evoqLogo: { height: 22, width: 'auto', objectFit: 'contain', alignSelf: 'flex-start', marginBottom: 4 },
   reportTitle: { fontSize: 18, fontFamily: 'Helvetica-Bold', color: '#1a1a2e', marginBottom: 4 },
   meta: { fontSize: 9, color: '#6b7280', marginBottom: 2 },
   metaBold: { fontSize: 9, fontFamily: 'Helvetica-Bold', color: '#374151', marginBottom: 2 },
