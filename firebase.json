@@ -1,8 +1,12 @@
 {
   "hosting": {
     "public": "dist",
-    "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+    "ignore": ["firebase.json", "**/node_modules/**", "**/.git/**", "**/.env*"],
     "rewrites": [
+      {
+        "source": "/.well-known/**",
+        "destination": "/.well-known/assetlinks.json"
+      },
       {
         "source": "**",
         "destination": "/index.html"
@@ -20,6 +24,13 @@
       {
         "source": "/index.html",
         "headers": [{ "key": "Cache-Control", "value": "no-cache" }]
+      },
+      {
+        "source": "/.well-known/assetlinks.json",
+        "headers": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Cache-Control", "value": "no-cache" }
+        ]
       }
     ]
   }
