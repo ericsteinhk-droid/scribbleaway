@@ -130,17 +130,23 @@ export function ReportDetailPage() {
   async function shareOrDownload(blob, fileName, mimeType) {
     const file = new File([blob], fileName, { type: mimeType })
     if (navigator.canShare?.({ files: [file] })) {
-      await navigator.share({ files: [file], title: fileName })
-    } else {
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = fileName
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
-      setTimeout(() => URL.revokeObjectURL(url), 1000)
+      try {
+        await navigator.share({ files: [file], title: fileName })
+        return
+      } catch (err) {
+        // AbortError = user dismissed the share sheet — don't also trigger download
+        if (err.name === 'AbortError') return
+        // Any other error (e.g. "must be handling a user gesture") → fall through to download
+      }
     }
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = fileName
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    setTimeout(() => URL.revokeObjectURL(url), 1000)
   }
 
   if (loading) {
