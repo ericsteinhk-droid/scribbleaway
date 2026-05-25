@@ -46,15 +46,24 @@ function sectionHeader(label, color) {
   })
 }
 
+const FETCH_TIMEOUT_MS = 10000
+
+function withTimeout(promise) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), FETCH_TIMEOUT_MS)),
+  ])
+}
+
 // Use Firebase Storage SDK (bypasses CORS) when storagePath is available,
 // otherwise fall back to fetch (works if CORS is configured on the bucket).
 async function fetchImageAsBuffer(url, storagePath) {
   try {
     if (storagePath) {
-      const blob = await getBlob(ref(storage, storagePath))
+      const blob = await withTimeout(getBlob(ref(storage, storagePath)))
       return blob.arrayBuffer()
     }
-    const res = await fetch(url)
+    const res = await withTimeout(fetch(url))
     if (!res.ok) return null
     return res.arrayBuffer()
   } catch {
