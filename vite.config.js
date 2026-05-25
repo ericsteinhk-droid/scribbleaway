@@ -44,9 +44,22 @@ export default defineConfig({
       workbox: {
         skipWaiting: true,
         clientsClaim: true,
-        globPatterns: ['**/*.{js,css,ico,png,svg,woff2}'],
+        // Only precache static assets that never change (icons, fonts).
+        // JS/CSS use NetworkFirst at runtime so updates apply immediately
+        // without requiring a cache clear — cache is only a fallback when offline.
+        globPatterns: ['**/*.{ico,png,svg,woff2}'],
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
         runtimeCaching: [
+          {
+            // App JS/CSS bundles: always try network, fall back to cache offline
+            urlPattern: /\/assets\/.+\.(js|css)$/i,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'app-assets',
+              networkTimeoutSeconds: 5,
+              expiration: { maxEntries: 60 },
+            },
+          },
           {
             urlPattern: /^https:\/\/firestore\.googleapis\.com\/.*/i,
             handler: 'NetworkFirst',
