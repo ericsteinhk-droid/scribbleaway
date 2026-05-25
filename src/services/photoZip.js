@@ -4,14 +4,23 @@ import { storage } from './firebase'
 import { ENTRY_TYPES, ENTRY_TYPE_ORDER } from '../utils/constants'
 import { formatReportNumber } from '../utils/format'
 
+const FETCH_TIMEOUT_MS = 10000
+
+function withTimeout(promise) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), FETCH_TIMEOUT_MS)),
+  ])
+}
+
 async function fetchPhotoBlob(url, storagePath) {
   if (storagePath) {
     try {
-      return await getBlob(ref(storage, storagePath))
+      return await withTimeout(getBlob(ref(storage, storagePath)))
     } catch { /* fall through */ }
   }
   try {
-    const res = await fetch(url)
+    const res = await withTimeout(fetch(url))
     if (res.ok) return res.blob()
   } catch { /* ignore */ }
   return null

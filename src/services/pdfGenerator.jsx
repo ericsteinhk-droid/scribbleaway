@@ -13,17 +13,17 @@ import { formatDate, formatReportNumber } from '../utils/format'
 
 const styles = StyleSheet.create({
   page: { fontFamily: 'Helvetica', fontSize: 10, padding: '20mm 20mm 25mm 20mm', color: '#1a1a2e' },
-  header: { marginBottom: 16, paddingBottom: 12, borderBottom: '2pt solid #6172f3' },
+  header: { marginBottom: 16, paddingBottom: 12, borderBottom: '2pt solid #00a99e' },
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   firmBlock: { flex: 1 },
-  firmName: { fontSize: 14, fontFamily: 'Helvetica-Bold', color: '#6172f3', marginBottom: 2 },
+  evoqLogo: { height: 22, width: 'auto', objectFit: 'contain', marginBottom: 4 },
   reportTitle: { fontSize: 18, fontFamily: 'Helvetica-Bold', color: '#1a1a2e', marginBottom: 4 },
   meta: { fontSize: 9, color: '#6b7280', marginBottom: 2 },
   metaBold: { fontSize: 9, fontFamily: 'Helvetica-Bold', color: '#374151', marginBottom: 2 },
   section: { marginBottom: 16 },
-  sectionTitle: { fontSize: 11, fontFamily: 'Helvetica-Bold', color: '#6172f3', marginBottom: 8, paddingBottom: 4, borderBottom: '1pt solid #e5e7eb' },
+  sectionTitle: { fontSize: 11, fontFamily: 'Helvetica-Bold', color: '#00a99e', marginBottom: 8, paddingBottom: 4, borderBottom: '1pt solid #e5e7eb' },
   attendeeRow: { flexDirection: 'row', marginBottom: 3 },
-  attendeeDot: { width: 4, height: 4, borderRadius: 2, backgroundColor: '#6172f3', marginTop: 3, marginRight: 6 },
+  attendeeDot: { width: 4, height: 4, borderRadius: 2, backgroundColor: '#00a99e', marginTop: 3, marginRight: 6 },
   attendeeText: { fontSize: 9, color: '#374151' },
   entryGroup: { marginBottom: 14 },
   groupTitle: { fontSize: 10, fontFamily: 'Helvetica-Bold', marginBottom: 6, padding: '4pt 8pt', borderRadius: 4 },
@@ -76,7 +76,7 @@ export function ReportPDF({ report, project }) {
         <View style={styles.header}>
           <View style={styles.headerRow}>
             <View style={styles.firmBlock}>
-              <Text style={styles.firmName}>{report.firmName || project.firmName || 'Cabinet d\'architecture'}</Text>
+              <Image src="/evoq_logo.png" style={styles.evoqLogo} />
               <Text style={styles.reportTitle}>
                 Rapport de chantier #{formatReportNumber(report.number)}
               </Text>
