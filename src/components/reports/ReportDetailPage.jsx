@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { doc, getDoc, onSnapshot } from 'firebase/firestore'
-import { db } from '../../services/firebase'
+import { ref, getBlob } from 'firebase/storage'
+import { db, storage } from '../../services/firebase'
 import { Plus, Download, Share2, FileText, FileType2, Pencil, Users, Images } from 'lucide-react'
 import { pdf } from '@react-pdf/renderer'
 import { useReports } from '../../hooks/useReports'
@@ -18,6 +19,45 @@ import { ENTRY_TYPES, ENTRY_TYPE_ORDER } from '../../utils/constants'
 import { formatDate, formatReportNumber } from '../../utils/format'
 import { v4 as uuidv4 } from 'uuid'
 import React from 'react'
+
+const PDF_PHOTO_TIMEOUT = 10000
+
+function blobToDataUrl(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(reader.result)
+    reader.onerror = reject
+    reader.readAsDataURL(blob)
+  })
+}
+
+async function fetchPhotoDataUrl(photo) {
+  const timeout = new Promise((_, reject) =>
+    setTimeout(() => reject(new Error('timeout')), PDF_PHOTO_TIMEOUT))
+  if (photo.storagePath) {
+    try {
+      const blob = await Promise.race([getBlob(ref(storage, photo.storagePath)), timeout])
+      return await blobToDataUrl(blob)
+    } catch { /* fall through */ }
+  }
+  try {
+    const res = await Promise.race([fetch(photo.url), timeout])
+    if (res.ok) return await blobToDataUrl(await res.blob())
+  } catch { /* ignore */ }
+  return null
+}
+
+async function prefetchReportPhotos(report) {
+  const entries = await Promise.all((report.entries || []).map(async (entry) => {
+    if (!entry.photos?.length) return entry
+    const photos = await Promise.all(entry.photos.map(async (photo) => {
+      const dataUrl = await fetchPhotoDataUrl(photo)
+      return dataUrl ? { ...photo, dataUrl } : photo
+    }))
+    return { ...entry, photos }
+  }))
+  return { ...report, entries }
+}
 
 export function ReportDetailPage() {
   const { projectId, reportId } = useParams()
@@ -89,7 +129,8 @@ export function ReportDetailPage() {
     if (!report || !project) return
     setExporting('pdf')
     try {
-      const blob = await pdf(<ReportPDF report={report} project={project} />).toBlob()
+      const enriched = await prefetchReportPhotos(report)
+      const blob = await pdf(<ReportPDF report={enriched} project={project} />).toBlob()
       const fileName = `Rapport-${formatReportNumber(report.number)}-${project.name.replace(/\s+/g, '-')}.pdf`
       await shareOrDownload(blob, fileName, 'application/pdf')
     } catch (err) {

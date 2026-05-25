@@ -125,7 +125,7 @@ export function ReportPDF({ report, project }) {
                   <View style={styles.photoGrid}>
                     {entry.photos.map((photo, pi) => (
                       <View key={pi} style={styles.photoItem}>
-                        <Image src={photo.url} style={styles.photoImg} />
+                        <Image src={photo.dataUrl || photo.url} style={styles.photoImg} />
                         {photo.caption && (
                           <Text style={styles.photoCaption}>{photo.caption}</Text>
                         )}
