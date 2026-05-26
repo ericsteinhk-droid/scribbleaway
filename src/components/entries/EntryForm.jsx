@@ -3,6 +3,7 @@ import { useForm } from 'react-hook-form'
 import { Mic, MicOff, Wand2, Check, X } from 'lucide-react'
 import { useVoice } from '../../hooks/useVoice'
 import { reformatWithClaude } from '../../services/ai'
+import { useApiKeys } from '../../context/ApiKeysContext'
 import { useToast } from '../ui/Toast'
 import { ENTRY_TYPES } from '../../utils/constants'
 import { cn } from '../../utils/cn'
@@ -12,9 +13,11 @@ const DRAFT_KEY = 'rdc_entry_draft'
 
 export function EntryForm({ initialValues, onSubmit, onCancel }) {
   const toast = useToast()
+  const { getKey } = useApiKeys()
   const { isRecording, transcript, error: voiceError, startRecording, stopRecording } = useVoice()
   const [reformatted, setReformatted] = useState(null)
   const [reformatting, setReformatting] = useState(false)
+  const [showApiGate, setShowApiGate] = useState(false)
   const [selectedType, setSelectedType] = useState(initialValues?.type || 'observation')
   const [pendingTranscript, setPendingTranscript] = useState(null)
   const [hasDraft, setHasDraft] = useState(false)
@@ -78,6 +81,7 @@ export function EntryForm({ initialValues, onSubmit, onCancel }) {
       const text = await stopRecording()
       if (text) setPendingTranscript(text)
     } else {
+      if (!getKey('openai')) { setShowApiGate(true); return }
       await startRecording()
     }
   }
@@ -93,6 +97,7 @@ export function EntryForm({ initialValues, onSubmit, onCancel }) {
   }
 
   async function handleReformat() {
+    if (!getKey('anthropic')) { setShowApiGate(true); return }
     const text = watch('text')
     if (!text?.trim()) return
     setReformatting(true)
@@ -250,6 +255,32 @@ export function EntryForm({ initialValues, onSubmit, onCancel }) {
             : (initialValues ? 'Enregistrer' : "Ajouter l'entrée")}
         </button>
       </div>
+
+      {showApiGate && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-6">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowApiGate(false)} />
+          <div className="relative w-full max-w-xs rounded-2xl bg-white dark:bg-gray-900 shadow-xl p-6 flex flex-col gap-5">
+            <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+              Fonction avancée IA. Pour l'utiliser, inscrire code API (obtenu auprès du service de TI)
+            </p>
+            <div className="flex gap-3">
+              <button type="button" onClick={() => setShowApiGate(false)} className="btn-secondary flex-1">
+                Annuler
+              </button>
+              <button
+                type="button"
+                className="btn-primary flex-1"
+                onClick={() => {
+                  setShowApiGate(false)
+                  window.dispatchEvent(new CustomEvent('open-settings'))
+                }}
+              >
+                Paramètres
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </form>
   )
 }

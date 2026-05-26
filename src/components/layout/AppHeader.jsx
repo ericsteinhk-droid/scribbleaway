@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Moon, Sun, LogOut, ChevronLeft, Settings } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
@@ -11,6 +11,12 @@ export function AppHeader({ title, subtitle, backTo, actions }) {
   const { isDark, toggle } = useTheme()
   const navigate = useNavigate()
   const [showSettings, setShowSettings] = useState(false)
+
+  useEffect(() => {
+    const handler = () => setShowSettings(true)
+    window.addEventListener('open-settings', handler)
+    return () => window.removeEventListener('open-settings', handler)
+  }, [])
 
   return (
     <>
