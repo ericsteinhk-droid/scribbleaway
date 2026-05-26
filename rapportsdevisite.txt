@@ -1,0 +1,316 @@
+RAPPORTS DE VISITE — APPLICATION FEATURE LIST
+Revue et rédaction assistée par IA
+==============================================
+Version 1.0.0 | EVOQ Architecture
+
+
+OVERVIEW
+--------
+Rapports de visite is a progressive web application (PWA) for architects to create,
+manage, and export professional site-visit reports. It runs in the browser and installs
+on Android and iOS as a standalone app. All data is stored in the cloud (Firebase) and
+syncs in real time across devices.
+
+
+──────────────────────────────────────────────
+1. AUTHENTICATION
+──────────────────────────────────────────────
+
+1.1  Email/password login with error messages for invalid credentials.
+1.2  New account registration with full name, optional firm name, and password
+     (minimum 6 characters).
+1.3  Toggle between Login and Register modes on the same screen.
+1.4  Password visibility toggle (show/hide) on all password fields.
+1.5  Splash screen with EVOQ logo and app version number shown while the
+     authentication state loads.
+1.6  Session persistence — authenticated users are taken directly to the app
+     on return; unauthenticated users are redirected to login.
+1.7  Logout button available in the header on every screen.
+
+
+──────────────────────────────────────────────
+2. NAVIGATION & LAYOUT
+──────────────────────────────────────────────
+
+2.1  Persistent header bar with EVOQ logo, page title, and subtitle.
+2.2  Back button on inner pages to return to the previous screen.
+2.3  Real-time sync status badge in the header.
+2.4  Theme toggle (light / dark) accessible from the header on every screen;
+     preference is saved across sessions.
+2.5  Settings button (gear icon) opens the Settings modal from anywhere in the app.
+2.6  Context-dependent action buttons injected into the header per page
+     (e.g., export buttons on the report detail page).
+
+
+──────────────────────────────────────────────
+3. PROJECTS
+──────────────────────────────────────────────
+
+3.1  Projects dashboard lists all projects with name, address, report count,
+     and last-modified timestamp.
+3.2  Create new project button in the header; opens a form with project name
+     (required) and address (optional).
+3.3  Edit project — pencil icon on each card reopens the form pre-filled.
+3.4  Delete project — trash icon with a confirmation step before permanent deletion.
+3.5  Tap a project card to open its list of reports.
+3.6  Empty state with call-to-action when no projects have been created.
+3.7  Loading spinner while project data is fetched from the cloud.
+
+
+──────────────────────────────────────────────
+4. REPORTS
+──────────────────────────────────────────────
+
+4.1  Reports list for a project shows: report number, date, author name, entry count,
+     and attendee count.
+4.2  Create new report button; form fields include:
+       - Date (required)
+       - Time (optional)
+       - Weather conditions — dropdown with preset options: Ensoleillé, Nuageux, Couvert,
+         Pluie légère, Pluie forte, Neige, Vent fort, Brouillard
+       - Author / architect name (required)
+       - Attendees — dynamic list (add/remove multiple names)
+4.3  Edit report — opens the same form pre-filled; updates are saved to the cloud.
+4.4  Delete report — trash icon with confirmation.
+4.5  Tap a report card to open the full report detail view.
+4.6  Empty state when a project has no reports.
+
+
+──────────────────────────────────────────────
+5. REPORT DETAIL VIEW
+──────────────────────────────────────────────
+
+5.1  Report header shows number, date, time (if set), weather (if set), and author.
+5.2  Attendees list accessible via a dedicated button; displayed in a modal.
+5.3  Entries displayed grouped by type in consistent colour-coded sections.
+5.4  Each section shows the type label and the count of entries within it.
+5.5  Floating action button (bottom-right) to add a new entry at any time.
+5.6  Edit report metadata via pencil icon in the header.
+5.7  Real-time updates — the view reflects changes from other sessions instantly.
+5.8  Empty state when no entries have been added.
+
+
+──────────────────────────────────────────────
+6. ENTRY TYPES
+──────────────────────────────────────────────
+
+Four entry types, each with a distinct colour scheme throughout the app and in exports:
+
+  Observation          — Blue
+  Avancement des travaux — Green
+  Discussion           — Amber / Yellow
+  Directive            — Red
+
+
+──────────────────────────────────────────────
+7. ENTRIES — CREATION & EDITING
+──────────────────────────────────────────────
+
+7.1  Type selector — 2×2 button grid; each button shows the type label and a colour dot.
+7.2  Text area for the entry content (required).
+7.3  Auto-save draft to local storage every 2 seconds (new entries only).
+7.4  Draft restoration banner on form open — option to keep or discard the saved draft.
+7.5  Cancel and Submit buttons; form disabled during submission.
+
+Voice Dictation:
+7.6  "Dicter" button starts a microphone recording session.
+     - Requests microphone permission from the browser.
+     - Records audio continuously in chunks (WebM format).
+     - Displays "Recording in progress…" with a pulse animation.
+     - "Arrêter" button stops recording and sends audio to OpenAI Whisper.
+     - Transcription is returned in French.
+7.7  Pending transcript preview card appears after transcription:
+     - Shows the transcribed text.
+     - "Insérer" appends it to the existing entry text.
+     - "Ignorer" discards it without inserting.
+7.8  If no OpenAI API key is configured, an API gate modal appears before any
+     recording starts (see Section 11).
+
+AI Text Reformatting:
+7.9  "Reformater IA" button (wand icon) appears when the text area has content.
+     - Sends the text and entry type to Claude (Anthropic API).
+     - Claude corrects grammar, applies professional architectural French, and
+       preserves all technical facts and observations.
+     - A spinner is shown during processing.
+7.10 Reformatted text preview card appears:
+     - Shows the Claude-suggested version.
+     - "Utiliser ce texte" replaces the entry text with the suggestion.
+     - "Ignorer" dismisses the suggestion without making changes.
+7.11 If no Anthropic API key is configured, the API gate modal appears before the
+     API call is made (see Section 11).
+
+
+──────────────────────────────────────────────
+8. ENTRIES — DISPLAY & MANAGEMENT
+──────────────────────────────────────────────
+
+8.1  Each entry card shows its type badge, full content text, and photos.
+8.2  Edit button (pencil icon) reopens the entry form pre-filled.
+8.3  Delete button with inline confirmation before permanent deletion.
+
+Photos:
+8.4  Two photo add buttons per entry:
+     - Camera button — opens the device camera directly (capture="environment").
+     - Gallery button — opens the device photo library; supports selecting multiple
+       photos at once.
+8.5  Each uploaded photo is compressed (max 1200 px wide, JPEG quality 0.75) before
+     upload to reduce storage and bandwidth.
+8.6  Upload progress spinner shown during photo transfer; 30-second timeout with a
+     clear error message if the upload stalls.
+8.7  Photos displayed as a responsive 2-column thumbnail grid.
+8.8  Each photo has:
+     - A delete button (always visible, not hover-only) with confirmation.
+     - An editable caption field ("+ légende" placeholder); tap to edit, blur or
+       Enter to save the caption to the cloud.
+8.9  Photos stored in Firebase Storage under a per-user, per-project, per-report,
+     per-entry path, ensuring isolation between users.
+
+
+──────────────────────────────────────────────
+9. EXPORTS
+──────────────────────────────────────────────
+
+9.1  All three export formats share a mobile-aware download strategy:
+     - On devices that support the Web Share API for files, the native share sheet
+       is offered.
+     - On all other devices (or if the share API loses its user-gesture context after
+       a long async operation), the file is downloaded directly.
+
+PDF Export:
+9.2  Generates a full-colour PDF (US Letter size) containing:
+     - Header: EVOQ logo (left-aligned), report title with number, project name and
+       address, date / time / weather / architect in a metadata row.
+     - Attendees section with bullet list (if any attendees are listed).
+     - Entries grouped by type with colour-coded section headings.
+     - Each entry numbered within its group, with full text.
+     - Photos in a 2-column grid with captions below each image.
+     - Signature block aligned to the right with architect name and title.
+     - Running footer on every page: project name, report number, page X / Y.
+     - EVOQ teal (#00a99e) used for all accent elements.
+9.3  Photos are pre-fetched via the Firebase Storage SDK (bypassing browser CORS)
+     and converted to base64 data URIs before PDF rendering, ensuring images always
+     appear in the document.
+9.4  Filename: Rapport-[number]-[project-name].pdf
+
+Word (DOCX) Export:
+9.5  Generates a professionally formatted Word document (.docx) containing:
+     - Firm name heading in teal.
+     - Report title with teal underline border.
+     - Three-column metadata table: project / date / architect, address / time / weather.
+     - Attendees section with bullet list (if any).
+     - Entries grouped by type with colour-shaded section headers.
+     - Each entry numbered, with text indented by a teal left border.
+     - Photos embedded at their natural aspect ratio, scaled to fit the page width.
+     - Photo captions in italic grey below each image.
+     - Signature block (right-aligned) with architect name.
+     - Footer on every page with project name, report number, and page X / Y.
+9.6  Photos fetched via Firebase Storage SDK with a 10-second per-photo timeout;
+     photos that fail to load are skipped without aborting the export.
+9.7  Real-time progress counter in the export button label: "3 / 12" (photos fetched
+     so far out of total) with a spinner.
+9.8  Filename: Rapport-[number]-[project-name].docx
+
+Photos ZIP Export:
+9.9  Collects every photo attached to the report across all entry types.
+9.10 Organises photos into sub-folders named after the entry type
+     (e.g., observation/, avancement_des_travaux/).
+9.11 Photo filenames are sequenced as entry-index_photo-index.jpg
+     (e.g., 01_01.jpg, 01_02.jpg, 02_01.jpg).
+9.12 Compressed with DEFLATE level 6 for a smaller download.
+9.13 Real-time progress counter in the export button label: "5 / 20".
+9.14 Error shown if the report contains no photos.
+9.15 Filename: Photos-Rapport-[number]-[project-name].zip
+
+
+──────────────────────────────────────────────
+10. SETTINGS
+──────────────────────────────────────────────
+
+10.1 Settings modal accessible from the gear icon in the header on any screen,
+     or via the "Paramètres" button in the API gate modal.
+10.2 Anthropic API key field (for AI text reformatting):
+     - Password-masked input with show/hide toggle.
+     - Link to obtain an API key.
+     - Save button appears when the field is edited; saves to localStorage.
+10.3 OpenAI API key field (for voice transcription via Whisper):
+     - Same layout as Anthropic field.
+     - Save button per field; saves to localStorage.
+10.4 Privacy notice: keys are stored only in the browser's local storage and never
+     sent to any server other than the respective AI provider.
+10.5 API keys entered here persist across sessions on the same device.
+10.6 Keys set by the organisation at build time (via environment variables) are used
+     as fallbacks when no key is entered in Settings.
+
+
+──────────────────────────────────────────────
+11. API KEY GATE
+──────────────────────────────────────────────
+
+11.1 If a user attempts to use voice dictation without an OpenAI key, or AI
+     reformatting without an Anthropic key, a modal appears before any API call:
+
+       "Fonction avancée IA. Pour l'utiliser, inscrire code API
+        (obtenu auprès du service de TI)"
+
+11.2 The modal has two buttons:
+     - "Annuler" — dismisses the modal; no recording or API call is made.
+     - "Paramètres" — opens the Settings modal directly so the user can
+       enter their key immediately.
+11.3 This gate prevents accidental API calls and gives a clear, actionable message
+     rather than a raw error.
+
+
+──────────────────────────────────────────────
+12. PROGRESSIVE WEB APP (PWA)
+──────────────────────────────────────────────
+
+12.1 Installable on Android and iOS home screens as a standalone app (no browser
+     chrome visible).
+12.2 Service worker caches static assets (icons, fonts) for offline use; JavaScript
+     and CSS are fetched from the network first, with the cache as a fallback.
+12.3 Automatic update: when a new version is deployed, the service worker activates
+     and the app reloads silently.
+12.4 Back-forward cache (bfcache) guard: if the browser restores a frozen page from
+     cache, the app reloads to avoid stale state.
+12.5 Background resume guard: if the app was in the background for more than 60
+     seconds (e.g., after pressing the Android back button), it reloads on return to
+     ensure Firebase connections and auth state are fresh.
+12.6 EVOQ-branded PWA icons (192×192 and 512×512) for home screen and splash.
+
+
+──────────────────────────────────────────────
+13. DATA & SYNC
+──────────────────────────────────────────────
+
+13.1 All projects, reports, and entries are stored in Firebase Firestore and sync
+     in real time across all logged-in devices.
+13.2 Photos are stored in Firebase Storage, scoped per user / project / report / entry.
+13.3 Sync badge in the header reflects the current connection and write status.
+13.4 Entry drafts are saved locally in the browser (localStorage) and restored
+     automatically on next form open.
+13.5 API keys are stored only in localStorage — never in the cloud.
+
+
+──────────────────────────────────────────────
+14. USER EXPERIENCE DETAILS
+──────────────────────────────────────────────
+
+14.1 Light and dark themes with EVOQ teal (#00a99e) as the primary accent colour.
+14.2 Toast notifications for all actions: success (green) and error (red), with
+     auto-dismiss.
+14.3 All icon-only buttons have ARIA labels for screen reader accessibility.
+14.4 Minimum touch target size of 44×44 px on all interactive elements.
+14.5 Safe area insets respected for notch and home-indicator devices (iOS/Android).
+14.6 Keyboard-aware modal layout: modals shift upward when the software keyboard
+     appears to keep the form visible.
+14.7 Loading spinners on all async operations; disabled states prevent double-submission.
+14.8 Confirmation dialogs before any destructive action (delete project, report, entry,
+     or photo).
+14.9 Empty states with descriptive messages and primary action buttons on every list
+     screen.
+14.10 App version number displayed on the splash screen for easy identification during
+      support.
+
+
+==============================================
+End of feature list
