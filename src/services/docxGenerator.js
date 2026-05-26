@@ -86,13 +86,17 @@ function getImageTransformation(buf, maxWidth = 420) {
   })
 }
 
-export async function generateDocx(report, project) {
+export async function generateDocx(report, project, onProgress) {
   const reportDate = report.date ? formatDate(report.date) : ''
   const groups = {}
   ENTRY_TYPE_ORDER.forEach((type) => {
     const typed = (report.entries || []).filter((e) => e.type === type)
     if (typed.length > 0) groups[type] = typed
   })
+
+  const totalPhotos = Object.values(groups).reduce(
+    (sum, entries) => sum + entries.reduce((s, e) => s + (e.photos?.length || 0), 0), 0)
+  let fetchedPhotos = 0
 
   const children = []
 
@@ -182,6 +186,7 @@ export async function generateDocx(report, project) {
       if (entry.photos?.length > 0) {
         for (const photo of entry.photos) {
           const buf = await fetchImageAsBuffer(photo.url, photo.storagePath)
+          onProgress?.(++fetchedPhotos, totalPhotos)
           if (buf) {
             const transformation = await getImageTransformation(buf)
             children.push(

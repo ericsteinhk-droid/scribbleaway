@@ -26,10 +26,14 @@ async function fetchPhotoBlob(url, storagePath) {
   return null
 }
 
-export async function buildPhotosZip(report, project) {
+export async function buildPhotosZip(report, project, onProgress) {
   const zip = new JSZip()
   const reportFolder = zip.folder(`rapport-${formatReportNumber(report.number)}`)
   let total = 0
+
+  const allPhotos = (report.entries || []).flatMap((e) => e.photos || [])
+  const totalPhotos = allPhotos.length
+  let fetched = 0
 
   for (const type of ENTRY_TYPE_ORDER) {
     const entries = (report.entries || []).filter((e) => e.type === type)
@@ -49,6 +53,7 @@ export async function buildPhotosZip(report, project) {
       for (let pi = 0; pi < photos.length; pi++) {
         const photo = photos[pi]
         const blob = await fetchPhotoBlob(photo.url, photo.storagePath)
+        onProgress?.(++fetched, totalPhotos)
         if (!blob) continue
         const name = `${String(ei + 1).padStart(2, '0')}_${String(pi + 1).padStart(2, '0')}.jpg`
         folder.file(name, blob)

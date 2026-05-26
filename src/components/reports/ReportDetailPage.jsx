@@ -72,6 +72,7 @@ export function ReportDetailPage() {
   const [editEntry, setEditEntry] = useState(null)
   const [showEditReport, setShowEditReport] = useState(false)
   const [exporting, setExporting] = useState(null)
+  const [exportProgress, setExportProgress] = useState(null)
   const [showAttendees, setShowAttendees] = useState(false)
 
   useEffect(() => {
@@ -143,28 +144,36 @@ export function ReportDetailPage() {
   async function exportDocx() {
     if (!report || !project) return
     setExporting('docx')
+    setExportProgress(null)
     try {
-      const blob = await generateDocx(report, project)
+      const blob = await generateDocx(report, project, (cur, tot) => {
+        if (tot > 0) setExportProgress({ cur, tot })
+      })
       const fileName = `Rapport-${formatReportNumber(report.number)}-${project.name.replace(/\s+/g, '-')}.docx`
       await shareOrDownload(blob, fileName, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document')
     } catch (err) {
       toast(`Erreur Word: ${err.message}`, 'error')
     } finally {
       setExporting(null)
+      setExportProgress(null)
     }
   }
 
   async function exportPhotos() {
     if (!report || !project) return
     setExporting('photos')
+    setExportProgress(null)
     try {
-      const blob = await buildPhotosZip(report, project)
+      const blob = await buildPhotosZip(report, project, (cur, tot) => {
+        if (tot > 0) setExportProgress({ cur, tot })
+      })
       const fileName = `Photos-Rapport-${formatReportNumber(report.number)}-${project.name.replace(/\s+/g, '-')}.zip`
       await shareOrDownload(blob, fileName, 'application/zip')
     } catch (err) {
       toast(`Erreur photos: ${err.message}`, 'error')
     } finally {
       setExporting(null)
+      setExportProgress(null)
     }
   }
 
@@ -250,7 +259,11 @@ export function ReportDetailPage() {
               {exporting === 'docx'
                 ? <span className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
                 : <FileType2 size={15} />}
-              <span className="hidden sm:inline">Word</span>
+              <span className="hidden sm:inline">
+                {exporting === 'docx' && exportProgress
+                  ? `${exportProgress.cur} / ${exportProgress.tot}`
+                  : 'Word'}
+              </span>
             </button>
             {totalPhotos > 0 && (
               <button
@@ -262,7 +275,11 @@ export function ReportDetailPage() {
                 {exporting === 'photos'
                   ? <span className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
                   : <Images size={15} />}
-                <span className="hidden sm:inline">Photos</span>
+                <span className="hidden sm:inline">
+                  {exporting === 'photos' && exportProgress
+                    ? `${exportProgress.cur} / ${exportProgress.tot}`
+                    : 'Photos'}
+                </span>
               </button>
             )}
           </div>
