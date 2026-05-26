@@ -2,11 +2,13 @@ package com.scribbleaway.meetingrecorder.repository
 
 import android.content.Context
 import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 import com.scribbleaway.meetingrecorder.db.ChunkDao
 import com.scribbleaway.meetingrecorder.db.MeetingDao
 import com.scribbleaway.meetingrecorder.model.Chunk
 import com.scribbleaway.meetingrecorder.model.Meeting
 import com.scribbleaway.meetingrecorder.model.MeetingStatus
+import com.scribbleaway.meetingrecorder.model.MeetingSummary
 import com.scribbleaway.meetingrecorder.model.TranscriptSegment
 import com.scribbleaway.meetingrecorder.summary.SummaryService
 import com.scribbleaway.meetingrecorder.util.backupToDownloads
@@ -93,6 +95,18 @@ class MeetingRepository(
             status = MeetingStatus.DONE,
             duration = totalDuration
         )
+    }
+
+    suspend fun retrySummary(meetingId: Long): MeetingSummary {
+        val meeting = meetingDao.getById(meetingId)
+            ?: throw RuntimeException("Réunion introuvable")
+        if (meeting.diarizedTranscript.isBlank())
+            throw RuntimeException("Transcription non disponible — impossible de générer le résumé")
+        val type = object : TypeToken<List<TranscriptSegment>>() {}.type
+        val segments: List<TranscriptSegment> = gson.fromJson(meeting.diarizedTranscript, type)
+        val summary = summaryService.summarize(segments)
+        meetingDao.updateSummary(meetingId, gson.toJson(summary), MeetingStatus.DONE)
+        return summary
     }
 
     suspend fun deleteMeeting(meeting: Meeting) {

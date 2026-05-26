@@ -106,6 +106,18 @@ class PreviewViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    fun retrySummary() {
+        val meetingId = _meeting.value?.id ?: return
+        viewModelScope.launch {
+            _processing.value = true
+            _processingStatus.value = "Génération du résumé…"
+            runCatching { repo.retrySummary(meetingId) }
+                .onSuccess { summary -> _summary.value = summary }
+                .onFailure { _error.value = "Erreur résumé: ${it.message}" }
+            _processing.value = false
+        }
+    }
+
     fun clearExportUri() { _exportUri.value = null }
     fun clearError() { _error.value = null }
 }

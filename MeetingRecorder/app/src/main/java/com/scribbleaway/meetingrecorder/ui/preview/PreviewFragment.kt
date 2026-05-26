@@ -39,6 +39,7 @@ class PreviewFragment : Fragment() {
 
         binding.btnExport.setOnClickListener { viewModel.exportDocx() }
         binding.btnShareAudio.setOnClickListener { shareAudioFiles() }
+        binding.btnRetrySummary.setOnClickListener { viewModel.retrySummary() }
 
         viewLifecycleOwner.lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
@@ -124,6 +125,8 @@ class PreviewFragment : Fragment() {
         }
 
         binding.tvSummary.text = sb.toString()
+        binding.btnRetrySummary.visibility =
+            if (summary.resumeExecutif.startsWith("[")) View.VISIBLE else View.GONE
     }
 
     private fun renderTranscript(segments: List<TranscriptSegment>) {

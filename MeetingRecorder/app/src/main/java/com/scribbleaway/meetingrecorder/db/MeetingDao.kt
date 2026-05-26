@@ -25,6 +25,9 @@ interface MeetingDao {
     @Query("UPDATE meetings SET diarizedTranscript = :transcript, summaryJson = :summaryJson, status = :status, durationSeconds = :duration WHERE id = :id")
     suspend fun updateResults(id: Long, transcript: String, summaryJson: String, status: MeetingStatus, duration: Double)
 
+    @Query("UPDATE meetings SET summaryJson = :summaryJson, status = :status WHERE id = :id")
+    suspend fun updateSummary(id: Long, summaryJson: String, status: MeetingStatus)
+
     @Delete
     suspend fun delete(meeting: Meeting)
 

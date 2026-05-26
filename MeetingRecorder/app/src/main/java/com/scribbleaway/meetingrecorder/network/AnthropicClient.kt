@@ -15,7 +15,7 @@ class AnthropicClient(private val apiKeyProvider: () -> String) {
 
     private val http = OkHttpClient.Builder()
         .connectTimeout(30, TimeUnit.SECONDS)
-        .readTimeout(300, TimeUnit.SECONDS)
+        .readTimeout(600, TimeUnit.SECONDS)
         .writeTimeout(60, TimeUnit.SECONDS)
         .retryOnConnectionFailure(true)
         .build()
@@ -60,16 +60,17 @@ class AnthropicClient(private val apiKeyProvider: () -> String) {
             .post(reqBody)
             .build()
 
+        val backoffMs = longArrayOf(5_000, 10_000, 20_000, 40_000)
         var lastError: IOException? = null
-        repeat(3) { attempt ->
+        repeat(5) { attempt ->
             try {
                 return executeRequest(httpReq)
             } catch (e: IOException) {
                 lastError = e
-                if (attempt < 2) Thread.sleep((attempt + 1) * 2000L)
+                if (attempt < 4) Thread.sleep(backoffMs[attempt])
             }
         }
-        throw RuntimeException("Connexion Anthropic interrompue après 3 tentatives. Vérifiez votre réseau.", lastError)
+        throw RuntimeException("Connexion Anthropic interrompue après 5 tentatives. Vérifiez votre réseau.", lastError)
     }
 
     private fun executeRequest(request: Request): String {
