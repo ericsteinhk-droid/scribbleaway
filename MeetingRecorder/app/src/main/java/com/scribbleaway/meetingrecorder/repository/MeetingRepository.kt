@@ -78,7 +78,21 @@ class MeetingRepository(
         if (allSegments.isEmpty()) {
             meetingDao.updateStatus(meetingId, MeetingStatus.ERROR)
             val detail = transcriptionErrors.joinToString("; ")
-            throw RuntimeException("Transcription échouée. Vérifiez votre clé API OpenAI dans Paramètres. Détail: $detail")
+            val userMessage = when {
+                detail.contains("Unable to resolve host") ||
+                detail.contains("No address associated") ||
+                detail.contains("Network is unreachable") ->
+                    "Connexion internet indisponible. Vérifiez votre réseau et réessayez."
+                detail.contains("connection abort", ignoreCase = true) ||
+                detail.contains("Connection reset", ignoreCase = true) ||
+                detail.contains("Connection refused", ignoreCase = true) ->
+                    "Connexion interrompue. Vérifiez votre réseau et réessayez."
+                detail.contains("401") || detail.contains("Unauthorized") ||
+                detail.contains("Incorrect API key") || detail.contains("invalid_api_key") ->
+                    "Clé API OpenAI invalide. Vérifiez votre clé dans Paramètres."
+                else -> "Transcription échouée. Détail: $detail"
+            }
+            throw RuntimeException(userMessage)
         }
 
         onProgress("Génération du résumé…")

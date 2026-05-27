@@ -22,6 +22,8 @@ class PreviewViewModel(app: Application) : AndroidViewModel(app) {
     private val gson = Gson()
     private val exporter = DocxExporter(app)
 
+    private var currentMeetingId = -1L
+
     private val _meeting = MutableStateFlow<Meeting?>(null)
     val meeting: StateFlow<Meeting?> = _meeting.asStateFlow()
 
@@ -44,6 +46,7 @@ class PreviewViewModel(app: Application) : AndroidViewModel(app) {
     val error: StateFlow<String?> = _error.asStateFlow()
 
     fun loadAndProcess(meetingId: Long) {
+        currentMeetingId = meetingId
         viewModelScope.launch {
             _processing.value = true
             _processingStatus.value = "Préparation…"
@@ -66,28 +69,29 @@ class PreviewViewModel(app: Application) : AndroidViewModel(app) {
                     expectedSpeakers = prefs.defaultSpeakerCount
                 ) { status -> _processingStatus.value = status }
             }.onFailure {
-                _error.value = "Erreur de traitement: ${it.message}"
+                _error.value = it.message
                 _processing.value = false
                 return@launch
             }
 
-            val processed = repo.getMeeting(meetingId)
-            _meeting.value = processed
+            loadResults(meetingId)
+            _processing.value = false
+        }
+    }
 
-            processed?.let { m ->
-                if (m.summaryJson.isNotBlank()) {
-                    runCatching {
-                        _summary.value = gson.fromJson(m.summaryJson, MeetingSummary::class.java)
-                    }
-                }
-                if (m.diarizedTranscript.isNotBlank()) {
-                    runCatching {
-                        val type = object : TypeToken<List<TranscriptSegment>>() {}.type
-                        _transcript.value = gson.fromJson(m.diarizedTranscript, type)
-                    }
-                }
-            }
+    fun retryProcessing() {
+        if (currentMeetingId < 0) return
+        loadAndProcess(currentMeetingId)
+    }
 
+    fun retrySummary() {
+        val meetingId = _meeting.value?.id ?: return
+        viewModelScope.launch {
+            _processing.value = true
+            _processingStatus.value = "Génération du résumé…"
+            runCatching { repo.retrySummary(meetingId) }
+                .onSuccess { summary -> _summary.value = summary }
+                .onFailure { _error.value = it.message }
             _processing.value = false
         }
     }
@@ -106,15 +110,21 @@ class PreviewViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun retrySummary() {
-        val meetingId = _meeting.value?.id ?: return
-        viewModelScope.launch {
-            _processing.value = true
-            _processingStatus.value = "Génération du résumé…"
-            runCatching { repo.retrySummary(meetingId) }
-                .onSuccess { summary -> _summary.value = summary }
-                .onFailure { _error.value = "Erreur résumé: ${it.message}" }
-            _processing.value = false
+    private suspend fun loadResults(meetingId: Long) {
+        val processed = repo.getMeeting(meetingId)
+        _meeting.value = processed
+        processed?.let { m ->
+            if (m.summaryJson.isNotBlank()) {
+                runCatching {
+                    _summary.value = gson.fromJson(m.summaryJson, MeetingSummary::class.java)
+                }
+            }
+            if (m.diarizedTranscript.isNotBlank()) {
+                runCatching {
+                    val type = object : TypeToken<List<TranscriptSegment>>() {}.type
+                    _transcript.value = gson.fromJson(m.diarizedTranscript, type)
+                }
+            }
         }
     }
 

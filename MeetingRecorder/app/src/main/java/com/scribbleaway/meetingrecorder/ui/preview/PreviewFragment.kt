@@ -57,11 +57,23 @@ class PreviewFragment : Fragment() {
                 launch {
                     viewModel.error.collect { err ->
                         err ?: return@collect
-                        MaterialAlertDialogBuilder(requireContext())
+                        val isRetryable = err.contains("indisponible") ||
+                                err.contains("interrompue") ||
+                                err.contains("tentatives")
+                        val builder = MaterialAlertDialogBuilder(requireContext())
                             .setTitle(R.string.error_title)
                             .setMessage(err)
-                            .setPositiveButton(android.R.string.ok) { _, _ -> viewModel.clearError() }
-                            .show()
+                        if (isRetryable) {
+                            builder
+                                .setPositiveButton(R.string.btn_retry) { _, _ ->
+                                    viewModel.clearError()
+                                    viewModel.retryProcessing()
+                                }
+                                .setNegativeButton(android.R.string.cancel) { _, _ -> viewModel.clearError() }
+                        } else {
+                            builder.setPositiveButton(android.R.string.ok) { _, _ -> viewModel.clearError() }
+                        }
+                        builder.show()
                     }
                 }
             }
