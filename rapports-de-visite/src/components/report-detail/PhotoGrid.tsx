@@ -69,6 +69,15 @@ export default function PhotoGrid({ photos, storagePath, onPhotosChange, onError
   // ── Native camera (Capacitor) ──────────────────────────────────────────
   async function handleNativeCamera() {
     try {
+      // Ensure CAMERA permission is granted before opening camera
+      let perms = await Camera.checkPermissions();
+      if (perms.camera !== 'granted') {
+        perms = await Camera.requestPermissions({ permissions: ['camera'] });
+        if (perms.camera !== 'granted') {
+          onError('Permission caméra refusée. Autorisez-la dans les paramètres de l\'appli.');
+          return;
+        }
+      }
       const photo = await Camera.getPhoto({
         quality: 75,
         allowEditing: false,
@@ -83,9 +92,9 @@ export default function PhotoGrid({ photos, storagePath, onPhotosChange, onError
       if (newPhoto) onPhotosChange([...photos, newPhoto]);
       else onError('Erreur lors du chargement de la photo.');
     } catch (err) {
-      const msg = (err as Error).message ?? '';
+      const msg = (err as Error).message ?? String(err);
       if (!msg.includes('cancelled') && !msg.includes('cancel')) {
-        onError('Impossible d\'ouvrir l\'appareil photo.');
+        onError('Impossible d\'ouvrir l\'appareil photo: ' + msg);
       }
     } finally {
       setUploading(false);
