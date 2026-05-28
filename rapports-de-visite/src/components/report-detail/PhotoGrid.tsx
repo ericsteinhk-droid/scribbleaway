@@ -1,6 +1,4 @@
 import { useRef, useState } from 'react';
-import { Capacitor } from '@capacitor/core';
-import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 import { ref as storageRef, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage';
 import { storage } from '../../firebase';
 import { compressImage } from '../../utils/imageCompression';
@@ -31,15 +29,13 @@ function GalleryIcon() {
 }
 
 export default function PhotoGrid({ photos, storagePath, onPhotosChange, onError }: Props) {
-  const webCameraRef = useRef<HTMLInputElement>(null);
-  const webGalleryRef = useRef<HTMLInputElement>(null);
+  const cameraRef = useRef<HTMLInputElement>(null);
+  const galleryRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<Photo | null>(null);
   const [editCaptionId, setEditCaptionId] = useState<string | null>(null);
   const [captionDraft, setCaptionDraft] = useState('');
-
-  const isNative = Capacitor.isNativePlatform();
 
   async function uploadBlob(blob: Blob, index: number, total: number): Promise<Photo | null> {
     setUploadProgress(`${index} / ${total}`);
@@ -66,62 +62,7 @@ export default function PhotoGrid({ photos, storagePath, onPhotosChange, onError
     }
   }
 
-  // ── Native camera (Capacitor) ──────────────────────────────────────────
-  async function handleNativeCamera() {
-    try {
-      const photo = await Camera.getPhoto({
-        quality: 75,
-        allowEditing: false,
-        resultType: CameraResultType.DataUrl,
-        source: CameraSource.Camera,
-      });
-      if (!photo.dataUrl) return;
-      setUploading(true);
-      const resp = await fetch(photo.dataUrl);
-      const blob = await resp.blob();
-      const newPhoto = await uploadBlob(blob, 1, 1);
-      if (newPhoto) onPhotosChange([...photos, newPhoto]);
-      else onError('Erreur lors du chargement de la photo.');
-    } catch (err) {
-      const msg = (err as Error).message ?? '';
-      if (!msg.includes('cancelled') && !msg.includes('cancel')) {
-        onError('Impossible d\'ouvrir l\'appareil photo.');
-      }
-    } finally {
-      setUploading(false);
-      setUploadProgress('');
-    }
-  }
-
-  async function handleNativeGallery() {
-    try {
-      const result = await Camera.pickImages({ quality: 75, limit: 20 });
-      if (!result.photos.length) return;
-      setUploading(true);
-      const newPhotos: Photo[] = [];
-      for (let i = 0; i < result.photos.length; i++) {
-        const p = result.photos[i];
-        const src = p.webPath ?? p.path ?? '';
-        if (!src) continue;
-        const resp = await fetch(src);
-        const blob = await resp.blob();
-        const newPhoto = await uploadBlob(blob, i + 1, result.photos.length);
-        if (newPhoto) newPhotos.push(newPhoto);
-      }
-      if (newPhotos.length) onPhotosChange([...photos, ...newPhotos]);
-    } catch (err) {
-      const msg = (err as Error).message ?? '';
-      if (!msg.includes('cancelled') && !msg.includes('cancel')) {
-        onError('Impossible d\'accéder à la galerie.');
-      }
-    } finally {
-      setUploading(false);
-      setUploadProgress('');
-    }
-  }
-
-  // ── Web fallback (file input) ──────────────────────────────────────────
-  async function handleWebFiles(files: FileList | null) {
+  async function handleFiles(files: FileList | null) {
     if (!files || files.length === 0) return;
     setUploading(true);
     const newPhotos: Photo[] = [];
@@ -157,7 +98,7 @@ export default function PhotoGrid({ photos, storagePath, onPhotosChange, onError
       <div className="flex gap-2 mb-3">
         <button
           type="button"
-          onClick={isNative ? handleNativeCamera : () => webCameraRef.current?.click()}
+          onClick={() => cameraRef.current?.click()}
           disabled={uploading}
           aria-label="Prendre une photo"
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 text-xs text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-50"
@@ -166,7 +107,7 @@ export default function PhotoGrid({ photos, storagePath, onPhotosChange, onError
         </button>
         <button
           type="button"
-          onClick={isNative ? handleNativeGallery : () => webGalleryRef.current?.click()}
+          onClick={() => galleryRef.current?.click()}
           disabled={uploading}
           aria-label="Choisir dans la galerie"
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 text-xs text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-50"
@@ -181,15 +122,11 @@ export default function PhotoGrid({ photos, storagePath, onPhotosChange, onError
         )}
       </div>
 
-      {/* Web-only hidden file inputs */}
-      {!isNative && (
-        <>
-          <input ref={webCameraRef} type="file" accept="image/*" capture="environment" className="hidden"
-            onChange={(e) => handleWebFiles(e.target.files)} />
-          <input ref={webGalleryRef} type="file" accept="image/*" multiple className="hidden"
-            onChange={(e) => handleWebFiles(e.target.files)} />
-        </>
-      )}
+      {/* Hidden file inputs */}
+      <input ref={cameraRef} type="file" accept="image/*" capture="environment" className="hidden"
+        onChange={(e) => handleFiles(e.target.files)} />
+      <input ref={galleryRef} type="file" accept="image/*" multiple className="hidden"
+        onChange={(e) => handleFiles(e.target.files)} />
 
       {/* Photo grid */}
       {photos.length > 0 && (
