@@ -56,6 +56,24 @@ jobs:
         working-directory: rapports-de-visite
         run: npx cap sync android
 
+      # @capacitor/camera registers a FileProvider that needs file_paths.xml.
+      # cap sync sometimes doesn't copy the plugin's XML resource to the app
+      # module — creating it explicitly prevents the ContentProvider init crash.
+      - name: Create FileProvider file_paths.xml for camera plugin
+        working-directory: rapports-de-visite/android
+        run: |
+          mkdir -p app/src/main/res/xml
+          cat > app/src/main/res/xml/file_paths.xml << 'XML'
+          <?xml version="1.0" encoding="utf-8"?>
+          <paths xmlns:android="http://schemas.android.com/apk/res/android">
+              <external-path name="images" path="." />
+              <external-files-path name="images" path="." />
+              <cache-path name="images" path="." />
+              <external-cache-path name="images" path="." />
+              <files-path name="images" path="." />
+          </paths>
+          XML
+
       # ── Android SDK ───────────────────────────────────────────────────────
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
