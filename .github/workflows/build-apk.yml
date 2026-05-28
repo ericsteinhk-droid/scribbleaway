@@ -86,7 +86,7 @@ jobs:
 
           public class MainActivity extends BridgeActivity {
               @Override
-              protected void onResume() {
+              public void onResume() {
                   super.onResume();
                   if (bridge != null && bridge.getWebView() != null) {
                       bridge.getWebView().setWebChromeClient(new BridgeWebChromeClient(bridge) {
