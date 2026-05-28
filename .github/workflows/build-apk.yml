@@ -80,22 +80,21 @@ jobs:
           cat > app/src/main/java/com/evoq/rapportsdevisite/MainActivity.java << 'JAVA'
           package com.evoq.rapportsdevisite;
 
+          import android.os.Bundle;
           import android.webkit.PermissionRequest;
           import com.getcapacitor.BridgeActivity;
           import com.getcapacitor.BridgeWebChromeClient;
 
           public class MainActivity extends BridgeActivity {
               @Override
-              public void onResume() {
-                  super.onResume();
-                  if (bridge != null && bridge.getWebView() != null) {
-                      bridge.getWebView().setWebChromeClient(new BridgeWebChromeClient(bridge) {
-                          @Override
-                          public void onPermissionRequest(final PermissionRequest request) {
-                              runOnUiThread(() -> request.grant(request.getResources()));
-                          }
-                      });
-                  }
+              public void onCreate(Bundle savedInstanceState) {
+                  super.onCreate(savedInstanceState);
+                  bridge.getWebView().setWebChromeClient(new BridgeWebChromeClient(bridge) {
+                      @Override
+                      public void onPermissionRequest(final PermissionRequest request) {
+                          runOnUiThread(() -> request.grant(request.getResources()));
+                      }
+                  });
               }
           }
           JAVA
