@@ -72,10 +72,14 @@ export default function ReportsList({ projectId, projectName, onOpenReport, onEr
 
   async function handleSave(data: ReportData) {
     if (!user) return;
+    // Firestore rejects undefined values — strip them before writing
+    const clean = Object.fromEntries(
+      Object.entries(data).filter(([, v]) => v !== undefined)
+    );
     try {
       if (editReport) {
         await updateDoc(doc(db, `${basePath}/${editReport.id}`), {
-          ...data,
+          ...clean,
           updatedAt: serverTimestamp(),
         });
         // Also update project updatedAt
@@ -86,7 +90,7 @@ export default function ReportsList({ projectId, projectName, onOpenReport, onEr
       } else {
         const number = await getNextNumber();
         await addDoc(collection(db, basePath), {
-          ...data,
+          ...clean,
           number,
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),

@@ -114,10 +114,11 @@ function AppShell() {
 
   async function handleSaveEditReport(data: Omit<Report, 'id' | 'number' | 'createdAt' | 'updatedAt' | 'entryCount' | 'attendeeCount'>) {
     if (!editReportModal || !nav.projectId) return;
+    const clean = Object.fromEntries(Object.entries(data).filter(([, v]) => v !== undefined));
     try {
       await updateDoc(
         doc(db, `users/${user!.uid}/projects/${nav.projectId}/reports/${editReportModal.id}`),
-        { ...data, updatedAt: serverTimestamp() }
+        { ...clean, updatedAt: serverTimestamp() }
       );
       addToast('Rapport mis à jour.', 'success');
     } catch {
