@@ -74,30 +74,6 @@ jobs:
           sed -i 's|<uses-permission android:name="android.permission.INTERNET" />|<uses-permission android:name="android.permission.INTERNET" />\n    <uses-permission android:name="android.permission.RECORD_AUDIO" />\n    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />\n    <uses-permission android:name="android.permission.CAMERA" />|' \
             app/src/main/AndroidManifest.xml
 
-      - name: Patch MainActivity — grant WebView microphone permission
-        working-directory: rapports-de-visite/android
-        run: |
-          cat > app/src/main/java/com/evoq/rapportsdevisite/MainActivity.java << 'JAVA'
-          package com.evoq.rapportsdevisite;
-
-          import android.os.Bundle;
-          import android.webkit.PermissionRequest;
-          import com.getcapacitor.BridgeActivity;
-          import com.getcapacitor.BridgeWebChromeClient;
-
-          public class MainActivity extends BridgeActivity {
-              @Override
-              public void onCreate(Bundle savedInstanceState) {
-                  super.onCreate(savedInstanceState);
-                  bridge.getWebView().setWebChromeClient(new BridgeWebChromeClient(bridge) {
-                      @Override
-                      public void onPermissionRequest(final PermissionRequest request) {
-                          runOnUiThread(() -> request.grant(request.getResources()));
-                      }
-                  });
-              }
-          }
-          JAVA
 
       # ── Gradle build ─────────────────────────────────────────────────────
       - name: Make gradlew executable
