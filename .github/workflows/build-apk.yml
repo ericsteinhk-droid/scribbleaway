@@ -34,6 +34,23 @@ jobs:
         working-directory: rapports-de-visite
         run: npm install
 
+      # @capacitor/camera's CameraUtils.java uses getExternalFilesDir() for the
+      # camera temp file. On devices where external storage is unavailable it
+      # returns null, causing File.createTempFile to throw "Unable to create
+      # photo on disk". Patch it to fall back to getCacheDir().
+      - name: Patch @capacitor/camera — cache dir fallback for temp file
+        working-directory: rapports-de-visite
+        run: |
+          python3 << 'PYEOF'
+          f = 'node_modules/@capacitor/camera/android/src/main/java/com/capacitorjs/plugins/camera/CameraUtils.java'
+          src = open(f).read()
+          old = 'File storageDir = activity.getExternalFilesDir(Environment.DIRECTORY_PICTURES);'
+          new = old + '\n        if (storageDir == null) { storageDir = activity.getCacheDir(); }'
+          patched = src.replace(old, new)
+          open(f, 'w').write(patched)
+          print('Patched' if patched != src else 'Already patched or pattern not found')
+          PYEOF
+
       - name: Build web assets (Vite)
         working-directory: rapports-de-visite
         env:
@@ -85,11 +102,16 @@ jobs:
           distribution: temurin
           java-version: '21'
 
-      # ── Android patches (permissions + WebView microphone) ───────────────
-      - name: Patch AndroidManifest — add audio & camera permissions
+      # ── Android patches (permissions + FileProvider for camera) ────────────
+      - name: Patch AndroidManifest — permissions + FileProvider
         working-directory: rapports-de-visite/android
         run: |
+          # Add missing runtime permissions
           sed -i 's|<uses-permission android:name="android.permission.INTERNET" />|<uses-permission android:name="android.permission.INTERNET" />\n    <uses-permission android:name="android.permission.RECORD_AUDIO" />\n    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />\n    <uses-permission android:name="android.permission.CAMERA" />|' \
+            app/src/main/AndroidManifest.xml
+          # @capacitor/camera plugin manifest omits FileProvider; add it so
+          # CameraUtils.createImageFileUri() can share the temp file with the camera app.
+          sed -i 's|</application>|    <provider\n            android:name="androidx.core.content.FileProvider"\n            android:authorities="${applicationId}.fileprovider"\n            android:exported="false"\n            android:grantUriPermissions="true">\n            <meta-data\n                android:name="android.support.FILE_PROVIDER_PATHS"\n                android:resource="@xml/file_paths" />\n        </provider>\n    </application>|' \
             app/src/main/AndroidManifest.xml
 
 
