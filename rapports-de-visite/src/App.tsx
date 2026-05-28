@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { Capacitor } from '@capacitor/core';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { useToast } from './hooks/useToast';
@@ -23,6 +24,8 @@ function AppShell() {
   const { user, loading } = useAuth();
   const { toasts, addToast, removeToast } = useToast();
 
+  const isNative = Capacitor.isNativePlatform();
+
   const [nav, setNav] = useState<NavState>({ screen: 'projects' });
   const [showSettings, setShowSettings] = useState(false);
   const [apiGate, setApiGate] = useState<'anthropic' | 'openai' | null>(null);
@@ -32,9 +35,10 @@ function AppShell() {
   // Edit report modal state (accessible from ReportDetail header)
   const [editReportModal, setEditReportModal] = useState<Report | null>(null);
 
-  // Background-resume guard (60s)
+  // Background-resume guard (60s) — browser/PWA only; Capacitor manages WebView lifecycle
   const hiddenAt = useRef<number | null>(null);
   useEffect(() => {
+    if (isNative) return;
     function onVisibilityChange() {
       if (document.visibilityState === 'hidden') {
         hiddenAt.current = Date.now();
@@ -47,16 +51,17 @@ function AppShell() {
     }
     document.addEventListener('visibilitychange', onVisibilityChange);
     return () => document.removeEventListener('visibilitychange', onVisibilityChange);
-  }, []);
+  }, [isNative]);
 
-  // bfcache guard
+  // bfcache guard — browser/PWA only; WebView can fire pageshow(persisted:true) on every resume
   useEffect(() => {
+    if (isNative) return;
     function onPageShow(e: PageTransitionEvent) {
       if (e.persisted) window.location.reload();
     }
     window.addEventListener('pageshow', onPageShow);
     return () => window.removeEventListener('pageshow', onPageShow);
-  }, []);
+  }, [isNative]);
 
   // Online/offline
   useEffect(() => {

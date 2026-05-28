@@ -14,6 +14,23 @@
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      (function () {
+        function showErr(text) {
+          var d = document.createElement('div');
+          d.style.cssText = 'position:fixed;inset:0;padding:20px;background:#fff8f8;color:#b91c1c;font:11px/1.5 monospace;overflow:auto;z-index:99999;white-space:pre-wrap;';
+          d.textContent = text;
+          if (document.body) { document.body.prepend(d); }
+          else { window.addEventListener('DOMContentLoaded', function () { document.body.prepend(d); }); }
+        }
+        window.onerror = function (m, u, l, c, e) {
+          showErr('JS Error:\n' + m + '\n' + (u || '') + ':' + (l || '') + (e && e.stack ? '\n' + e.stack : ''));
+        };
+        window.addEventListener('unhandledrejection', function (e) {
+          showErr('Unhandled rejection:\n' + (e.reason && e.reason.stack ? e.reason.stack : String(e.reason)));
+        });
+      })();
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
