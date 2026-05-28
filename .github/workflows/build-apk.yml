@@ -18,8 +18,10 @@ jobs:
 
     steps:
       # ── Checkout ──────────────────────────────────────────────────────────
-      - name: Checkout repository
+      - name: Checkout app branch
         uses: actions/checkout@v4
+        with:
+          ref: claude/web-app-features-KU9ZJ
 
       # ── Java ──────────────────────────────────────────────────────────────
       - name: Set up Java 17
@@ -33,13 +35,11 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '22'
-          cache: npm
-          cache-dependency-path: rapports-de-visite/package-lock.json
 
       # ── Web build ─────────────────────────────────────────────────────────
       - name: Install npm dependencies
         working-directory: rapports-de-visite
-        run: npm ci
+        run: npm install
 
       - name: Build web assets (Vite)
         working-directory: rapports-de-visite
