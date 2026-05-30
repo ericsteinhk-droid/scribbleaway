@@ -37,3 +37,4 @@ echo    2. Copy NMS-DDN_Bilingual_Lexicon.txt to each workstation
 echo    3. First run will prompt for API key + lexicon path
 echo ============================================================
 endlocal
+pause
