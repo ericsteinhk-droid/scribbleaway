@@ -294,7 +294,7 @@ class App(tk.Tk):
         frm = tk.Frame(self, bg=BG, padx=PAD, pady=PAD)
         frm.pack(fill="x")
 
-        tk.Label(frm, text="Source DOCX:", bg=BG, width=14, anchor="e").grid(
+        tk.Label(frm, text="Source DOCX only:", bg=BG, width=16, anchor="e").grid(
             row=0, column=0, padx=(0, 4), pady=4, sticky="e"
         )
         self._src_var = tk.StringVar()
@@ -390,13 +390,8 @@ class App(tk.Tk):
     # ── Browse helpers ───────────────────────────────────────────────────
     def _browse_src(self) -> None:
         path = filedialog.askopenfilename(
-            title="Select source DOCX or RTF",
-            filetypes=[
-                ("Supported files", "*.docx *.rtf"),
-                ("Word documents", "*.docx"),
-                ("Rich Text Format", "*.rtf"),
-                ("All files", "*.*"),
-            ],
+            title="Select source DOCX file",
+            filetypes=[("Word documents", "*.docx"), ("All files", "*.*")],
         )
         if path:
             self._src_var.set(path)
@@ -421,6 +416,12 @@ class App(tk.Tk):
 
         if not src or not Path(src).exists():
             messagebox.showerror("Missing file", "Please select a valid source DOCX file.")
+            return
+        if Path(src).suffix.lower() != ".docx":
+            messagebox.showerror(
+                "Unsupported file type",
+                "Only DOCX files can be translated.\nPlease select a .docx file.",
+            )
             return
         if not out:
             messagebox.showerror("Missing folder", "Please select an output folder.")
@@ -459,8 +460,9 @@ class App(tk.Tk):
             for label, path in outputs.items():
                 self._enqueue_log(f"  {label}: {path}")
             self._enqueue_log("")
-            self._enqueue_log("Translation complete.")
-            self.after(0, lambda: self._status_var.set("Translation complete."))
+            self._enqueue_log("Success!")
+            self.after(0, lambda: self._status_var.set("Success!"))
+            self.after(0, self._on_success)
         except Exception as exc:
             msg = str(exc)
             self._enqueue_log(f"\nERROR: {msg}")
@@ -468,6 +470,26 @@ class App(tk.Tk):
             self.after(0, lambda: self._status_var.set("Error — see log."))
         finally:
             self.after(0, lambda: self._set_running(False))
+
+    def _on_success(self) -> None:
+        again = messagebox.askyesno(
+            "Success!",
+            "Translation complete!\n\nTranslate another file?",
+            icon="info",
+        )
+        if again:
+            self._src_var.set("")
+            self._out_var.set("")
+            self._clear_log()
+            self._progress.configure(mode="determinate", value=0)
+            self._prog_lbl.set("")
+            self._status_var.set("Ready.")
+        else:
+            messagebox.showinfo(
+                "Thank you",
+                "Thank you for using NMS/DDN Translator.\n\nThe application will now close.",
+            )
+            self.destroy()
 
     def _on_progress(self, done: int, total: int) -> None:
         label = f"{done} / {total} paragraphs"

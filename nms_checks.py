@@ -211,17 +211,12 @@ def check_heading_numbering(segments: list[Segment]) -> list[str]:
 # Public entry point
 # ---------------------------------------------------------------------------
 def run_checks(
-    work_dir: str | None,
+    work_dir: str,
     segments: list[Segment],
     lexicon: dict[str, str],
     direction: str,
-    skip_xml: bool = False,
 ) -> list[str]:
-    """
-    Run self-checks. Returns list of FAIL strings (empty = all passed).
-    skip_xml=True skips check_style_coverage (used for RTF files where
-    there is no document.xml to inspect).
-    """
+    """Run all 8 checks. Returns list of FAIL strings (empty = all passed)."""
     failures: list[str] = []
     failures += check_paragraph_count(segments)
     failures += check_bracket_integrity(segments)
@@ -229,8 +224,7 @@ def run_checks(
     failures += check_mandatory_language(segments, direction)
     failures += check_no_source_language(segments, direction)
     failures += check_terminology(segments, lexicon, direction)
-    if not skip_xml and work_dir:
-        failures += check_style_coverage(work_dir, segments)
+    failures += check_style_coverage(work_dir, segments)
     failures += check_heading_numbering(segments)
     return failures
 
