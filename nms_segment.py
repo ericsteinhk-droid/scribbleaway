@@ -344,3 +344,8 @@ def _post_process(text: str, direction: str) -> str:
         for c in ":.;!?":
             text = text.replace(f" {c}", c).replace(f" {c}", c)
     return text
+
+
+def post_process(text: str, direction: str) -> str:
+    """Public entry point for deterministic post-processing (used by header translation)."""
+    return _post_process(text, direction)

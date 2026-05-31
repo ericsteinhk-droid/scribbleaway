@@ -10,15 +10,26 @@ repeated calls within a batch benefit from prompt caching.
 """
 from __future__ import annotations
 
+import glob
+import os
 import re
 from pathlib import Path
 from typing import Callable
 
+from lxml import etree
+
 # Purely numeric table cells (e.g. "0,0", "77,6") — skip API, handle in code
 _NUMERIC_CELL = re.compile(r"^\s*-?\d+(?:[.,]\d+)?\s*$")
+# NMS section number: two-digit triplet, optionally separated by spaces/hyphens
+_SECTION_NUM_RE = re.compile(r"\d{2}[ \t\-]*\d{2}[ \t\-]*\d{2}")
+# Separator between section number and section name
+_AFTER_NUM_SEP_RE = re.compile(r"^[ \t–—\-]+")
+
+W      = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}"
+_XML_NS = "http://www.w3.org/XML/1998/namespace"
 
 from api_client import ApiClient, TranslationResponse
-from nms_segment import Segment, extract_segments, apply_translations, restore_and_postprocess
+from nms_segment import Segment, extract_segments, apply_translations, restore_and_postprocess, post_process
 
 
 # ---------------------------------------------------------------------------
@@ -227,3 +238,118 @@ def translate_document(
     _log(f"  Reinsertion complete. Target language tag: {tgt_lang}")
 
     return segments
+
+
+# ---------------------------------------------------------------------------
+# Page-header section-name translation
+# ---------------------------------------------------------------------------
+_HDR_REMOVE = frozenset({
+    W + "r", W + "hyperlink", W + "proofErr", W + "del", W + "ins",
+    W + "fldSimple", W + "sdt",
+})
+_HDR_KEEP = frozenset({W + "pPr", W + "bookmarkStart", W + "bookmarkEnd"})
+
+
+def translate_docx_headers(
+    work_dir: str,
+    direction: str,
+    client: ApiClient,
+    lexicon: dict[str, str],
+    log: Callable[[str], None] | None = None,
+) -> int:
+    """
+    Translate the section name in DOCX page headers (header*.xml).
+
+    For each header paragraph that contains an NMS 6-digit section number
+    (e.g. "04 05 12"), the text that follows the number and its separator
+    is translated.  The number and separator are left exactly as-is.
+    Returns the count of paragraphs updated.
+    """
+    def _log(msg: str) -> None:
+        if log:
+            log(msg)
+
+    header_files = sorted(
+        glob.glob(os.path.join(work_dir, "word", "header*.xml"))
+    )
+    if not header_files:
+        return 0
+
+    target_lang = "en-CA" if direction == "fr→en" else "fr-CA"
+    updated = 0
+
+    for hpath in header_files:
+        tree = etree.parse(hpath)
+        root = tree.getroot()
+        file_modified = False
+
+        for p in root.iter(W + "p"):
+            runs = list(p.iter(W + "r"))
+            full_text = "".join(
+                "".join(t.text or "" for t in r.findall(W + "t"))
+                for r in runs
+            )
+
+            num_match = _SECTION_NUM_RE.search(full_text)
+            if num_match is None:
+                continue
+
+            after_num = full_text[num_match.end():]
+            sep_match = _AFTER_NUM_SEP_RE.match(after_num)
+            sep = sep_match.group() if sep_match else ""
+            section_name = after_num[len(sep):].strip()
+
+            if not section_name:
+                continue
+
+            sys_prompt = build_system_prompt(direction, "heading", lexicon)
+            response: TranslationResponse = client.translate(sys_prompt, section_name)
+            translated_name = post_process(response.translated.strip(), direction)
+
+            if translated_name == section_name:
+                continue
+
+            new_text = full_text[:num_match.end()] + sep + translated_name
+
+            # Preserve formatting from the first run's rPr
+            first_rpr_xml = None
+            for r in runs:
+                rpr = r.find(W + "rPr")
+                if rpr is not None:
+                    first_rpr_xml = etree.tostring(rpr)
+                    break
+
+            # Rebuild paragraph as a single run with new text
+            for child in list(p):
+                if child.tag in _HDR_REMOVE:
+                    p.remove(child)
+                elif child.tag not in _HDR_KEEP:
+                    p.remove(child)
+
+            new_r = etree.SubElement(p, W + "r")
+            if first_rpr_xml is not None:
+                rpr_el = etree.fromstring(first_rpr_xml)
+                lang_el = rpr_el.find(W + "lang")
+                if lang_el is not None:
+                    lang_el.set(W + "val", target_lang)
+                else:
+                    lang_el = etree.SubElement(rpr_el, W + "lang")
+                    lang_el.set(W + "val", target_lang)
+                new_r.insert(0, rpr_el)
+
+            t_el = etree.SubElement(new_r, W + "t")
+            t_el.text = new_text
+            if new_text and (new_text[0].isspace() or new_text[-1].isspace()):
+                t_el.set(f"{{{_XML_NS}}}space", "preserve")
+
+            _log(
+                f"  Header ({os.path.basename(hpath)}): "
+                f"{repr(section_name)} → {repr(translated_name)}"
+            )
+            file_modified = True
+            updated += 1
+
+        if file_modified:
+            tree.write(hpath, xml_declaration=True, encoding="UTF-8", standalone=True)
+
+    return updated

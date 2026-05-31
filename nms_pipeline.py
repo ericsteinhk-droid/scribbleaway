@@ -35,7 +35,7 @@ from nms_preprocess import (
     discover_styles,
     _parse,
 )
-from nms_translate import translate_document, load_lexicon
+from nms_translate import translate_document, load_lexicon, translate_docx_headers
 from nms_checks import run_checks, write_checks_report
 from nms_tn import generate_tn
 from api_client import ApiClient
@@ -239,6 +239,16 @@ def run_pipeline(
         log=_log,
         progress_cb=progress_cb,
     )
+    hdr_count = translate_docx_headers(
+        work_dir=trans_work,
+        direction=direction,
+        client=client,
+        lexicon=lexicon,
+        log=_log,
+    )
+    if hdr_count:
+        _log(f"  {hdr_count} page-header section name(s) translated.")
+
     repack(trans_work, translated_docx)
     _log(f"  Written: {translated_docx}")
     _log(f"  {client.usage_summary()}")
