@@ -152,6 +152,7 @@ def run_pipeline(
     cfg: Config,
     delete_empty_notes: bool = False,
     log: Callable[[str], None] | None = None,
+    progress_cb: Callable[[int, int], None] | None = None,
 ) -> dict[str, str]:
     """
     Full end-to-end pipeline.  Returns dict of output file paths.
@@ -236,6 +237,7 @@ def run_pipeline(
         client=client,
         lexicon=lexicon,
         log=_log,
+        progress_cb=progress_cb,
     )
     repack(trans_work, translated_docx)
     _log(f"  Written: {translated_docx}")

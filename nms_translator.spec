@@ -9,7 +9,7 @@ a = Analysis(
     ['gui.py'],
     pathex=[],
     binaries=[],
-    datas=[],
+    datas=[('evoq_logo.png', '.')],
     hiddenimports=[
         # lxml C extensions
         'lxml.etree',
@@ -25,6 +25,7 @@ a = Analysis(
         'idna',
         'sniffio',
         'h11',
+        'PIL', 'PIL.Image', 'PIL.ImageTk',
         # our modules
         'config',
         'api_client',

@@ -144,6 +144,7 @@ def translate_document(
     client: ApiClient,
     lexicon: dict[str, str],
     log: Callable[[str], None] | None = None,
+    progress_cb: Callable[[int, int], None] | None = None,
 ) -> list[Segment]:
     """
     Extract → translate → reinsert.  Returns segments for checks + TN.
@@ -192,6 +193,8 @@ def translate_document(
 
         done += 1
         _log(f"  [{done}/{total}] para {seg.para_index} ({seg.style_id or 'unstyled'})")
+        if progress_cb:
+            progress_cb(done, total)
 
     tgt_lang = _target_lang(direction, source_lang)
     apply_translations(tree, work_dir, segments, tgt_lang)
