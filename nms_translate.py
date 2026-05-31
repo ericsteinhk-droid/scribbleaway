@@ -68,10 +68,14 @@ TRANSLATION DIRECTION: {direction}
 
 CORE RULES — non-negotiable:
 1. Fidelity over fluency. Do not summarize, paraphrase, add, or omit content.
-2. Preserve mandatory language exactly:
-   - "shall" (EN) ↔ "doit"/"devra" (FR) — binding obligation
-   - "should" (EN) ↔ "devrait" (FR) — recommendation
-   - "may" (EN) ↔ "peut" (FR) — permission
+2. Modal / obligation language:
+   - EN output: use imperative verb mood for all obligations — "Install…", \
+"Provide…", "Submit…". Do NOT use "shall", "must", or "will" for obligations. \
+This is current NMS standard.
+   - FR→EN: translate "doit"/"devra"/"doivent" as the direct imperative.
+   - EN→FR: translate imperative obligations as "doit"/"devra" as appropriate.
+   - "should" (EN) ↔ "devrait" (FR) — recommendation (unchanged)
+   - "may" (EN) ↔ "peut" (FR) — permission (unchanged)
 3. Placeholders ⟦0⟧ ⟦1⟧ … mark content that must NOT be translated \
 (standard designations, dimensions, blank fields). Copy them exactly as-is.
 4. Preserve option brackets exactly: [option text] — translate the text \

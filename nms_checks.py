@@ -95,19 +95,18 @@ def check_placeholder_fidelity(segments: list[Segment]) -> list[str]:
 
 def check_mandatory_language(segments: list[Segment], direction: str) -> list[str]:
     """
-    If source contains binding modal, target should too.
-    FR→EN: doit/devra → shall.  EN→FR: shall → doit/devra.
-    Flags paragraphs where the source has the modal but the target does not.
+    FR→EN: flag if "shall" appears in output (current NMS standard uses imperative mood).
+    EN→FR: flag if source has "shall" but output lacks doit/devra.
     """
     fails = []
     for s in segments:
         if not s.source_text.strip() or s.translated_text is None:
             continue
         if direction == "fr→en":
-            if _MANDATORY_FR.search(s.source_text) and not _MANDATORY_EN.search(s.translated_text):
+            if _MANDATORY_EN.search(s.translated_text):
                 fails.append(
                     f"MANDATORY LANGUAGE para {s.para_index}: "
-                    "source has doit/devra but translated text lacks 'shall'."
+                    "'shall' found in EN output — current NMS standard requires imperative mood."
                 )
         else:
             if _MANDATORY_EN.search(s.source_text) and not _MANDATORY_FR.search(s.translated_text):
