@@ -390,8 +390,13 @@ class App(tk.Tk):
     # ── Browse helpers ───────────────────────────────────────────────────
     def _browse_src(self) -> None:
         path = filedialog.askopenfilename(
-            title="Select source DOCX",
-            filetypes=[("Word documents", "*.docx"), ("All files", "*.*")],
+            title="Select source DOCX or RTF",
+            filetypes=[
+                ("Supported files", "*.docx *.rtf"),
+                ("Word documents", "*.docx"),
+                ("Rich Text Format", "*.rtf"),
+                ("All files", "*.*"),
+            ],
         )
         if path:
             self._src_var.set(path)

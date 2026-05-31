@@ -38,6 +38,7 @@ from nms_preprocess import (
 from nms_translate import translate_document, load_lexicon
 from nms_checks import run_checks, write_checks_report
 from nms_tn import generate_tn
+from nms_rtf import translate_rtf, paras_to_segments, RtfStyleReport
 from api_client import ApiClient
 from config import Config
 
@@ -145,6 +146,82 @@ def _delete_empty_notes(preprocessed_docx: str, work_dir: str, spec_note_styles:
 # ---------------------------------------------------------------------------
 # Main pipeline
 # ---------------------------------------------------------------------------
+# RTF pipeline (no preprocessing step; translate directly)
+# ---------------------------------------------------------------------------
+def _run_rtf_pipeline(
+    src: str,
+    output_dir: str,
+    direction: str,
+    cfg: Config,
+    log: Callable[[str], None] | None = None,
+    progress_cb: Callable[[int, int], None] | None = None,
+) -> dict[str, str]:
+    def _log(msg: str) -> None:
+        if log:
+            log(msg)
+
+    out = Path(output_dir)
+    out.mkdir(parents=True, exist_ok=True)
+    stem = Path(src).stem
+
+    translated_rtf  = str(out / f"{stem}_translated.rtf")
+    checks_report   = str(out / f"{stem}_checks.txt")
+    tn_report       = str(out / f"{stem}_TN.txt")
+
+    _log("Step 1/3: Translating RTF…")
+    client  = ApiClient(api_key=cfg.api_key, model=cfg.model)
+    lexicon = load_lexicon(cfg.lexicon_path)
+    _log(f"  Lexicon: {len(lexicon)} terms loaded from {cfg.lexicon_path.name}")
+
+    rpt, paras = translate_rtf(
+        src_path=src,
+        out_path=translated_rtf,
+        direction=direction,
+        client=client,
+        lexicon=lexicon,
+        log=_log,
+        progress_cb=progress_cb,
+    )
+    _log(f"  {client.usage_summary()}")
+
+    _log("Step 2/3: Running self-checks…")
+    segments = paras_to_segments(paras)
+    failures = run_checks(
+        work_dir=None,
+        segments=segments,
+        lexicon=lexicon,
+        direction=direction,
+        skip_xml=True,
+    )
+    write_checks_report(failures, checks_report)
+    if failures:
+        _log(f"  {len(failures)} check(s) FAILED — see {checks_report}")
+        for f in failures:
+            _log(f"    FAIL: {f}")
+    else:
+        _log("  All checks passed.")
+
+    _log("Step 3/3: Generating Translator's Notes…")
+    tn_count = generate_tn(
+        segments=segments,
+        preprocess_notes=rpt.notes,
+        check_failures=failures,
+        direction=direction,
+        src_docx=src,
+        out_path=tn_report,
+        empty_note_para_indices=[],
+    )
+    _log(f"  {tn_count} TN entr{'y' if tn_count == 1 else 'ies'} written: {tn_report}")
+    _log("Done.")
+
+    return {
+        "translated_rtf":  translated_rtf,
+        "checks_report":   checks_report,
+        "tn_report":       tn_report,
+    }
+
+
+# ---------------------------------------------------------------------------
 def run_pipeline(
     src_docx: str,
     output_dir: str,
@@ -154,6 +231,15 @@ def run_pipeline(
     log: Callable[[str], None] | None = None,
     progress_cb: Callable[[int, int], None] | None = None,
 ) -> dict[str, str]:
+    if Path(src_docx).suffix.lower() == ".rtf":
+        return _run_rtf_pipeline(
+            src=src_docx,
+            output_dir=output_dir,
+            direction=direction,
+            cfg=cfg,
+            log=log,
+            progress_cb=progress_cb,
+        )
     """
     Full end-to-end pipeline.  Returns dict of output file paths.
 
