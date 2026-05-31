@@ -1,9 +1,7 @@
 # -*- mode: python ; coding: utf-8 -*-
 # PyInstaller spec for NMS/DDN Translator
 # One-file Windows executable.  No LibreOffice dependency.
-# Build: pyinstaller nms_translator.spec
-
-block_cipher = None
+# Build: python -m PyInstaller nms_translator.spec
 
 a = Analysis(
     ['gui.py'],
@@ -45,19 +43,15 @@ a = Analysis(
         'docx', 'openpyxl', 'xlrd',
         'tkinter.test',
     ],
-    win_no_prefer_redirects=False,
-    win_private_assemblies=False,
-    cipher=block_cipher,
     noarchive=False,
 )
 
-pyz = PYZ(a.pure, a.zlib_data, cipher=block_cipher)
+pyz = PYZ(a.pure)
 
 exe = EXE(
     pyz,
     a.scripts,
     a.binaries,
-    a.zipfiles,
     a.datas,
     [],
     name='NMSTranslator',
@@ -67,7 +61,7 @@ exe = EXE(
     upx=True,
     upx_exclude=[],
     runtime_tmpdir=None,
-    console=False,           # no console window for end users
+    console=False,
     disable_windowed_traceback=False,
     argv_emulation=False,
     target_arch=None,
