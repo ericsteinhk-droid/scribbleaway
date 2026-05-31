@@ -12,7 +12,7 @@ python --version 2>nul || (
 )
 
 echo Installing/upgrading dependencies...
-pip install --upgrade anthropic lxml pyinstaller
+pip install --upgrade anthropic lxml Pillow pyinstaller
 if errorlevel 1 (
     echo ERROR: pip install failed.
     goto :done
@@ -20,7 +20,7 @@ if errorlevel 1 (
 
 echo.
 echo Building one-file executable...
-pyinstaller nms_translator.spec --clean
+python -m PyInstaller nms_translator.spec --clean
 if errorlevel 1 (
     echo ERROR: PyInstaller build failed.
     goto :done

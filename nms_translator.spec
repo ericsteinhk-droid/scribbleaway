@@ -41,7 +41,7 @@ a = Analysis(
     runtime_hooks=[],
     excludes=[
         # keep the bundle small
-        'matplotlib', 'numpy', 'pandas', 'PIL', 'scipy',
+        'matplotlib', 'numpy', 'pandas', 'scipy',
         'docx', 'openpyxl', 'xlrd',
         'tkinter.test',
     ],
