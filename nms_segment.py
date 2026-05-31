@@ -82,6 +82,7 @@ class Segment:
     mixed_lang_runs: list[tuple[str, str]]  # [(text, lang)]
     has_mixed_formatting: bool
     first_rpr_xml: bytes | None
+    is_table_cell: bool = False
     translated_text: str | None = None
     missing_placeholders: list[int] = field(default_factory=list)
     flags: list[str] = field(default_factory=list)
@@ -193,6 +194,8 @@ def extract_segments(
     for idx, p in enumerate(root.iter(W + "p")):
         style_id = _para_style(p)
         style_type = "heading" if style_id in heading_styleids else "body"
+        parent = p.getparent()
+        in_table_cell = parent is not None and parent.tag == W + "tc"
 
         runs = _collect_runs(p)
         if not runs:
@@ -210,6 +213,7 @@ def extract_segments(
                     mixed_lang_runs=[],
                     has_mixed_formatting=False,
                     first_rpr_xml=None,
+                    is_table_cell=in_table_cell,
                 )
             )
             continue
@@ -235,6 +239,7 @@ def extract_segments(
             mixed_lang_runs=mixed_runs,
             has_mixed_formatting=has_mixed_fmt,
             first_rpr_xml=first_rpr,
+            is_table_cell=in_table_cell,
         )
 
         if mixed_runs:

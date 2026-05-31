@@ -14,6 +14,9 @@ import re
 from pathlib import Path
 from typing import Callable
 
+# Purely numeric table cells (e.g. "0,0", "77,6") — skip API, handle in code
+_NUMERIC_CELL = re.compile(r"^\s*-?\d+(?:[.,]\d+)?\s*$")
+
 from api_client import ApiClient, TranslationResponse
 from nms_segment import Segment, extract_segments, apply_translations, restore_and_postprocess
 
@@ -182,8 +185,27 @@ def translate_document(
                 "Verify carefully."
             )
 
-        prev_text = segments[i - 1].source_text if i > 0 else None
-        next_text = segments[i + 1].source_text if i < len(segments) - 1 else None
+        # Purely numeric table cells (e.g. "0,0", "77,6"): no API call needed.
+        # Convert decimal comma → period for FR→EN and pass through.
+        if seg.is_table_cell and _NUMERIC_CELL.match(seg.source_text):
+            if direction == "fr→en":
+                seg.translated_text = seg.source_text.strip().replace(",", ".")
+            else:
+                seg.translated_text = seg.source_text
+            done += 1
+            if progress_cb:
+                progress_cb(done, total)
+            continue
+
+        # Table cells: suppress before/after context — adjacent cells are from
+        # different columns/rows and can cause the model to confuse context with
+        # the content being translated (root cause of cell-content contamination).
+        if seg.is_table_cell:
+            prev_text = None
+            next_text = None
+        else:
+            prev_text = segments[i - 1].source_text if i > 0 else None
+            next_text = segments[i + 1].source_text if i < len(segments) - 1 else None
 
         sys_prompt = build_system_prompt(direction, seg.style_type, lexicon)
         user_msg = _build_user_message(seg, prev_text, next_text)
