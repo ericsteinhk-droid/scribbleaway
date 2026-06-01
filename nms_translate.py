@@ -44,7 +44,7 @@ def load_lexicon(path: Path) -> dict[str, str]:
     Lines starting with # are comments.
     """
     lexicon: dict[str, str] = {}
-    if not path.exists():
+    if not path.is_file():
         return lexicon
     with open(path, encoding="utf-8") as f:
         for line in f:

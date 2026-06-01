@@ -32,7 +32,7 @@ class Config:
                 "API key is missing or doesn't look right (expected sk-ant-…). "
                 "Check Settings."
             )
-        if not self.lexicon_path.exists():
+        if not self.lexicon_path.is_file():
             errors.append(f"Lexicon file not found: {self.lexicon_path}")
         return errors
 
@@ -70,7 +70,7 @@ def load() -> Config | None:
         d = json.load(f)
     tmp = Path(os.environ.get("TEMP", os.environ.get("TMP", "/tmp")))
     lexicon_path = Path(d.get("lexicon_path", ""))
-    if not lexicon_path.exists():
+    if not lexicon_path.is_file():
         discovered = find_lexicon_near_exe()
         if discovered:
             lexicon_path = discovered
