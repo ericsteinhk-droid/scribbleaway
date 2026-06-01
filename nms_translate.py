@@ -250,6 +250,51 @@ _HDR_REMOVE = frozenset({
 _HDR_KEEP = frozenset({W + "pPr", W + "bookmarkStart", W + "bookmarkEnd"})
 
 
+def _para_text(p: etree._Element) -> str:
+    """Return the plain text of a paragraph element."""
+    return "".join(
+        "".join(t.text or "" for t in r.findall(W + "t"))
+        for r in p.iter(W + "r")
+    )
+
+
+def _rewrite_para(
+    p: etree._Element,
+    new_text: str,
+    target_lang: str,
+) -> None:
+    """Replace all runs in paragraph p with a single run containing new_text."""
+    runs = list(p.iter(W + "r"))
+    first_rpr_xml = None
+    for r in runs:
+        rpr = r.find(W + "rPr")
+        if rpr is not None:
+            first_rpr_xml = etree.tostring(rpr)
+            break
+
+    for child in list(p):
+        if child.tag in _HDR_REMOVE:
+            p.remove(child)
+        elif child.tag not in _HDR_KEEP:
+            p.remove(child)
+
+    new_r = etree.SubElement(p, W + "r")
+    if first_rpr_xml is not None:
+        rpr_el = etree.fromstring(first_rpr_xml)
+        lang_el = rpr_el.find(W + "lang")
+        if lang_el is not None:
+            lang_el.set(W + "val", target_lang)
+        else:
+            lang_el = etree.SubElement(rpr_el, W + "lang")
+            lang_el.set(W + "val", target_lang)
+        new_r.insert(0, rpr_el)
+
+    t_el = etree.SubElement(new_r, W + "t")
+    t_el.text = new_text
+    if new_text and (new_text[0].isspace() or new_text[-1].isspace()):
+        t_el.set(f"{{{_XML_NS}}}space", "preserve")
+
+
 def translate_docx_headers(
     work_dir: str,
     direction: str,
@@ -260,9 +305,12 @@ def translate_docx_headers(
     """
     Translate the section name in DOCX page headers (header*.xml).
 
-    For each header paragraph that contains an NMS 6-digit section number
-    (e.g. "04 05 12"), the text that follows the number and its separator
-    is translated.  The number and separator are left exactly as-is.
+    Handles two layouts found in NMS DOCX headers:
+      Layout A: number and name in the same paragraph
+                "07 13 52 — Membranes d'étanchéité de toiture"
+      Layout B: number in one table cell, name in an adjacent cell
+                | 07 13 52 | Membranes d'étanchéité de toiture |
+
     Returns the count of paragraphs updated.
     """
     def _log(msg: str) -> None:
@@ -273,8 +321,10 @@ def translate_docx_headers(
         glob.glob(os.path.join(work_dir, "word", "header*.xml"))
     )
     if not header_files:
+        _log("  Headers: no header*.xml files found.")
         return 0
 
+    _log(f"  Headers: found {len(header_files)} header file(s).")
     target_lang = "en-CA" if direction == "fr→en" else "fr-CA"
     updated = 0
 
@@ -282,14 +332,11 @@ def translate_docx_headers(
         tree = etree.parse(hpath)
         root = tree.getroot()
         file_modified = False
+        fname = os.path.basename(hpath)
 
+        # ── Layout A: section number + name in the same paragraph ──────
         for p in root.iter(W + "p"):
-            runs = list(p.iter(W + "r"))
-            full_text = "".join(
-                "".join(t.text or "" for t in r.findall(W + "t"))
-                for r in runs
-            )
-
+            full_text = _para_text(p)
             num_match = _SECTION_NUM_RE.search(full_text)
             if num_match is None:
                 continue
@@ -300,7 +347,7 @@ def translate_docx_headers(
             section_name = after_num[len(sep):].strip()
 
             if not section_name:
-                continue
+                continue  # Layout B handled below
 
             sys_prompt = build_system_prompt(direction, "heading", lexicon)
             response: TranslationResponse = client.translate(sys_prompt, section_name)
@@ -310,46 +357,53 @@ def translate_docx_headers(
                 continue
 
             new_text = full_text[:num_match.end()] + sep + translated_name
-
-            # Preserve formatting from the first run's rPr
-            first_rpr_xml = None
-            for r in runs:
-                rpr = r.find(W + "rPr")
-                if rpr is not None:
-                    first_rpr_xml = etree.tostring(rpr)
-                    break
-
-            # Rebuild paragraph as a single run with new text
-            for child in list(p):
-                if child.tag in _HDR_REMOVE:
-                    p.remove(child)
-                elif child.tag not in _HDR_KEEP:
-                    p.remove(child)
-
-            new_r = etree.SubElement(p, W + "r")
-            if first_rpr_xml is not None:
-                rpr_el = etree.fromstring(first_rpr_xml)
-                lang_el = rpr_el.find(W + "lang")
-                if lang_el is not None:
-                    lang_el.set(W + "val", target_lang)
-                else:
-                    lang_el = etree.SubElement(rpr_el, W + "lang")
-                    lang_el.set(W + "val", target_lang)
-                new_r.insert(0, rpr_el)
-
-            t_el = etree.SubElement(new_r, W + "t")
-            t_el.text = new_text
-            if new_text and (new_text[0].isspace() or new_text[-1].isspace()):
-                t_el.set(f"{{{_XML_NS}}}space", "preserve")
-
-            _log(
-                f"  Header ({os.path.basename(hpath)}): "
-                f"{repr(section_name)} → {repr(translated_name)}"
-            )
+            _rewrite_para(p, new_text, target_lang)
+            _log(f"  Header ({fname}) Layout A: {repr(section_name)} → {repr(translated_name)}")
             file_modified = True
             updated += 1
 
+        # ── Layout B: number and name in separate cells of the same row ─
+        for tbl in root.iter(W + "tbl"):
+            for tr in tbl.findall(W + "tr"):
+                cells = tr.findall(W + "tc")
+                if len(cells) < 2:
+                    continue
+
+                # Find a cell whose text is primarily a section number
+                num_cell_idx = None
+                for ci, tc in enumerate(cells):
+                    cell_text = "".join(_para_text(p) for p in tc.findall(W + "p")).strip()
+                    if _SECTION_NUM_RE.search(cell_text) and len(cell_text) <= 15:
+                        num_cell_idx = ci
+                        break
+
+                if num_cell_idx is None:
+                    continue
+
+                # Translate every other non-empty cell in this row
+                for ci, tc in enumerate(cells):
+                    if ci == num_cell_idx:
+                        continue
+                    for p in tc.findall(W + "p"):
+                        section_name = _para_text(p).strip()
+                        if not section_name:
+                            continue
+
+                        sys_prompt = build_system_prompt(direction, "heading", lexicon)
+                        response: TranslationResponse = client.translate(sys_prompt, section_name)
+                        translated_name = post_process(response.translated.strip(), direction)
+
+                        if translated_name == section_name:
+                            continue
+
+                        _rewrite_para(p, translated_name, target_lang)
+                        _log(f"  Header ({fname}) Layout B: {repr(section_name)} → {repr(translated_name)}")
+                        file_modified = True
+                        updated += 1
+
         if file_modified:
             tree.write(hpath, xml_declaration=True, encoding="UTF-8", standalone=True)
+        else:
+            _log(f"  Header ({fname}): no translatable section names found.")
 
     return updated
