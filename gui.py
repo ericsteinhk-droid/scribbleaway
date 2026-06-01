@@ -87,11 +87,13 @@ class PrivacyNotice(tk.Toplevel):
         tk.Label(
             self,
             text=(
-                "Cette application transmet temporairement des informations à un modèle de "
-                "langage IA accessible sur Internet afin d'effectuer la traduction. Il est "
-                "fortement recommandé d'anonymiser les renseignements protégés, tels que les "
-                "références de projet et de client figurant dans l'en-tête du document, "
-                "avant de commencer la traduction."
+                "Cette application transmet des extraits du document à l'API Claude d'Anthropic "
+                "afin d'effectuer la traduction. Conformément aux conditions d'utilisation "
+                "d'Anthropic, les données transmises via l'API ne sont pas utilisées pour "
+                "entraîner des modèles d'intelligence artificielle. Il est néanmoins fortement "
+                "recommandé d'anonymiser les renseignements protégés, tels que les références "
+                "de projet et de client figurant dans l'en-tête du document, avant de commencer "
+                "la traduction."
             ),
             wraplength=460,
             justify="left",
@@ -105,8 +107,9 @@ class PrivacyNotice(tk.Toplevel):
         tk.Label(
             self,
             text=(
-                "This application temporarily shares information with an internet-based AI "
-                "language model to perform translation. It is strongly recommended that "
+                "This application sends document excerpts to Anthropic's Claude API to perform "
+                "translation. Under Anthropic's terms of service, data submitted via the API is "
+                "not used to train AI models. It is nonetheless strongly recommended that "
                 "protected information such as project and client references in the title "
                 "header be anonymized before beginning the translation."
             ),
