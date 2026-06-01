@@ -60,6 +60,7 @@ class PrivacyNotice(tk.Toplevel):
         self.resizable(False, False)
         self.configure(bg="white")
         self.grab_set()
+        self.attributes("-topmost", True)
         self.accepted = False
 
         # Logo
