@@ -177,12 +177,17 @@ def run_pipeline(
     trans_work   = str(work / "translate")
     manifest_scan = str(work / "manifest_scan")
 
-    preprocessed_docx  = str(out / f"{stem}_preprocessed.docx")
-    translated_docx    = str(out / f"{stem}_translated.docx")
-    preproc_report     = str(out / f"{stem}_preprocess_report.txt")
-    prestrip_manifest  = str(out / f"{stem}_prestrip_manifest.txt")
-    checks_report      = str(out / f"{stem}_checks.txt")
-    tn_report          = str(out / f"{stem}_TN.txt")
+    # Auxiliary files go into a "translation info" subfolder; only the
+    # translated DOCX lands directly in output_dir.
+    info_dir = out / "translation info"
+    info_dir.mkdir(parents=True, exist_ok=True)
+
+    preprocessed_docx  = str(info_dir / f"{stem}_preprocessed.docx")
+    translated_docx    = str(out      / f"{stem}_translated.docx")
+    preproc_report     = str(info_dir / f"{stem}_preprocess_report.txt")
+    prestrip_manifest  = str(info_dir / f"{stem}_prestrip_manifest.txt")
+    checks_report      = str(info_dir / f"{stem}_checks.txt")
+    tn_report          = str(info_dir / f"{stem}_TN.txt")
 
     # ── Step 0: Pre-strip manifest ──────────────────────────────────────
     _log("Step 0/4: Generating pre-strip manifest…")

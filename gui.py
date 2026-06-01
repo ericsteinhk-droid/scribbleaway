@@ -30,6 +30,7 @@ PAD = 8
 BG = "#f0f0f0"
 ACCENT = "#0055a5"
 LOGO_FILE = "evoq_logo.png"
+MAX_FILES = 3
 
 
 # ---------------------------------------------------------------------------
@@ -224,13 +225,12 @@ class App(tk.Tk):
         super().__init__()
         self.title(APP_TITLE)
         self.resizable(True, True)
-        self.minsize(660, 540)
+        self.minsize(680, 580)
         self.configure(bg=BG)
 
         self._cfg: Config | None = None
         self._log_queue: queue.Queue[str] = queue.Queue()
         self._running = False
-        self._prog_total = 0
 
         self._build_ui()
 
@@ -294,37 +294,44 @@ class App(tk.Tk):
         frm = tk.Frame(self, bg=BG, padx=PAD, pady=PAD)
         frm.pack(fill="x")
 
-        tk.Label(frm, text="Source DOCX only:", bg=BG, width=16, anchor="e").grid(
-            row=0, column=0, padx=(0, 4), pady=4, sticky="e"
-        )
-        self._src_var = tk.StringVar()
-        tk.Entry(frm, textvariable=self._src_var).grid(
-            row=0, column=1, padx=(0, 4), pady=4, sticky="ew"
-        )
-        tk.Button(frm, text="Browse…", command=self._browse_src).grid(
-            row=0, column=2, pady=4
-        )
+        # File rows (up to MAX_FILES)
+        self._src_vars: list[tk.StringVar] = []
+        file_labels = ["File 1 (required):", "File 2:", "File 3:"]
+        for i in range(MAX_FILES):
+            tk.Label(frm, text=file_labels[i], bg=BG, width=18, anchor="e").grid(
+                row=i, column=0, padx=(0, 4), pady=3, sticky="e"
+            )
+            var = tk.StringVar()
+            self._src_vars.append(var)
+            tk.Entry(frm, textvariable=var).grid(
+                row=i, column=1, padx=(0, 4), pady=3, sticky="ew"
+            )
+            tk.Button(
+                frm, text="Browse…", command=lambda idx=i: self._browse_src(idx)
+            ).grid(row=i, column=2, pady=3)
 
-        tk.Label(frm, text="Direction:", bg=BG, width=14, anchor="e").grid(
-            row=1, column=0, padx=(0, 4), pady=4, sticky="e"
+        # Direction
+        tk.Label(frm, text="Direction:", bg=BG, width=18, anchor="e").grid(
+            row=MAX_FILES, column=0, padx=(0, 4), pady=4, sticky="e"
         )
         self._dir_var = tk.StringVar(value="fr→en")
         dir_frame = tk.Frame(frm, bg=BG)
-        dir_frame.grid(row=1, column=1, sticky="w", pady=4)
+        dir_frame.grid(row=MAX_FILES, column=1, sticky="w", pady=4)
         for val, label in [("fr→en", "French → English"), ("en→fr", "English → French")]:
             tk.Radiobutton(
                 dir_frame, text=label, variable=self._dir_var, value=val, bg=BG
             ).pack(side="left", padx=(0, PAD))
 
-        tk.Label(frm, text="Output folder:", bg=BG, width=14, anchor="e").grid(
-            row=2, column=0, padx=(0, 4), pady=4, sticky="e"
+        # Output folder
+        tk.Label(frm, text="Output folder:", bg=BG, width=18, anchor="e").grid(
+            row=MAX_FILES + 1, column=0, padx=(0, 4), pady=4, sticky="e"
         )
         self._out_var = tk.StringVar()
         tk.Entry(frm, textvariable=self._out_var).grid(
-            row=2, column=1, padx=(0, 4), pady=4, sticky="ew"
+            row=MAX_FILES + 1, column=1, padx=(0, 4), pady=4, sticky="ew"
         )
         tk.Button(frm, text="Browse…", command=self._browse_out).grid(
-            row=2, column=2, pady=4
+            row=MAX_FILES + 1, column=2, pady=4
         )
 
         frm.columnconfigure(1, weight=1)
@@ -361,7 +368,7 @@ class App(tk.Tk):
         self._prog_lbl = tk.StringVar(value="")
         tk.Label(
             prog_frame, textvariable=self._prog_lbl, bg=BG,
-            font=("Segoe UI", 8), width=22, anchor="w",
+            font=("Segoe UI", 8), width=28, anchor="w",
         ).pack(side="left", padx=(6, 0))
 
         # ── Log ──
@@ -388,14 +395,14 @@ class App(tk.Tk):
         ).pack(fill="x", side="bottom")
 
     # ── Browse helpers ───────────────────────────────────────────────────
-    def _browse_src(self) -> None:
+    def _browse_src(self, idx: int) -> None:
         path = filedialog.askopenfilename(
             title="Select source DOCX file",
             filetypes=[("Word documents", "*.docx"), ("All files", "*.*")],
         )
         if path:
-            self._src_var.set(path)
-            if not self._out_var.get():
+            self._src_vars[idx].set(path)
+            if idx == 0 and not self._out_var.get():
                 self._out_var.set(str(Path(path).parent))
 
     def _browse_out(self) -> None:
@@ -411,18 +418,23 @@ class App(tk.Tk):
     def _start_translation(self) -> None:
         if self._running:
             return
-        src = self._src_var.get().strip()
+
+        srcs = [v.get().strip() for v in self._src_vars if v.get().strip()]
         out = self._out_var.get().strip()
 
-        if not src or not Path(src).exists():
-            messagebox.showerror("Missing file", "Please select a valid source DOCX file.")
+        if not srcs:
+            messagebox.showerror("Missing file", "Please select at least one source DOCX file.")
             return
-        if Path(src).suffix.lower() != ".docx":
-            messagebox.showerror(
-                "Unsupported file type",
-                "Only DOCX files can be translated.\nPlease select a .docx file.",
-            )
-            return
+        for src in srcs:
+            if not Path(src).exists():
+                messagebox.showerror("File not found", f"File not found:\n{src}")
+                return
+            if Path(src).suffix.lower() != ".docx":
+                messagebox.showerror(
+                    "Unsupported file type",
+                    f"Only DOCX files can be translated:\n{Path(src).name}",
+                )
+                return
         if not out:
             messagebox.showerror("Missing folder", "Please select an output folder.")
             return
@@ -439,30 +451,41 @@ class App(tk.Tk):
 
         thread = threading.Thread(
             target=self._pipeline_thread,
-            args=(src, out, self._dir_var.get()),
+            args=(srcs, out, self._dir_var.get()),
             daemon=True,
         )
         thread.start()
 
-    def _pipeline_thread(self, src: str, out: str, direction: str) -> None:
+    def _pipeline_thread(self, srcs: list[str], out: str, direction: str) -> None:
+        total_files = len(srcs)
         try:
-            outputs = run_pipeline(
-                src_docx=src,
-                output_dir=out,
-                direction=direction,
-                cfg=self._cfg,
-                delete_empty_notes=False,
-                log=self._enqueue_log,
-                progress_cb=self._on_progress,
-            )
+            for i, src in enumerate(srcs):
+                if total_files > 1:
+                    self._enqueue_log(
+                        f"\n{'─' * 50}\n"
+                        f"  File {i + 1} of {total_files}: {Path(src).name}\n"
+                        f"{'─' * 50}"
+                    )
+                outputs = run_pipeline(
+                    src_docx=src,
+                    output_dir=out,
+                    direction=direction,
+                    cfg=self._cfg,
+                    delete_empty_notes=False,
+                    log=self._enqueue_log,
+                    progress_cb=lambda done, total, fi=i + 1, ft=total_files:
+                        self._on_progress(done, total, fi, ft),
+                )
+                self._enqueue_log("")
+                self._enqueue_log("Output files:")
+                for label, path in outputs.items():
+                    self._enqueue_log(f"  {label}: {path}")
+
             self._enqueue_log("")
-            self._enqueue_log("Output files:")
-            for label, path in outputs.items():
-                self._enqueue_log(f"  {label}: {path}")
-            self._enqueue_log("")
-            self._enqueue_log("Success!")
+            n = f"{total_files} file{'s' if total_files > 1 else ''}"
+            self._enqueue_log(f"✓ {n} translated successfully.")
             self.after(0, lambda: self._status_var.set("Success!"))
-            self.after(0, self._on_success)
+            self.after(0, lambda: self._on_success(total_files))
         except Exception as exc:
             msg = str(exc)
             self._enqueue_log(f"\nERROR: {msg}")
@@ -471,14 +494,16 @@ class App(tk.Tk):
         finally:
             self.after(0, lambda: self._set_running(False))
 
-    def _on_success(self) -> None:
+    def _on_success(self, count: int) -> None:
+        n = f"{count} file{'s' if count > 1 else ''}"
         again = messagebox.askyesno(
             "Success!",
-            "Translation complete!\n\nTranslate another file?",
+            f"{n} translated successfully!\n\nTranslate more files?",
             icon="info",
         )
         if again:
-            self._src_var.set("")
+            for v in self._src_vars:
+                v.set("")
             self._out_var.set("")
             self._clear_log()
             self._progress.configure(mode="determinate", value=0)
@@ -491,8 +516,11 @@ class App(tk.Tk):
             )
             self.destroy()
 
-    def _on_progress(self, done: int, total: int) -> None:
-        label = f"{done} / {total} paragraphs"
+    def _on_progress(self, done: int, total: int, file_idx: int, total_files: int) -> None:
+        if total_files > 1:
+            label = f"File {file_idx}/{total_files}: {done}/{total} paras"
+        else:
+            label = f"{done} / {total} paragraphs"
         pct = int(done / total * 100) if total else 0
 
         def _update() -> None:
