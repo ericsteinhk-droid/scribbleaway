@@ -7,7 +7,7 @@ a = Analysis(
     ['gui.py'],
     pathex=[],
     binaries=[],
-    datas=[('evoq_logo.png', '.')],
+    datas=[('evoq_logo.png', '.'), ('NMS-DDN_Bilingual_Lexicon.txt', '.')],
     hiddenimports=[
         # lxml C extensions
         'lxml.etree',

@@ -37,7 +37,7 @@ class Config:
         return errors
 
 
-def _find_lexicon_near_exe() -> Path | None:
+def find_lexicon_near_exe() -> Path | None:
     """
     Look for a lexicon .txt file next to the running exe or script.
     Preference order:
@@ -71,7 +71,7 @@ def load() -> Config | None:
     tmp = Path(os.environ.get("TEMP", os.environ.get("TMP", "/tmp")))
     lexicon_path = Path(d.get("lexicon_path", ""))
     if not lexicon_path.exists():
-        discovered = _find_lexicon_near_exe()
+        discovered = find_lexicon_near_exe()
         if discovered:
             lexicon_path = discovered
     return Config(

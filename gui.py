@@ -21,7 +21,7 @@ from pathlib import Path
 from PIL import Image, ImageTk
 
 import config as cfg_module
-from config import Config, load, save
+from config import Config, load, save, find_lexicon_near_exe
 from nms_pipeline import run_pipeline
 
 
@@ -143,42 +143,58 @@ class PrivacyNotice(tk.Toplevel):
 
 
 # ---------------------------------------------------------------------------
-# First-run wizard
+# Setup wizard (first run: API key only; settings mode: API key + lexicon)
 # ---------------------------------------------------------------------------
 class SetupWizard(tk.Toplevel):
-    def __init__(self, parent: tk.Tk):
+    def __init__(self, parent: tk.Tk, first_run: bool = True, current_cfg: Config | None = None):
         super().__init__(parent)
-        self.title("Setup — NMS/DDN Translator")
+        self.title(
+            "Setup — NMS/DDN Translator" if first_run else "Settings — NMS/DDN Translator"
+        )
         self.resizable(False, False)
         self.configure(bg=BG)
         self.grab_set()
         self.config_saved = False
+        self._first_run = first_run
 
+        heading = "Configuration initiale / Initial Setup" if first_run else "Settings / Paramètres"
         tk.Label(
-            self,
-            text="Configuration initiale / Initial Setup",
-            font=("Segoe UI", 10, "bold"),
-            bg=BG,
+            self, text=heading, font=("Segoe UI", 10, "bold"), bg=BG,
         ).grid(row=0, column=0, columnspan=3, padx=PAD * 2, pady=(PAD * 2, PAD), sticky="w")
 
+        # API key (always shown)
         tk.Label(self, text="Anthropic API key:", bg=BG).grid(
             row=1, column=0, padx=PAD * 2, pady=4, sticky="w"
         )
-        self._key_var = tk.StringVar()
+        self._key_var = tk.StringVar(value=current_cfg.api_key if current_cfg else "")
         tk.Entry(self, textvariable=self._key_var, show="*", width=52).grid(
             row=1, column=1, columnspan=2, padx=(0, PAD * 2), pady=4, sticky="ew"
         )
 
-        tk.Label(self, text="Lexicon file (.txt):", bg=BG).grid(
-            row=2, column=0, padx=PAD * 2, pady=4, sticky="w"
-        )
-        self._lex_var = tk.StringVar()
-        tk.Entry(self, textvariable=self._lex_var, width=40).grid(
-            row=2, column=1, padx=(0, 4), pady=4, sticky="ew"
-        )
-        tk.Button(self, text="Browse…", command=self._browse_lex).grid(
-            row=2, column=2, padx=(0, PAD * 2), pady=4
-        )
+        if first_run:
+            # Show which lexicon will be used (informational, not editable)
+            discovered = find_lexicon_near_exe()
+            lex_note = (
+                f"Default lexicon: {discovered.name}" if discovered
+                else "No lexicon found in app folder — use Settings to add one."
+            )
+            tk.Label(
+                self, text=lex_note, bg=BG, fg="#555555", font=("Segoe UI", 8), anchor="w",
+            ).grid(row=2, column=0, columnspan=3, padx=PAD * 2, pady=(0, PAD), sticky="w")
+            self._lex_var = None
+        else:
+            # Settings mode — show editable lexicon path
+            current_lex = str(current_cfg.lexicon_path) if current_cfg else ""
+            tk.Label(self, text="Lexicon file (.txt):", bg=BG).grid(
+                row=2, column=0, padx=PAD * 2, pady=4, sticky="w"
+            )
+            self._lex_var = tk.StringVar(value=current_lex)
+            tk.Entry(self, textvariable=self._lex_var, width=40).grid(
+                row=2, column=1, padx=(0, 4), pady=4, sticky="ew"
+            )
+            tk.Button(self, text="Browse…", command=self._browse_lex).grid(
+                row=2, column=2, padx=(0, PAD * 2), pady=4
+            )
 
         tk.Button(
             self,
@@ -203,15 +219,22 @@ class SetupWizard(tk.Toplevel):
 
     def _save(self) -> None:
         key = self._key_var.get().strip()
-        lex = self._lex_var.get().strip()
         if not key.startswith("sk-ant-"):
             messagebox.showerror("Invalid key", "API key must start with sk-ant-…", parent=self)
             return
-        if not lex or not Path(lex).exists():
-            messagebox.showerror(
-                "Missing lexicon", "Please select a valid lexicon .txt file.", parent=self
-            )
-            return
+
+        if self._first_run:
+            # Use discovered lexicon; empty string is fine (auto-discovery will find it at runtime)
+            discovered = find_lexicon_near_exe()
+            lex = str(discovered) if discovered else ""
+        else:
+            lex = self._lex_var.get().strip()
+            if not lex or not Path(lex).exists():
+                messagebox.showerror(
+                    "Missing lexicon", "Please select a valid lexicon .txt file.", parent=self
+                )
+                return
+
         save(api_key=key, lexicon_path=lex)
         self.config_saved = True
         self.destroy()
@@ -411,7 +434,8 @@ class App(tk.Tk):
             self._out_var.set(path)
 
     def _open_settings(self) -> None:
-        self._run_wizard()
+        wizard = SetupWizard(self, first_run=False, current_cfg=self._cfg)
+        self.wait_window(wizard)
         self._cfg = load()
 
     # ── Translation ──────────────────────────────────────────────────────

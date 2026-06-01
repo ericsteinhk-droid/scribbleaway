@@ -1,0 +1,434 @@
+================================================================================
+NMS / DDN BILINGUAL LEXICON AND STYLE GUIDE (EN <> FR)
+Reference for assisting automated translation of technical specifications
+================================================================================
+
+SOURCE BASIS
+  Derived from a comparison of 5 matched English/French section pairs of the
+  Canadian National Master Construction Specification (NMS) / Devis directeur
+  national de la construction au Canada (DDN):
+    - 01 33 00  Submittal Procedures / Documents-échantillons à soumettre (2009-12-31)
+    - 03 45 00  Precast Architectural Concrete / Éléments préfabriqués en
+                béton architectural (2019-11-06)
+    - 04 05 00  Common Work Results for Masonry / Maçonnerie - exigences
+                générales concernant les résultats des travaux (2023-11-06)
+    - 06 10 53  Miscellaneous Rough Carpentry / Charpenterie diverse (2021-11-05)
+    - 07 21 13  Board Insulation / Isolant en panneaux (2022-04-20)
+
+  These observations reflect only the 5 sampled sections. Vintage matters: the
+  2009 section (01 33 00) uses slightly older phrasing and capitalized defined
+  terms ("Documents Contractuels", "Entrepreneur"); the 2019-2023 sections use
+  lower-case ("documents contractuels") and added sustainability content. Where
+  a convention is not consistent across all samples, that is noted. Treat
+  anything uncertain as a candidate to verify against a current MasterFormat /
+  NMS source rather than as a fixed rule.
+
+================================================================================
+PART 1 - STRUCTURAL / EDITORIAL CONVENTIONS (highest priority for consistency)
+================================================================================
+
+1.1  THREE-PART SECTION STRUCTURE (PART headings)
+  Every section follows the CSC/MasterFormat three-part model. Translate the
+  PART headings exactly as follows; these are fixed:
+    GENERAL    ->  GÉNÉRALITÉS
+    PRODUCTS   ->  PRODUITS
+    EXECUTION  ->  EXÉCUTION
+  When a part is empty, "NOT USED" -> "SANS OBJET" (NMS standard; not present in
+  the 2009 sample, which left the French headings absent - verify per template).
+
+1.2  EDITOR NOTES (the single most distinctive NMS/DDN convention)
+  English editor notes are tagged:
+       **SPEC NOTE: **              ->  **NOTE AU RÉDACTEUR : **
+       **SPEC NOTE DESCRIPTION: **  ->  **NOTE AU RÉDACTEUR - DESCRIPTION : **
+  Notes:
+    - In the older 2009 section the French tag appears as "RÉDACTEUR :" alone;
+      the modern standard is "NOTE AU RÉDACTEUR". Prefer the modern form.
+    - French inserts a space before the colon (": " becomes " : ") per French
+      typographic rule. This applies to ALL colons in the French text, not just
+      editor notes (e.g. "Qualifications :", "Échantillons :").
+    - Editor notes are instructions to the spec writer, NOT contract text. They
+      are never numbered and are stripped from the issued project manual. Keep
+      them clearly distinct; do not fold them into the article body.
+
+1.3  ARTICLE NUMBERING AND PARAGRAPH SCHEME
+    - Articles (## level) are numbered 1.01, 1.02 ... in PART 1; 2.01 ... in
+      PART 2; 3.01 ... in PART 3. The number is identical in both languages;
+      only the title is translated.
+    - Paragraph levels use the NMS dotted scheme: .1, .2, .3 then nested .1, .2.
+      This scheme is language-independent - preserve numbering exactly.
+    - The French extraction shows the leading ".1 / .2" markers explicitly; the
+      English may render them as flat lines. Do not renumber when translating;
+      map paragraph-for-paragraph.
+
+1.4  PLACEHOLDERS AND OPTIONAL TEXT (preserve verbatim)
+    - Fill-in blanks: [______]  -> keep identical (same bracket + underscores).
+    - Bracketed optional/choice text: [exterior] [interior] -> [extérieur]
+      [intérieur]. Brackets denote writer choices and MUST be preserved around
+      the corresponding translated span, including nested brackets
+      e.g. [[complete] [standard]] -> [[complète] [standard]].
+    - Numeric values, units and dimensions are NOT translated: 100 x 100 mm,
+      [24] hours -> [24] heures, 19% , kg/m3, L/m2, MPa, mm all stay.
+      French uses a comma decimal: 0.15 mm -> 0,15 mm. Watch this conversion.
+
+1.5  HEADER / TITLE BLOCK
+    CANADIAN NATIONAL MASTER CONSTRUCTION SPECIFICATION
+        -> DEVIS DIRECTEUR DE LA CONSTRUCTION AU CANADA
+    SECTION xx xx xx   -> SECTION xx xx xx  (unchanged)
+    PAGE __ OF __      -> PAGE __ DE __
+    Date format YYYY-MM-DD is unchanged.
+
+1.6  REFERENCE STANDARDS - DO NOT TRANSLATE STANDARD TITLES
+    The titles of cited standards (ASTM, CSA, ANSI, ISO, NLGA, ASME ...) remain
+    in English in BOTH versions. Example, unchanged in the French text:
+      ASTM C578-[19] Standard Specification for Rigid, Cellular Polystyrene
+      Thermal Insulation
+    Only the NAMES OF STANDARDS BODIES and any descriptive Canadian-code titles
+    are translated (see Part 2.7). Standard designations/numbers never change.
+
+================================================================================
+PART 2 - TERMINOLOGY GLOSSARY (EN -> FR), grouped by theme
+================================================================================
+
+2.1  ROLES / PARTIES / CONTRACT
+  Departmental Representative        Représentant du Ministère
+  DCC Representative                 Représentant de CDC
+  Consultant                         Consultant
+  Owner                              propriétaire
+  Contractor                         Entrepreneur   (capitalized as defined term)
+  Subcontractor                      sous-traitant
+  Supplier                           fournisseur
+  Manufacturer                       fabricant
+  Contract Documents                 Documents contractuels  (cap. in 2009 sample)
+  Contract Price                     prix contractuel
+  Contract Time                      délai d'exécution des travaux
+  Work (the)                         travaux / ouvrage  (see note 2.10)
+  General Conditions                 Conditions générales
+  Supplementary Condition            condition supplémentaire
+  warranty                           garantie
+  bid                                soumission (the offer) / "before bid" =
+                                       "avant le dépôt de la soumission"
+
+2.2  SUBMITTALS (Section 01 33 00 vocabulary)
+  Submittals                         documents et échantillons à soumettre
+  Action and Informational Submittals
+        Documents/échantillons à soumettre pour approbation/information
+  shop drawings                      dessins d'atelier
+  product data / data sheets         fiches techniques
+  samples                            échantillons
+  selection samples                  échantillons sélectionnés / de sélection
+  verification samples               échantillons pour vérification
+  mock-up                            échantillon de l'ouvrage  (NOT "maquette")
+  transmittal letter                 lettre d'envoi
+  test and evaluation reports        rapports des essais et rapports d'évaluation
+  certified test reports             rapports certifiés des essais
+  Manufacturer's Instructions        Instructions du fabricant
+  Maintenance Material Submittals    Documents/échantillons - matériaux de remplacement
+  to submit                          soumettre
+  for review                         aux fins d'examen
+  to resubmit                        soumettre de nouveau
+
+2.3  GENERAL ADMINISTRATIVE / RECURRING BOILERPLATE
+  in accordance with Section X       conformément à la section X
+  Submit in accordance with Section 01 33 00 - Submittal Procedures
+       Soumettre les documents et les échantillons requis conformément à la
+       section 01 33 00 - Documents/échantillons à soumettre.
+  Related Requirements               Exigences connexes
+  Reference Standards                Normes de référence
+  Administrative Requirements        Modalités administratives
+  Price and Payment Procedures       Prix et modalités de paiement
+  Quality Assurance                  Assurance de la qualité
+  Source Quality Control             Contrôle de la qualité à la source
+  Delivery, Storage, and Handling    Transport, entreposage et manutention
+  Site Conditions                    Conditions de mise en oeuvre
+  Definitions                        Définitions
+  Qualifications                     Qualifications
+  as indicated on Drawings           comme indiqué sur les dessins
+  manufacturer's recommendations     recommandations du fabricant
+  manufacturer's instructions        instructions du fabricant
+  performance criteria               critères de performance
+  design requirements                critères de calcul
+  performance requirements           exigences de performance
+
+2.4  EXECUTION ARTICLE TITLES
+  Examination                        Examen  (occasionally "Inspection")
+  Preparation                        Travaux préparatoires
+  Installation                       Installation / Mise en place
+  Erection                           Mise en place / Montage
+  Tolerances                         Tolérances
+  Cleaning                           Nettoyage
+  Protection                         Protection (des ouvrages finis)
+  Fabrication                        (see 2.6)
+  Verification of Conditions         Vérification des conditions
+
+2.5  MASONRY (04 05 00)
+  masonry                            maçonnerie
+  masonry unit                       élément de maçonnerie
+  brick / block                      brique / bloc
+  bricklayers/masons                 briqueteurs-maçons
+  mortar                             mortier
+  mortar joint                       joint de mortier
+  grout / grouting                   coulis / jointoiement (see 2.6 grout)
+  cavity / cavity space              cavité / espace des cavités
+  cavity wall                        mur creux
+  weep holes                         barbacanes
+  vents                              évents
+  reinforcing bars                   barres d'armature
+  ties / connectors                  attaches / connecteurs
+  through-wall flashing              solins muraux
+  coursing                           assise / tracés (layout)
+  tooling of joints                  outillage des joints
+  pointing                           jointoiement
+  efflorescence                      efflorescence
+  joint sealant                      produit d'étanchéité pour joints
+  initial rate of absorption         taux d'absorption initial
+  lintel                             linteau
+  bond beam                          poutre de liaison
+  partition / non-load-bearing wall  cloison / mur non porteur
+  opening (door/window)              baie
+  door frame                         montant de porte
+  running bond                       appareil en panneresse
+  shelf angles                       cornières d'appui
+  to tooth into (existing masonry)   appareiller (à la maçonnerie existante)
+  bonding / bond continuity          liaisonnement / continuité du liaisonnement
+  reinforcement and ties (as a set)  armatures et crampons
+  to grout (verb)                    injecter le coulis / injecter du coulis
+  cold weather requirements          exigences visant les travaux par temps froid
+  hot weather requirements           exigences visant les travaux par temps chaud
+
+2.6  PRECAST CONCRETE (03 45 00)
+  precast architectural concrete     éléments préfabriqués en béton architectural
+  precast element/unit               élément préfabriqué
+  cast-in-place concrete             béton coulé en place
+  cement / white cement              ciment / ciment blanc
+  Portland cement                    ciment Portland
+  blended hydraulic cement           ciment hydraulique composé
+  supplementary cementitious materials (SCMs)  ajouts cimentaires
+  cementitious materials             matières / ajouts cimentaires
+  aggregate / coarse aggregate       granulat / gros granulat
+  exposed aggregate                  granulats apparents
+  admixture                          adjuvant
+  air entrainment admixture          entraîneur d'air
+  chemical admixture                 adjuvant chimique
+  set retarder                       retardateur de prise
+  water-cement ratio                 rapport eau-ciment
+  compressive strength               résistance à la compression
+  exposure class                     classe d'exposition
+  concrete mixtures                  formules de dosage du béton
+  grout mixes                        formules de dosage du coulis
+  reinforcing steel                  acier d'armature
+  prestressing steel                 acier de précontrainte
+  welded wire mesh                   treillis métallique soudé
+  epoxy-coated                       revêtu de résines époxydiques
+  formwork                           coffrage
+  anchors and supports               ancrages et supports
+  steel grade 350W                   acier de nuance 350W
+  yield strength                     limite d'élasticité
+  hot-dip galvanizing                galvanisation par immersion à chaud
+  zinc-rich coating                  enduit riche en zinc
+  primer / shop primer               peinture d'impression / couche d'impression
+  bearing pads                       coussinets
+  shims                              cales d'espacement
+  post-tensioning ducts              gaines de post-tension
+  curing compound                    produit de cure
+  sealer (shop/field applied)        produit de scellement (en atelier/sur place)
+  sealant                            produit d'étanchéité
+  caulking                           produit de calfeutrage
+  camber                             contre-flèche (NMS); "Camber" listed alone
+                                       in sample - verify French heading
+  finishes / finishing schedule      finis / (calendrier des finis)
+  erection devices                   dispositifs de montage / d'érection
+  spalling                           écaillage / "spall" = s'écailler
+  hairline shrinkage cracks          fissures capillaires de retrait
+
+2.7  STANDARDS BODIES (names translated; designations are not)
+  ASTM International (ASTM)           ASTM International (ASTM)  [unchanged]
+  Canadian Gas Association (CGA)      Association canadienne du gaz (ACG)
+  Canadian General Standards Board (CGSB)
+        Office des normes générales du Canada (ONGC ou CGSB)
+  CSA Group (CSA)                     Groupe CSA (CSA)
+  National Lumber Grades Authority (NLGA)   NLGA (kept)
+  US Green Building Council (USGBC)   US Green Building Council (USGBC) [kept]
+  Note: ANSI Approved / IES Cosponsored -> "Approuvée par l'ANSI; co-parrainée
+        par l'IES" (the descriptive note is translated, the acronyms are not).
+
+2.8  CARPENTRY / WOOD (06 10 53)
+  miscellaneous rough carpentry      charpenterie diverse
+  lumber                             bois d'oeuvre
+  softwood lumber                    bois d'oeuvre résineux (CSA O141 title kept EN)
+  dimensional / dimension lumber     bois de construction de dimensions courantes
+  engineered wood / lumber           bois d'ingénierie / produits de bois d'ingénierie
+  plywood                            contreplaqué
+  panel / wood-based panel           panneau / panneau à base de bois
+  sheathing                          revêtement / support de revêtement
+  construction sheathing             support de revêtement (CSA O325 title kept)
+  furring                            fourrure
+  blocking                           cale / cale d'espacement / blocage
+  nailing strips                     bandes de clouage
+  curbs / cants                      larmiers / chanlattes
+  grounds                            tasseaux
+  rough bucks                        bâtis bruts
+  sleepers                           lambourdes
+  backer boards                      panneaux de support
+  lumber grades                      classes de bois d'oeuvre
+  grade-marked                       classe estampillée
+  S4S (surfaced four sides)          blanchi sur 4 côtés (fini S4S)
+  moisture content                   teneur en humidité
+  kiln dry / air dry                 séché au four / séché à l'air
+  species                            essence (de bois)
+  fingerjoined                       abouté
+  machine-graded                     classé mécaniquement / classement mécanique
+  driven fasteners                   dispositifs de fixation enfoncés
+  nails / spikes / brads / staples   clous / crampons / clous à tête perdue / agrafes
+  bolts, nuts and washers            boulons, écrous et rondelles
+  rough hardware                     grosse quincaillerie
+  wood screws                        vis à bois
+  cold-formed metal framing          ossature métallique formée à froid
+  framing connectors / hangers       connecteurs d'ossature / étriers
+  sill gasket                        garniture d'étanchéité de lisse
+  sill                               lisse (sill plate) / arase (top of foundation)
+  subflooring adhesive               adhésif de support de revêtement de sol
+  general purpose adhesive           adhésif tout usage
+  pressure-treated                   traité sous pression
+  wood preservative / treatment      traitement du bois
+
+2.9  INSULATION / THERMAL (07 21 13)
+  board insulation                   isolant en panneaux
+  rigid insulation                   isolant rigide
+  insulation board / boards          panneau(x) isolant(s)
+  thermal resistance                 résistance thermique
+  long-term thermal resistance (LTTR) résistance thermique à long terme moyenne (RTLTM)
+  polystyrene (expanded/extruded)    polystyrène (expansé / extrudé)
+  polyisocyanurate                   polyisocyanurate
+  mineral fibre                      fibres minérales
+  vapour barrier                     pare-vapeur
+  substrate                          surface / support
+  notched trowel                     truelle brettée
+  insulation clips and disks         attaches et rondelles
+  expansion and control joints       joints de dilatation et de rupture
+  modified bituminous membrane       membrane de bitume modifié
+  underslab / under slab             sous dalle / radier (slab-on-grade base)
+  perimeter foundation               fondation périphérique
+  drainage board / panel             panneau de drainage
+  waterproofing membrane             membrane hydrofuge
+  filter fabric                      tissu de filtre / géotextile
+  finish grade                       niveau fini
+  footing                            semelle
+  to backfill                        remblayer / bloquer (cover)
+
+2.10  SUSTAINABILITY / ENVIRONMENTAL (modern sections 2019+)
+  Environmental Product Declaration (EPD)
+        Fiche de déclaration environnementale (FDE) / DEP (Déclaration
+        environnementale de produit - both forms appear; 07 21 13 uses FDE,
+        06 10 53 uses DEP. FLAG: pick one per project and keep consistent.)
+  Product Category Rule (PCR)        Règle de catégorie de produit (RCP)
+  Life cycle assessment              évaluation du cycle de vie
+  cradle to gate                     de la production à la livraison / du berceau
+                                       à la tombe (both appear - prefer "du
+                                       berceau à la tombe" per DEP usage)
+  global warming potential (GWP)     potentiel de réchauffement de la planète (PRG)
+  ozone depletion potential (ODP)    potentiel d'appauvrissement de la couche d'ozone (PDO)
+  acidification potential (AP)       potentiel d'acidification (AP)
+  eutrophication potential (EP)      potentiel d'eutrophisation (EP)
+  volatile organic compounds (VOC)   composés organiques volatils (COV)
+  chain of custody                   chaîne de surveillance
+  responsibly sourced                localisés auprès de sources responsables
+  Greening Government Strategy       Stratégie pour un gouvernement vert
+  WHMIS SDS                          SIMDUT FDS
+  recycled content                   contenu recyclé / teneur en matières recyclées
+  LEED Requirements                  Exigences LEED
+
+================================================================================
+PART 3 - STYLISTIC RULES (verb mood, register, recurring patterns)
+================================================================================
+
+3.1  IMPERATIVE / INFINITIVE VERB MOOD
+  This is the defining stylistic feature. English specs use the bare imperative
+  ("Submit", "Install", "Verify", "Do not proceed"). French DDN uses the
+  INFINITIVE, not the imperative ("Soumettre", "Poser/Installer", "S'assurer",
+  "Ne pas entreprendre"). Map every English instruction verb to a French
+  infinitive. Common pairs observed:
+    Submit            -> Soumettre
+    Install / Apply   -> Poser / Installer / Appliquer
+    Provide           -> Fournir / Prescrire (when specifying)
+    Verify / Ensure   -> S'assurer / Vérifier / Veiller à ce que
+    Review            -> Examiner / Revoir
+    Inspect           -> Inspecter
+    Coordinate        -> Coordonner
+    Indicate          -> Indiquer
+    Keep / Store      -> Conserver / Garder / Entreposer
+    Cut and trim      -> Découper et tailler
+    Fit (tight)       -> Ajuster / Abouter (joints)
+    Do not proceed    -> Ne pas entreprendre / Ne pas procéder
+    Refer to / See    -> Se reporter à / Voir
+    Allow [X] days    -> Laisser [X] jours
+    Notify / Inform   -> Aviser / Informer
+    Obtain            -> Obtenir
+    Offset (joints)   -> Décaler
+    Embed             -> Noyer
+    Secure / Attach   -> Assujettir / Fixer
+    Extend            -> Poser ... (extend boards) / prolonger
+    Overlap           -> Faire chevaucher / chevaucher
+
+3.2  REGISTER AND OMISSION OF ARTICLES (English telegraphic style)
+  English NMS drops articles for brevity: "Submit shop drawings", "Keep
+  materials dry until use", "Store materials off ground". French restores normal
+  grammar with articles: "Soumettre les dessins d'atelier", "Garder les
+  matériaux secs jusqu'à leur utilisation", "Entreposer les matériaux ... de
+  manière qu'ils ne reposent pas sur le sol". Do not carry the article-dropping
+  into French; produce grammatical French.
+
+3.3  TYPOGRAPHY
+    - French space before high punctuation: " : ", and guillemets with spaces:
+      « C » , « dessins d'atelier ». English uses straight quotes: "shop drawings".
+    - Decimal comma in French (0,15 mm), decimal point in English (0.15 mm).
+    - Multiplication sign: English "100 x 100 mm"; French commonly "100 × 100 mm"
+      (true multiplication sign appears in the masonry sample).
+    - Apostrophes: French uses the typographic right single quote (U+2019).
+
+3.4  DEFINED-TERM CAPITALIZATION
+  Older sections capitalize contract-defined nouns in French (Entrepreneur,
+  Documents Contractuels, Représentant du Ministère). Newer sections lowercase
+  most (entrepreneur, documents contractuels) but keep the bracketed role
+  placeholders capitalized: [Représentant du Ministère]. FLAG: match the
+  capitalization style of the specific section's vintage; do not normalize
+  across sections without instruction.
+
+3.5  "WORK" - travaux vs ouvrage
+  "Work" (the contractual scope/activity) -> "travaux".
+  "Work" (a physical built result / portion) -> "ouvrage".
+  Watch context: "portion of Work" = "partie de l'ouvrage"; "delay in Work" =
+  "retarder l'exécution des travaux"; "finished Work" tolerances often "ouvrages
+  finis".
+
+3.6  CROSS-REFERENCE FORMAT
+  "Section 03 30 00 - Cast-in-Place Concrete" -> "section 03 30 00 - Béton
+  coulé en place". The number is identical; only the descriptive title is
+  translated; the en-dash/space separator is kept. In French "section" is
+  usually lowercase mid-sentence; "Section" capitalized at line start of a list.
+
+3.7  KNOWN OCR/SOURCE ARTIFACTS TO IGNORE (do not propagate into translations)
+  The English samples contain spec-writer typos that should be silently
+  corrected, not mirrored, in any cleaned bilingual output:
+    "oOffset" (07 21 13)  -> intended "Offset"
+    "méralliques" (FR 06 10 53) -> intended "métalliques"
+    "before to proceeding" (01 33 00) -> intended "before proceeding"
+  These confirm the source is a working master, not a copy-edited final.
+
+================================================================================
+PART 4 - USAGE NOTES FOR AUTOMATED TRANSLATION
+================================================================================
+  1. Translate structure and boilerplate from the fixed maps in Part 1-2 first;
+     these recur identically across thousands of NMS paragraphs and are the
+     highest-leverage consistency wins.
+  2. Never translate: standard designations/numbers, section numbers, units,
+     numeric values, [______] blanks, bracket structure.
+  3. Always convert: verb mood (imperative -> infinitive), decimal separator,
+     colon spacing, quote style, and restore French articles.
+  4. Flag for human review: EPD/FDE/DEP choice, "cradle to gate" rendering,
+     capitalization of defined terms (vintage-dependent), and any term carrying
+     a "verify" note above.
+  5. This lexicon reflects 5 sampled sections only. It is a starting reference,
+     not an authoritative termbase. For production use, validate against the
+     current official NMS/DDN release and Termium Plus / the PSPC/SPAC
+     terminology resources.
+================================================================================
