@@ -345,17 +345,11 @@ class App(tk.Tk):
                 dir_frame, text=label, variable=self._dir_var, value=val, bg=BG
             ).pack(side="left", padx=(0, PAD))
 
-        # Output folder
-        tk.Label(frm, text="Output folder:", bg=BG, width=18, anchor="e").grid(
-            row=MAX_FILES + 1, column=0, padx=(0, 4), pady=4, sticky="e"
-        )
-        self._out_var = tk.StringVar()
-        tk.Entry(frm, textvariable=self._out_var).grid(
-            row=MAX_FILES + 1, column=1, padx=(0, 4), pady=4, sticky="ew"
-        )
-        tk.Button(frm, text="Browse…", command=self._browse_out).grid(
-            row=MAX_FILES + 1, column=2, pady=4
-        )
+        # Output note (no folder picker — output goes beside each source file)
+        tk.Label(
+            frm, text="Output: same folder as source file(s)",
+            bg=BG, fg="#666666", font=("Segoe UI", 8), anchor="w",
+        ).grid(row=MAX_FILES + 1, column=1, padx=(0, 4), pady=(0, 4), sticky="w")
 
         frm.columnconfigure(1, weight=1)
 
@@ -425,13 +419,6 @@ class App(tk.Tk):
         )
         if path:
             self._src_vars[idx].set(path)
-            if idx == 0 and not self._out_var.get():
-                self._out_var.set(str(Path(path).parent))
-
-    def _browse_out(self) -> None:
-        path = filedialog.askdirectory(title="Select output folder")
-        if path:
-            self._out_var.set(path)
 
     def _open_settings(self) -> None:
         wizard = SetupWizard(self, first_run=False, current_cfg=self._cfg)
@@ -444,7 +431,6 @@ class App(tk.Tk):
             return
 
         srcs = [v.get().strip() for v in self._src_vars if v.get().strip()]
-        out = self._out_var.get().strip()
 
         if not srcs:
             messagebox.showerror("Missing file", "Please select at least one source DOCX file.")
@@ -459,9 +445,6 @@ class App(tk.Tk):
                     f"Only DOCX files can be translated:\n{Path(src).name}",
                 )
                 return
-        if not out:
-            messagebox.showerror("Missing folder", "Please select an output folder.")
-            return
         if self._cfg is None:
             messagebox.showerror("No config", "Configuration missing. Open Settings.")
             return
@@ -475,15 +458,16 @@ class App(tk.Tk):
 
         thread = threading.Thread(
             target=self._pipeline_thread,
-            args=(srcs, out, self._dir_var.get()),
+            args=(srcs, self._dir_var.get()),
             daemon=True,
         )
         thread.start()
 
-    def _pipeline_thread(self, srcs: list[str], out: str, direction: str) -> None:
+    def _pipeline_thread(self, srcs: list[str], direction: str) -> None:
         total_files = len(srcs)
         try:
             for i, src in enumerate(srcs):
+                out = str(Path(src).parent)  # output beside the source file
                 if total_files > 1:
                     self._enqueue_log(
                         f"\n{'─' * 50}\n"
@@ -528,7 +512,6 @@ class App(tk.Tk):
         if again:
             for v in self._src_vars:
                 v.set("")
-            self._out_var.set("")
             self._clear_log()
             self._progress.configure(mode="determinate", value=0)
             self._prog_lbl.set("")

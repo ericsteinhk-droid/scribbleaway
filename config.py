@@ -74,11 +74,18 @@ def load() -> Config | None:
         discovered = find_lexicon_near_exe()
         if discovered:
             lexicon_path = discovered
+    # Ensure work_dir is always absolute — an empty or relative path would
+    # resolve to '.' (current directory) and cause Permission Denied on
+    # network drives that don't allow directory creation at their root.
+    work_dir_str = d.get("work_dir", "")
+    work_dir = Path(work_dir_str) if work_dir_str else tmp / _WORK_SUBDIR
+    if not work_dir.is_absolute():
+        work_dir = tmp / _WORK_SUBDIR
     return Config(
         api_key=d.get("api_key", ""),
         model=d.get("model", "claude-sonnet-4-6"),
         lexicon_path=lexicon_path,
-        work_dir=Path(d.get("work_dir", str(tmp / _WORK_SUBDIR))),
+        work_dir=work_dir,
     )
 
 
