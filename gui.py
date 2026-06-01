@@ -22,7 +22,10 @@ from PIL import Image, ImageTk
 
 import config as cfg_module
 from config import Config, load, save, find_lexicon_near_exe
-from nms_pipeline import run_pipeline
+
+# run_pipeline is imported lazily in App._finish_init so the splash screen
+# is visible during the slow lxml/anthropic import chain.
+_run_pipeline = None
 
 
 APP_TITLE = "NMS/DDN Translator"
@@ -247,23 +250,65 @@ class SetupWizard(tk.Toplevel):
 class App(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title(APP_TITLE)
-        self.resizable(True, True)
-        self.minsize(680, 580)
-        self.configure(bg=BG)
+        self.withdraw()  # stay hidden until fully ready
 
         self._cfg: Config | None = None
         self._log_queue: queue.Queue[str] = queue.Queue()
         self._running = False
 
+        splash = self._make_launch_splash()
+        self.after(50, lambda: self._finish_init(splash))
+
+    def _make_launch_splash(self) -> tk.Toplevel:
+        sp = tk.Toplevel(self)
+        sp.overrideredirect(True)
+        sp.configure(bg="white")
+        sp.attributes("-topmost", True)
+        logo = load_logo(200, 47)
+        if logo:
+            lbl = tk.Label(sp, image=logo, bg="white")
+            lbl.image = logo
+            lbl.pack(padx=40, pady=(28, 8))
+        else:
+            tk.Label(
+                sp, text=APP_TITLE, font=("Segoe UI", 13, "bold"),
+                bg="white", fg=ACCENT,
+            ).pack(padx=40, pady=(28, 8))
+        tk.Label(
+            sp, text="Starting…", font=("Segoe UI", 9),
+            bg="white", fg="#666666",
+        ).pack(pady=(0, 24))
+        sp.update_idletasks()
+        w, h = sp.winfo_reqwidth(), sp.winfo_reqheight()
+        sw, sh = sp.winfo_screenwidth(), sp.winfo_screenheight()
+        sp.geometry(f"{w}x{h}+{(sw - w) // 2}+{(sh - h) // 2}")
+        sp.update()
+        return sp
+
+    def _finish_init(self, splash: tk.Toplevel) -> None:
+        global _run_pipeline
+        from nms_pipeline import run_pipeline as _rp
+        _run_pipeline = _rp
+
+        # Close PyInstaller splash if running from a built exe
+        try:
+            import pyi_splash  # type: ignore[import]
+            pyi_splash.close()
+        except ImportError:
+            pass
+
+        splash.destroy()
+
+        self.title(APP_TITLE)
+        self.resizable(True, True)
+        self.minsize(680, 580)
+        self.configure(bg=BG)
+
         self._build_ui()
+        self.deiconify()
 
-        # Show privacy notice before anything else
         self._show_privacy_notice()
-
-        # Load config (may trigger first-run wizard)
         self._load_config()
-
         self.after(100, self._drain_log)
 
     # ── Privacy notice ───────────────────────────────────────────────────
@@ -475,7 +520,7 @@ class App(tk.Tk):
                         f"  File {i + 1} of {total_files}: {Path(src).name}\n"
                         f"{'─' * 50}"
                     )
-                outputs = run_pipeline(
+                outputs = _run_pipeline(
                     src_docx=src,
                     output_dir=out,
                     direction=direction,

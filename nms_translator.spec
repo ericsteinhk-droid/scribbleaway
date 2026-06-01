@@ -48,11 +48,24 @@ a = Analysis(
 
 pyz = PYZ(a.pure)
 
+splash = Splash(
+    'evoq_logo.png',
+    binaries=a.binaries,
+    datas=a.datas,
+    text_pos=(10, 50),
+    text_size=10,
+    text_color='#0055a5',
+    minify_script=True,
+    always_on_top=True,
+)
+
 exe = EXE(
     pyz,
     a.scripts,
     a.binaries,
     a.datas,
+    splash,
+    splash.binaries,
     [],
     name='NMSTranslator',
     debug=False,
