@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import os
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -36,6 +37,31 @@ class Config:
         return errors
 
 
+def _find_lexicon_near_exe() -> Path | None:
+    """
+    Look for a lexicon .txt file next to the running exe or script.
+    Preference order:
+      1. Any .txt file whose name contains "lexicon" (case-insensitive)
+      2. Any single .txt file present (if exactly one exists)
+    Returns None if no unambiguous match is found.
+    """
+    if getattr(sys, "frozen", False):
+        # PyInstaller one-file exe — search beside the exe
+        app_dir = Path(sys.executable).parent
+    else:
+        # Script / run.bat — search beside gui.py / the entry script
+        candidate = Path(sys.argv[0]).parent if sys.argv else Path.cwd()
+        app_dir = candidate if candidate.is_dir() else Path.cwd()
+
+    txt_files = list(app_dir.glob("*.txt"))
+    named = [f for f in txt_files if "lexicon" in f.name.lower()]
+    if named:
+        return named[0]
+    if len(txt_files) == 1:
+        return txt_files[0]
+    return None
+
+
 def load() -> Config | None:
     """Return Config if config.json exists, None if first-run wizard is needed."""
     if not CONFIG_FILE.exists():
@@ -43,10 +69,15 @@ def load() -> Config | None:
     with open(CONFIG_FILE, encoding="utf-8") as f:
         d = json.load(f)
     tmp = Path(os.environ.get("TEMP", os.environ.get("TMP", "/tmp")))
+    lexicon_path = Path(d.get("lexicon_path", ""))
+    if not lexicon_path.exists():
+        discovered = _find_lexicon_near_exe()
+        if discovered:
+            lexicon_path = discovered
     return Config(
         api_key=d.get("api_key", ""),
         model=d.get("model", "claude-sonnet-4-6"),
-        lexicon_path=Path(d.get("lexicon_path", "")),
+        lexicon_path=lexicon_path,
         work_dir=Path(d.get("work_dir", str(tmp / _WORK_SUBDIR))),
     )
 
