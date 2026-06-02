@@ -444,7 +444,68 @@ def translate_document(
     apply_translations(tree, work_dir, segments, tgt_lang)
     _log(f"  Reinsertion complete. Target language tag: {tgt_lang}")
 
+    # Fix numbering labels (PARTIE %1 ↔ PART %1) — these live in numbering.xml
+    # and are invisible to the segment pipeline.
+    n = fix_numbering_labels(work_dir, direction, log)
+    if n:
+        _log(f"  Numbering labels updated: {n} replacement(s).")
+
     return segments
+
+
+# ---------------------------------------------------------------------------
+# Numbering-label translation (PARTIE %1 ↔ PART %1)
+# ---------------------------------------------------------------------------
+# Map of French numbering labels → English equivalents (and vice versa).
+# Keys are regex patterns to match in w:lvlText w:val; values are replacements.
+_NUMBERING_LABEL_MAP: dict[str, str] = {
+    "PARTIE": "PART",
+    "Partie": "Part",
+}
+
+
+def fix_numbering_labels(work_dir: str, direction: str, log: Callable[[str], None] | None = None) -> int:
+    """
+    Translate French/English structural labels in numbering.xml.
+
+    "PARTIE %1" in list definitions generates the visible "PARTIE 1 / PARTIE 2 /
+    PARTIE 3" heading prefixes.  Because this is a numbering template (not body
+    text), the segment-based pipeline never touches it.  This function patches
+    it directly.
+
+    For fr→en: "PARTIE %1" → "PART %1"
+    For en→fr: "PART %1"   → "PARTIE %1"
+    """
+    num_path = os.path.join(work_dir, "word", "numbering.xml")
+    if not os.path.isfile(num_path):
+        return 0
+
+    tree = etree.parse(num_path)
+    root = tree.getroot()
+    updated = 0
+
+    if direction == "fr→en":
+        replacements = list(_NUMBERING_LABEL_MAP.items())          # FR→EN
+    else:
+        replacements = [(v, k) for k, v in _NUMBERING_LABEL_MAP.items()]  # EN→FR
+
+    for lvl_text in root.iter(W + "lvlText"):
+        val = lvl_text.get(W + "val", "")
+        if not val:
+            continue
+        new_val = val
+        for src, tgt in replacements:
+            if src in new_val:
+                new_val = new_val.replace(src, tgt)
+        if new_val != val:
+            lvl_text.set(W + "val", new_val)
+            updated += 1
+            if log:
+                log(f"  numbering.xml: {repr(val)} → {repr(new_val)}")
+
+    if updated:
+        tree.write(num_path, xml_declaration=True, encoding="UTF-8", standalone=True)
+    return updated
 
 
 # ---------------------------------------------------------------------------
