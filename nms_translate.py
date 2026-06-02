@@ -52,8 +52,12 @@ def load_lexicon(path: Path) -> dict[str, str]:
     lexicon: dict[str, str] = {}
     if not path.is_file():
         return lexicon
-    _MULTI_SP = re.compile(r'\s{3,}')
+    _MULTI_SP    = re.compile(r'\s{3,}')
     _SECTION_HDR = re.compile(r'^\d+[\.\d]*\s')  # "2.5  MASONRY" style headers
+    # Arrow lines that should NOT be treated as vocabulary pairs (narrative /
+    # template text).  Excludes: double-quoted values, bracket examples,
+    # template placeholders (xx / __), Note: prefixes.
+    _BAD_ARROW_LEFT = re.compile(r'["\[\]]|(?:^|\s)xx\s|__|\bNote:')
     with open(path, encoding="utf-8") as f:
         for line in f:
             stripped = line.strip()
@@ -75,18 +79,26 @@ def load_lexicon(path: Path) -> dict[str, str]:
                     if en and fr:
                         lexicon[en] = fr
                 continue
-            # Multi-space column format
+            # Arrow notation: handle BEFORE multi-space check so tight spacing
+            # like "EXECUTION  ->  EXÉCUTION" (2 spaces) is caught.
+            if "->" in stripped:
+                parts = stripped.split("->", 1)
+                en = parts[0].strip()
+                fr = parts[1].strip()
+                if (en and fr
+                        and not en.startswith("->")
+                        and not _BAD_ARROW_LEFT.search(en)
+                        and not _SECTION_HDR.match(en)):
+                    lexicon[en] = fr
+                continue  # always consume arrow lines — never fall through
+            # Multi-space column format (3+ spaces between EN and FR columns)
             parts = _MULTI_SP.split(stripped, 1)
             if len(parts) != 2:
                 continue
             en = parts[0].strip()
             fr = parts[1].strip()
-            # Arrow notation: "TERM    ->  TRANSLATION"
-            if fr.startswith("->"):
-                fr = fr[2:].strip()
             if not en or not fr:
                 continue
-            # Skip section-header lines ("2.5  MASONRY", "1.1  THREE-PART …")
             if _SECTION_HDR.match(en):
                 continue
             lexicon[en] = fr
@@ -196,9 +208,49 @@ def apply_lexicon_to_section_refs(
     return result
 
 
-# ---------------------------------------------------------------------------
-# System prompt (built once per batch; cached on the API side)
-# ---------------------------------------------------------------------------
+# Matches "Section NN NN NN – <title>" in body text (section numbers are NOT masked)
+_MASKED_SECTION_REF_RE = re.compile(
+    r'((?:Section|section)\s+\d{2}[\s\-]*\d{2}[\s\-]*\d{2}\s*[–—\-]+\s*)([^\n⟦]+)',
+    re.MULTILINE,
+)
+
+
+def _presubstitute_section_titles(
+    masked_text: str,
+    placeholders: dict[int, str],
+    lexicon: dict[str, str],
+    direction: str,
+) -> str:
+    """
+    Find "Section NN NN NN – <title>" patterns in masked_text and replace the
+    title portion with a new ⟦n⟧ placeholder whose value is the authoritative
+    lexicon translation.
+
+    This runs BEFORE the API call so the model never sees the title text —
+    it only ever passes the ⟦n⟧ marker through unchanged.
+    restore_and_postprocess fills in the correct target term at the end.
+    """
+    if not lexicon:
+        return masked_text
+
+    next_idx = (max(placeholders.keys()) + 1) if placeholders else 0
+    result = masked_text
+
+    def _replacer(m: re.Match) -> str:
+        nonlocal next_idx
+        prefix    = m.group(1)
+        src_title = m.group(2).strip()
+        tgt_title = _lookup_title(src_title, lexicon, direction)
+        if not tgt_title:
+            return m.group(0)   # not in lexicon — leave for the API
+        marker = f"⟦{next_idx}⟧"
+        placeholders[next_idx] = tgt_title
+        next_idx += 1
+        return prefix + marker
+
+    return _MASKED_SECTION_REF_RE.sub(_replacer, result)
+
+
 _SYSTEM_TEMPLATE = """\
 You are a professional translator specializing in Canadian construction \
 specifications (NMS/DDN format). You translate between French and English \
@@ -334,6 +386,29 @@ def translate_document(
                 progress_cb(done, total)
             continue
 
+        # ── Direct lexicon bypass: whole paragraph matches a known NMS term ──
+        # Handles: section titles as standalone heading paragraphs, PART headings
+        # (GÉNÉRALITÉS→GENERAL, etc.), and any other exact-match paragraph.
+        src_trimmed = seg.source_text.strip()
+        direct = _lookup_title(src_trimmed, lexicon, direction)
+        if direct:
+            seg.translated_text = post_process(direct, direction)
+            done += 1
+            if progress_cb:
+                progress_cb(done, total)
+            _log(f"  [{done}/{total}] para {seg.para_index} lexicon-bypass: "
+                 f"{repr(src_trimmed[:40])} → {repr(direct[:40])}")
+            continue
+
+        # ── Pre-substitute section title text before the API call ────────────
+        # Replaces the title portion of "Section NN NN NN – <FR title>" with
+        # a ⟦n⟧ placeholder mapped to the authoritative EN title.  The API
+        # passes ⟦n⟧ through untouched; restore_and_postprocess fills it in.
+        if lexicon and not seg.is_table_cell:
+            seg.masked_text = _presubstitute_section_titles(
+                seg.masked_text, seg.placeholders, lexicon, direction
+            )
+
         # Table cells: suppress before/after context — adjacent cells are from
         # different columns/rows and can cause the model to confuse context with
         # the content being translated (root cause of cell-content contamination).
@@ -354,7 +429,7 @@ def translate_document(
 
         seg.translated_text = restore_and_postprocess(seg, raw, direction)
 
-        # Post-pass: fix inline section ref titles using lexicon + source text
+        # ── Fallback post-pass: catch any section refs that slipped through ──
         if seg.translated_text and _SECTION_REF_RE.search(seg.translated_text):
             seg.translated_text = apply_lexicon_to_section_refs(
                 seg.source_text, seg.translated_text, lexicon, direction
