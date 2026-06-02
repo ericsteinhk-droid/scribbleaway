@@ -305,13 +305,20 @@ def translate_docx_headers(
     """
     Translate the section name in DOCX page headers (header*.xml).
 
-    Handles three layouts found in NMS DOCX headers:
-      Layout A: number and name in the same paragraph
+    Handles the standard NMS header layout (Layout D) and three fallbacks:
+
+      Layout D (primary — standard NMS): multi-row table, same column
+                | Nom du bâtiment | Section 07 13 52       |  ← row 1
+                | Titre projet    | Titre du section devis |  ← row 2: translate right cell
+                | Titre projet    | Page 1 de 1            |
+
+      Layout C: number and title are consecutive paragraphs in the same cell
+                <cell>  07 13 52 / Membranes d'étanchéité… </cell>
+
+      Layout A: number and title in the same paragraph
                 "07 13 52 — Membranes d'étanchéité de toiture"
-      Layout C: number on one line, name on the next line in the same container
-                07 13 52
-                Membranes d'étanchéité de toiture        ← translated
-      Layout B: number in one table cell, name in an adjacent cell (same row)
+
+      Layout B: number and title in adjacent cells of the same row
                 | 07 13 52 | Membranes d'étanchéité de toiture |
 
     Returns the count of paragraphs updated.
@@ -336,86 +343,118 @@ def translate_docx_headers(
         root = tree.getroot()
         file_modified = False
         fname = os.path.basename(hpath)
+        translated_els: set[int] = set()  # id()s of already-translated paragraphs
 
-        all_paras = list(root.iter(W + "p"))
-        skip = set()  # indices already handled
+        def _translate_para(p: etree._Element, layout: str) -> bool:
+            """Translate paragraph p in place. Returns True if changed."""
+            title_text = _para_text(p).strip()
+            if not title_text or _SECTION_NUM_RE.search(title_text):
+                return False
+            sys_prompt = build_system_prompt(direction, "heading", lexicon)
+            response: TranslationResponse = client.translate(sys_prompt, title_text)
+            translated_name = post_process(response.translated.strip(), direction)
+            if translated_name == title_text:
+                return False
+            _rewrite_para(p, translated_name, target_lang)
+            _log(f"  Header ({fname}) {layout}: {repr(title_text)} → {repr(translated_name)}")
+            translated_els.add(id(p))
+            return True
 
-        for i, p in enumerate(all_paras):
-            if i in skip:
+        # ── Layout D (primary): section number and title in same column,
+        #    consecutive rows of a table ──────────────────────────────────
+        for tbl in root.iter(W + "tbl"):
+            rows = tbl.findall(W + "tr")
+            for ri, tr in enumerate(rows[:-1]):
+                cells = tr.findall(W + "tc")
+                for ci, tc in enumerate(cells):
+                    cell_text = "".join(
+                        _para_text(p) for p in tc.findall(W + "p")
+                    ).strip()
+                    if not _SECTION_NUM_RE.search(cell_text):
+                        continue
+                    # Found section number cell — translate same column, next row
+                    next_cells = rows[ri + 1].findall(W + "tc")
+                    if ci >= len(next_cells):
+                        continue
+                    for p in next_cells[ci].findall(W + "p"):
+                        if id(p) in translated_els:
+                            continue
+                        if _translate_para(p, "Layout D"):
+                            file_modified = True
+                            updated += 1
+
+        # ── Layout A: number + title in the same paragraph ───────────────
+        for p in root.iter(W + "p"):
+            if id(p) in translated_els:
                 continue
-
             full_text = _para_text(p)
             num_match = _SECTION_NUM_RE.search(full_text)
             if num_match is None:
                 continue
-
             after_num = full_text[num_match.end():]
             sep_match = _AFTER_NUM_SEP_RE.match(after_num)
             sep = sep_match.group() if sep_match else ""
             section_name = after_num[len(sep):].strip()
+            if not section_name:
+                continue
+            sys_prompt = build_system_prompt(direction, "heading", lexicon)
+            response = client.translate(sys_prompt, section_name)
+            translated_name = post_process(response.translated.strip(), direction)
+            if translated_name != section_name:
+                new_text = full_text[:num_match.end()] + sep + translated_name
+                _rewrite_para(p, new_text, target_lang)
+                _log(f"  Header ({fname}) Layout A: {repr(section_name)} → {repr(translated_name)}")
+                translated_els.add(id(p))
+                file_modified = True
+                updated += 1
 
-            if section_name:
-                # Layout A: number + title in same paragraph
-                sys_prompt = build_system_prompt(direction, "heading", lexicon)
-                response: TranslationResponse = client.translate(sys_prompt, section_name)
-                translated_name = post_process(response.translated.strip(), direction)
-                if translated_name != section_name:
-                    new_text = full_text[:num_match.end()] + sep + translated_name
-                    _rewrite_para(p, new_text, target_lang)
-                    _log(f"  Header ({fname}) Layout A: {repr(section_name)} → {repr(translated_name)}")
+        # ── Layout C: number + title as consecutive paragraphs in same cell ─
+        all_paras = list(root.iter(W + "p"))
+        for i, p in enumerate(all_paras):
+            if id(p) in translated_els:
+                continue
+            full_text = _para_text(p)
+            if not _SECTION_NUM_RE.search(full_text):
+                continue
+            after_num = full_text[_SECTION_NUM_RE.search(full_text).end():]
+            if after_num.strip():
+                continue  # has inline name — Layout A already handled it
+            p_parent = p.getparent()
+            for next_p in all_paras[i + 1:]:
+                if next_p.getparent() is not p_parent:
+                    break
+                if id(next_p) in translated_els:
+                    break
+                if not _para_text(next_p).strip():
+                    continue
+                if _translate_para(next_p, "Layout C"):
                     file_modified = True
                     updated += 1
-            else:
-                # Layout C: title is the next non-empty paragraph in the same container
-                p_parent = p.getparent()
-                for j in range(i + 1, len(all_paras)):
-                    next_p = all_paras[j]
-                    if next_p.getparent() is not p_parent:
-                        break
-                    title_text = _para_text(next_p).strip()
-                    if not title_text:
-                        continue
-                    if _SECTION_NUM_RE.search(title_text):
-                        break  # another number, not a title
-                    sys_prompt = build_system_prompt(direction, "heading", lexicon)
-                    response = client.translate(sys_prompt, title_text)
-                    translated_name = post_process(response.translated.strip(), direction)
-                    if translated_name != title_text:
-                        _rewrite_para(next_p, translated_name, target_lang)
-                        _log(f"  Header ({fname}) Layout C: {repr(title_text)} → {repr(translated_name)}")
-                        file_modified = True
-                        updated += 1
-                    skip.add(j)
-                    break
+                break
 
-        # Layout B: number and title in adjacent cells of the same row
-        # (fallback for headers where number and title are in separate columns)
+        # ── Layout B: number and title in adjacent cells, same row ───────
         for tbl in root.iter(W + "tbl"):
             for tr in tbl.findall(W + "tr"):
                 cells = tr.findall(W + "tc")
                 if len(cells) < 2:
                     continue
-                num_cell_idx = None
+                num_ci = None
                 for ci, tc in enumerate(cells):
-                    cell_text = "".join(_para_text(p) for p in tc.findall(W + "p")).strip()
-                    if _SECTION_NUM_RE.search(cell_text) and len(cell_text) <= 15:
-                        num_cell_idx = ci
+                    cell_text = "".join(
+                        _para_text(p) for p in tc.findall(W + "p")
+                    ).strip()
+                    if _SECTION_NUM_RE.search(cell_text) and len(cell_text) <= 20:
+                        num_ci = ci
                         break
-                if num_cell_idx is None:
+                if num_ci is None:
                     continue
                 for ci, tc in enumerate(cells):
-                    if ci == num_cell_idx:
+                    if ci == num_ci:
                         continue
                     for p in tc.findall(W + "p"):
-                        title_text = _para_text(p).strip()
-                        if not title_text:
+                        if id(p) in translated_els:
                             continue
-                        sys_prompt = build_system_prompt(direction, "heading", lexicon)
-                        response = client.translate(sys_prompt, title_text)
-                        translated_name = post_process(response.translated.strip(), direction)
-                        if translated_name != title_text:
-                            _rewrite_para(p, translated_name, target_lang)
-                            _log(f"  Header ({fname}) Layout B: {repr(title_text)} → {repr(translated_name)}")
+                        if _translate_para(p, "Layout B"):
                             file_modified = True
                             updated += 1
 
