@@ -38,23 +38,58 @@ from nms_segment import Segment, extract_segments, apply_translations, restore_a
 def load_lexicon(path: Path) -> dict[str, str]:
     """
     Parse the bilingual lexicon file.
-    Supported formats (auto-detected):
-      french_term<TAB>english_term
-      french_term|english_term
-    Lines starting with # are comments.
+
+    Supports (auto-detected, in order of priority):
+      EN term<TAB>FR term          (tab-separated legacy)
+      EN term|FR term              (pipe-separated legacy)
+      EN term   <3+ spaces>  FR term  (multi-space column — current standard)
+      EN term    ->    FR term     (arrow notation used for fixed headings)
+
+    Keys are EN terms in original case; values are FR terms.
+    Lines starting with # or = are skipped.  Section-header lines (digit prefix)
+    are skipped.
     """
     lexicon: dict[str, str] = {}
     if not path.is_file():
         return lexicon
+    _MULTI_SP = re.compile(r'\s{3,}')
+    _SECTION_HDR = re.compile(r'^\d+[\.\d]*\s')  # "2.5  MASONRY" style headers
     with open(path, encoding="utf-8") as f:
         for line in f:
-            line = line.strip()
-            if not line or line.startswith("#"):
+            stripped = line.strip()
+            if not stripped or stripped.startswith("#") or stripped.startswith("="):
                 continue
-            sep = "\t" if "\t" in line else "|"
-            parts = line.split(sep, 1)
-            if len(parts) == 2:
-                lexicon[parts[0].strip().lower()] = parts[1].strip()
+            # Tab-separated (legacy)
+            if "\t" in stripped:
+                parts = stripped.split("\t", 1)
+                if len(parts) == 2:
+                    en, fr = parts[0].strip(), parts[1].strip()
+                    if en and fr:
+                        lexicon[en] = fr
+                continue
+            # Pipe-separated (legacy)
+            if "|" in stripped:
+                parts = stripped.split("|", 1)
+                if len(parts) == 2:
+                    en, fr = parts[0].strip(), parts[1].strip()
+                    if en and fr:
+                        lexicon[en] = fr
+                continue
+            # Multi-space column format
+            parts = _MULTI_SP.split(stripped, 1)
+            if len(parts) != 2:
+                continue
+            en = parts[0].strip()
+            fr = parts[1].strip()
+            # Arrow notation: "TERM    ->  TRANSLATION"
+            if fr.startswith("->"):
+                fr = fr[2:].strip()
+            if not en or not fr:
+                continue
+            # Skip section-header lines ("2.5  MASONRY", "1.1  THREE-PART …")
+            if _SECTION_HDR.match(en):
+                continue
+            lexicon[en] = fr
     return lexicon
 
 
@@ -62,12 +97,32 @@ def _build_lexicon_block(lexicon: dict[str, str], direction: str) -> str:
     if not lexicon:
         return "(no lexicon loaded)"
     lines = []
-    for fr, en in sorted(lexicon.items()):
+    for en, fr in sorted(lexicon.items()):
         if direction == "fr→en":
             lines.append(f"  {fr}  →  {en}")
         else:
             lines.append(f"  {en}  →  {fr}")
     return "\n".join(lines)
+
+
+def _lookup_title(title: str, lexicon: dict[str, str], direction: str) -> str | None:
+    """
+    Case-insensitive direct lexicon lookup for section titles.
+    Lexicon keys = EN, values = FR.
+    Returns the target-language title if found, None otherwise.
+    """
+    if not lexicon or not title.strip():
+        return None
+    t = title.strip().lower()
+    if direction == "en→fr":
+        for en_key, fr_val in lexicon.items():
+            if en_key.lower() == t:
+                return fr_val
+    else:  # fr→en
+        for en_key, fr_val in lexicon.items():
+            if fr_val.lower() == t:
+                return en_key
+    return None
 
 
 # ---------------------------------------------------------------------------
@@ -426,13 +481,19 @@ def translate_docx_headers(
             title_text = _right_side_text(p).strip()
             if not title_text or _SECTION_NUM_RE.search(title_text):
                 return False
-            sys_prompt = build_system_prompt(direction, "heading", lexicon)
-            response: TranslationResponse = client.translate(sys_prompt, title_text)
-            translated_name = post_process(response.translated.strip(), direction)
+            direct = _lookup_title(title_text, lexicon, direction)
+            if direct:
+                translated_name = post_process(direct, direction)
+                source = "lexicon"
+            else:
+                sys_prompt = build_system_prompt(direction, "heading", lexicon)
+                response: TranslationResponse = client.translate(sys_prompt, title_text)
+                translated_name = post_process(response.translated.strip(), direction)
+                source = "API"
             if translated_name == title_text:
                 return False
             _rewrite_right_side(p, translated_name, target_lang)
-            _log(f"  Header ({fname}) Layout E: {repr(title_text)} → {repr(translated_name)}")
+            _log(f"  Header ({fname}) Layout E [{source}]: {repr(title_text)} → {repr(translated_name)}")
             translated_ids.add(id(p))
             return True
 
@@ -440,13 +501,19 @@ def translate_docx_headers(
             title_text = _para_text(p).strip()
             if not title_text or _SECTION_NUM_RE.search(title_text):
                 return False
-            sys_prompt = build_system_prompt(direction, "heading", lexicon)
-            response: TranslationResponse = client.translate(sys_prompt, title_text)
-            translated_name = post_process(response.translated.strip(), direction)
+            direct = _lookup_title(title_text, lexicon, direction)
+            if direct:
+                translated_name = post_process(direct, direction)
+                source = "lexicon"
+            else:
+                sys_prompt = build_system_prompt(direction, "heading", lexicon)
+                response: TranslationResponse = client.translate(sys_prompt, title_text)
+                translated_name = post_process(response.translated.strip(), direction)
+                source = "API"
             if translated_name == title_text:
                 return False
             _rewrite_para(p, translated_name, target_lang)
-            _log(f"  Header ({fname}) {layout}: {repr(title_text)} → {repr(translated_name)}")
+            _log(f"  Header ({fname}) {layout} [{source}]: {repr(title_text)} → {repr(translated_name)}")
             translated_ids.add(id(p))
             return True
 
@@ -506,13 +573,19 @@ def translate_docx_headers(
             section_name = after_num[len(sep):].strip()
             if not section_name:
                 continue
-            sys_prompt = build_system_prompt(direction, "heading", lexicon)
-            response = client.translate(sys_prompt, section_name)
-            translated_name = post_process(response.translated.strip(), direction)
+            direct = _lookup_title(section_name, lexicon, direction)
+            if direct:
+                translated_name = post_process(direct, direction)
+                src_a = "lexicon"
+            else:
+                sys_prompt = build_system_prompt(direction, "heading", lexicon)
+                response = client.translate(sys_prompt, section_name)
+                translated_name = post_process(response.translated.strip(), direction)
+                src_a = "API"
             if translated_name != section_name:
                 new_text = full_text[:num_match.end()] + sep + translated_name
                 _rewrite_para(p, new_text, target_lang)
-                _log(f"  Header ({fname}) Layout A: {repr(section_name)} → {repr(translated_name)}")
+                _log(f"  Header ({fname}) Layout A [{src_a}]: {repr(section_name)} → {repr(translated_name)}")
                 translated_ids.add(id(p))
                 file_modified = True
                 updated += 1

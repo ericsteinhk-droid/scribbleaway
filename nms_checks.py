@@ -151,15 +151,15 @@ def check_terminology(
             continue
         src_lower = s.source_text.lower()
         tgt_lower = s.translated_text.lower()
-        for fr_term, en_term in lexicon.items():
+        for en_term, fr_term in lexicon.items():
             if direction == "fr→en":
-                if fr_term in src_lower and en_term.lower() not in tgt_lower:
+                if fr_term.lower() in src_lower and en_term.lower() not in tgt_lower:
                     fails.append(
                         f"TERMINOLOGY para {s.para_index}: "
                         f"'{fr_term}' found in source but '{en_term}' not found in translation."
                     )
             else:
-                if en_term.lower() in src_lower and fr_term not in tgt_lower:
+                if en_term.lower() in src_lower and fr_term.lower() not in tgt_lower:
                     fails.append(
                         f"TERMINOLOGY para {s.para_index}: "
                         f"'{en_term}' found in source but '{fr_term}' not found in translation."

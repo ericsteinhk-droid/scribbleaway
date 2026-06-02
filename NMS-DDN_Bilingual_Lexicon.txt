@@ -337,6 +337,356 @@ PART 2 - TERMINOLOGY GLOSSARY (EN -> FR), grouped by theme
   recycled content                   contenu recyclé / teneur en matières recyclées
   LEED Requirements                  Exigences LEED
 
+
+================================================================================
+NMS / DDN SECTION TITLE LEXICON (EN <> FR)  —  DIVISIONS 00–09
+Canadian National Master Construction Specification (NMS) /
+Devis directeur national de la construction au Canada (DDN)
+Source: Section 00 01 10 — Table of Contents, approved 2024-11-04
+================================================================================
+
+  Each entry pairs the English section title (left) with its official
+  French equivalent (right). Section numbers are omitted; use the NMS
+  Table of Contents for number-to-title lookup. Divisions 10 and higher
+  are not included.
+
+================================================================================
+DIVISION 00 — PROCUREMENT AND CONTRACTING REQUIREMENTS
+================================================================================
+
+  Seals Page                                Page des sceaux et des signatures
+  Table of Contents                         Table des matières
+  List of Drawing Sheets                    Liste des feuilles de dessins
+  Request for Proposal-Design Build (Single Prime Contract)   Demande de proposition-conception-construction (contrat unique)
+  Instructions to Bidders                   Instructions aux soumissionnaires
+  Available Project Information             Renseignements disponibles sur le projet
+
+================================================================================
+DIVISION 01 — GENERAL REQUIREMENTS
+================================================================================
+
+  Summary of Work                           Sommaire des travaux
+  Multiple Contract Summary                 Sommaire des travaux-contrats multiples
+  Work Restrictions                         Restrictions visant les travaux
+  Allowances                                Allocations
+  Alternatives                              Solutions de rechange
+  Payment Procedures                        Paiement
+  Payment Procedures for Testing Laboratory Services   Paiement-services de laboratoires d'essai
+  Project Meetings                          Réunions de projet
+  Construction Progress Schedule-Critical Path Method (CPM)   Ordonnancement des travaux-méthode du chemin critique
+  Construction Progress Schedule-Bar (Gantt) Chart   Ordonnancement des travaux-diagramme à barres (Gantt)
+  Submittal Procedures                      Documents/échantillons à soumettre
+  Sustainable Design Reporting              Rapports sur la conception durable
+  Special Project Procedures for Airport Facilities   Exigences particulières pour installations aéroportuaires
+  Special Project Procedures for Contaminated Sites   Procédures spéciales-sites contaminés
+  Special Project Procedures During COVID-19 Pandemic   Procédures de projet particulières pendant la pandémie de COVID-19
+  LEED Requirements                         Exigences LEED
+  Health and Safety Requirements            Santé et sécurité
+  Health, Safety, and Emergency Response Procedures for Contaminated Sites   Méthodes relatives à la santé, à la sécurité et aux interventions en cas d'urgence sur les sites contaminés
+  DND Fire Safety Requirements              Consignes de sécurité-incendie-MDN
+  Environmental Procedures                  Protection de l'environnement
+  Environmental Procedures-Bridges          Protection de l'environnement-ponts
+  Regulatory Requirements                   Exigences réglementaires
+  Quality Assurance                         Assurance de la qualité
+  Quality Control                           Contrôle de la qualité
+  Sustainable Requirements: Construction    Développement durable-construction
+  Temporary Facilities and Controls for Dredging   Installations et contrôles temporaires en matière de dragage
+  Temporary Utilities                       Services d'utilités temporaires
+  Construction Facilities                   Installations de chantier
+  Traffic Control                           Régulation de la circulation
+  Temporary Barriers and Enclosures         Ouvrages d'accès et de protection temporaires
+  Temporary Controls                        Contrôles temporaires
+  Common Product Requirements               Exigences générales concernant les produits
+  Examination and Preparation               Examen et préparation
+  Execution                                 Exécution des travaux
+  Cleaning                                  Nettoyage
+  Waste Management and Disposal             Gestion et élimination des déchets
+  Closeout Procedures                       Achèvement des travaux
+  Closeout Submittals                       Documents/éléments à remettre à l'achèvement des travaux
+  Demonstration and Training                Démonstration et formation
+  Demonstration and Training for Building Commissioning   Démonstration et formation-mise en service de bâtiment
+  General Commissioning Requirements        Mise en service-exigences générales
+  Commissioning Plan                        Plan de mise en service
+  Commissioning Forms                       Mise en service-formulaires
+  Facility Operation                        Exploitation d'installation
+
+================================================================================
+DIVISION 02 — EXISTING CONDITIONS
+================================================================================
+
+  Period Structure Relocating               Déplacement de structure patrimoniale
+  Shoring and Support of Period Structures   Étaiement et support des structures d'époque
+  Existing Building Condition Assessments   Évaluation de bâtiment existant
+  Roofing Investigations-Thermographic      Inspections thermographiques des couvertures
+  Hazardous Material Assessment             Évaluation des matières dangereuses
+  Thermographic Assessment-Building Envelope   Analyse thermographique-enveloppes de bâtiment
+  Thermographic Assessment-Mechanical Equipment   Analyse thermographique-matériels mécaniques
+  Thermographic Assessment-Electrical Systems   Analyse thermographique-matériels électriques
+  Selective Site Demolition                 Démolition sélective d'ouvrages d'aménagement du terrain
+  Paving Removal                            Enlèvement d'un pavage
+  Structure Demolition                      Démolition de structures
+  Selective Demolition                      Démolition sélective
+  Selective Building Demolition             Démolition sélective d'un bâtiment
+  Selective Interior Demolition             Démolition sélective des composants intérieurs des bâtiments
+  De-Commissioning and Removal of General Purpose (GP) Fume Hoods   Mise hors service et enlèvement de hottes de laboratoire d'usage général
+  Removal and Salvage of Construction Materials   Enlèvement et récupération des matériaux de construction
+  Deconstruction of Structures              Déconstruction de structures
+  Carpeting Recycling                       Recyclage de tapis-moquettes
+  Site Remediation                          Assainissement de site
+  Waste Containment                         Confinement des déchets
+  Underground Storage Tank Removal          Enlèvement de réservoirs de stockage souterrains
+  Hazardous Materials                       Matières dangereuses
+  Asbestos Abatement-Minimum Precautions    Désamiantage-précautions minimales
+  Asbestos Abatement-Intermediate Precautions   Désamiantage-précautions moyennes
+  Asbestos Abatement-Maximum Precautions    Désamiantage-précautions maximales
+  Lead-Based Paint Abatement-Minimum Precautions   Enlèvement de revêtements de peinture à base de plomb-précautions minimales
+  Lead-Based Paint Abatement-Intermediate Precautions   Enlèvement de revêtements de peinture à base de plomb-précautions moyennes
+  Lead-Based Paint Abatement-Maximum Precautions   Enlèvement de revêtements de peinture à base de plomb-précautions maximales
+  Polychlorinate Biphenyl Remediation       Assainissement-PCB (polychlorobiphényles)
+  Precautions for Mould Remediation-Minimum Precautions   Précautions en matière de traitement de la contamination fongique-précautions minimales
+  Precautions for Mould Remediation-Medium Precautions   Précautions en matière de traitement de la contamination fongique-précautions moyennes
+  Precautions for Mould Remediation-Maximum Precautions   Précautions en matière de traitement de la contamination fongique-précautions maximales
+
+================================================================================
+DIVISION 03 — CONCRETE
+================================================================================
+
+  Concrete Restoration                      Restauration du béton
+  Cleaning of Precast Concrete              Nettoyage du béton préfabriqué
+  Concrete Forming and Accessories          Coffrages et accessoires pour béton
+  Insulating Concrete Forming               Coffrages isolants pour béton
+  Concrete Reinforcing                      Armatures pour béton
+  Cast-in-Place Concrete                    Béton coulé en place
+  High-Performance Structural Concrete for Bridge Decks   Béton de structure à haute performance pour tabliers de pont
+  Concrete Finishing                        Finition de surfaces en béton
+  Concrete Topical Treatments               Traitements topiques pour béton
+  Shotcrete                                 Béton projeté
+  Underwater Placed Concrete                Béton mis en place sous l'eau
+  Precast Structural Concrete               Éléments préfabriqués en béton structural
+  Precast Structural Post-Tensioned Concrete   Éléments préfabriqués en béton structural précontraint par post-tension
+  Precast Architectural Concrete            Éléments préfabriqués en béton architectural
+  Precast Concrete Specialties              Ouvrages spéciaux préfabriqués en béton
+  Pressure Grouting Rock                    Injection de coulis dans le roc
+  Injection Grouting                        Injection de coulis
+
+================================================================================
+DIVISION 04 — MASONRY
+================================================================================
+
+  Testing and Sampling Brick Units for Restoration   Échantillonnage et essai de briques destinées à une restauration
+  Period Masonry Cleaning                   Nettoyage de la maçonnerie d'époque
+  Period Masonry Mortaring                  Ouvrages d'époque – mortiers
+  Period Masonry Grouting                   Injection de coulis dans la maçonnerie d'époque
+  Period Masonry Repointing                 Rejointoiement de la maçonnerie d'époque
+  Clay Brick Conservation Treatment         Restauration de la brique d'argile
+  Period Glazed Structural Clay Facing Tile Repair   Réparation de carreaux de parement structuraux patrimoniaux en terre cuite vernissés
+  Period Stone Repairing                    Ouvrages d'époque – réparation de maçonnerie de pierre
+  Period Stone Replacing                    Ouvrages d'époque – remplacement de pierres
+  Period Stone Dismantling                  Démantèlement d'ouvrages d'époque en maçonnerie de pierre
+  Common Work Results for Masonry           Maçonnerie-exigences générales concernant les résultats des travaux
+  Masonry Mortaring and Grouting            Mortier et coulis pour maçonnerie
+  Masonry Anchorage and Reinforcing         Armatures, connecteurs et ancrages pour la maçonnerie
+  Masonry Accessories                       Accessoires de maçonnerie
+  Masonry for Minor Works                   Maçonnerie-travaux de petite envergure
+  Brick Masonry                             Maçonnerie de briques
+  Clay Tile Masonry                         Maçonnerie d'éléments en terre cuite
+  Concrete Unit Masonry                     Maçonnerie d'éléments en béton
+  Glass Unit Masonry                        Maçonnerie de briques de verre
+  Marble Veneer Cladding                    Placages de marbre
+  Granite Veneer Cladding                   Placages de granit
+  Collected Stone Veneer Cladding           Placages de pierres ramassées
+  Quarried Stone Veneer Cladding            Placages de pierres de carrière
+  Dimension Stone Veneer Cladding           Placages de pierres prétaillées
+  Calcium Silicate Manufactured Brick Masonry   Maçonnerie de briques silico-calcaires préfabriquées
+  Prefaced Calcium Silicate Manufactured Brick Masonry   Maçonnerie de briques de parement silico-calcaires
+  Calcium Silicate Manufactured Stone Masonry   Maçonnerie de pierres silico-calcaires préfabriquées
+
+================================================================================
+DIVISION 05 — METALS
+================================================================================
+
+  Structural Steel for Buildings            Acier de construction pour bâtiments
+  Structural Steel for Bridges              Acier de construction pour ponts
+  Structural Aluminum Framing               Charpentes en aluminum de construction
+  Steel Joist Framing                       Ossatures à poutrelles en acier
+  Steel Decking                             Platelages en acier
+  Structural Metal Stud Framing             Ossatures porteuses à poteaux métalliques
+  Metal Fabrications                        Ouvrages métalliques
+  Metal Stairs and Ladders                  Échelles et escaliers métalliques
+  Modular Workplace Guardrail System        Balustrades métalliques sur toits
+
+================================================================================
+DIVISION 06 — WOOD, PLASTICS, AND COMPOSITES
+================================================================================
+
+  Period Wood Storage and Protection        Entreposage et protection du bois d'époque
+  Long-Term Period Wood Treatment           Traitement de longue durée du bois d'époque
+  Eradication of Insects in Period Wood     Élimination des insectes s'attaquant au bois d'époque
+  Antiseptic Treatment of Period Wood       Traitement antiseptique du bois d'époque
+  Conservation Treatment of Period Log Construction   Traitement de conservation des constructions en bois rond
+  Conservation Treatment of Period Heavy Timber   Traitement de conservation du bois massif d'époque
+  Carvel Planking                           Bordés à franc bord
+  Steam Bending and Replacement of Curved Wood Members   Remplacement de pièces de bois cintrées à la vapeur
+  Caulking Period Vessels                   Calfatage de bateaux patrimoniaux
+  Wood Treatment                            Traitement du bois
+  Rough Carpentry for Minor Works           Charpenterie-travaux de petite envergure
+  Miscellaneous Rough Carpentry             Charpenterie diverse
+  Treated Wood Foundations                  Fondations en bois traité
+  Wood Decking                              Platelages en bois
+  Shop-Fabricated Structural Wood           Éléments d'ossature en bois préfabriqués
+  Shop-Fabricated Wood Trusses              Fermes en bois préfabriquées
+  Glued-Laminated Construction              Ouvrages en lamellé-collé
+  Finish Carpentry                          Menuiserie
+  Architectural Woodwork                    Ébénisterie
+  Plastic Laminate Finishing for Interior Architectural Woodwork   Revêtements de finition en stratifié pour ébénisterie d'intérieur
+  Cabinet and Miscellaneous Hardware        Quincaillerie pour armoires et articles divers
+  Fibreglass Reinforced Panelling           Panneaux renforcés de fibre de verre
+
+================================================================================
+DIVISION 07 — THERMAL AND MOISTURE PROTECTION
+================================================================================
+
+  Conservation Treatment for Period Canvas Roofing   Traitement de conservation des couvertures en toile d'époque
+  Conservation Treatment for Period Board Roofing   Traitement de conservation des couvertures en planches
+  Conservation Treatment for Period Slate Shingles   Traitement de conservation des bardeaux en ardoise
+  Conservation Treatment for Period Wood Shingles and Shakes   Traitement de conservation des bardeaux de sciage et des bardeaux de fente d'époque-en bois
+  Conservation Treatment for Period Concrete Roof Tiles   Traitement de conservation des tuiles en béton
+  Conservation Treatment for Period Sod Roofing   Traitement de conservation des couvertures d'époque en plaques de gazon
+  Conservation Treatment for Period Metal Roof Panels   Traitement de conservation des couvertures d'époque en panneaux métalliques
+  Period Copper Sheet Roof Repair           Réparation de couverture d'époque en feuille de cuivre
+  Period Copper Sheet Roof Replacing        Remplacement de couverture d'époque en feuille de cuivre
+  Building Enclosure Performance Testing    Essai d'efficacité de l'enceinte du bâtiment
+  Bituminous Dampproofing                   Hydrofuges bitumineux
+  Built-up Asphalt Waterproofing            Revêtements d'étanchéité à membrane bitumineuse multicouche-asphalte
+  Modified Bituminous Sheet Waterproofing   Revêtements d'étanchéité à membrane de bitume modifié
+  Elastomeric Sheet Waterproofing           Revêtements d'étanchéité en feuilles en élastomère
+  Hot Fluid-Applied Rubberized Asphalt Waterproofing   Revêtements d'étanchéité à membrane protégée de bitume caoutchouté d'application liquide à chaud
+  Metal Oxide Waterproofing                 Revêtements d'imperméabilisation à base d'oxydes métalliques
+  Bentonite Panel Waterproofing             Revêtements d'imperméabilisation en panneaux à la bentonite
+  Traffic Coatings                          Revêtements pour aires de circulation
+  Water Repellents                          Enduits d'imperméabilisation
+  Board Insulation                          Isolant en panneaux
+  Blanket Insulation                        Isolants en matelas
+  Loose-Fill Insulation                     Isolants en vrac
+  Blown Insulation-Cellulose                Isolants projetés-fibres cellulosiques
+  Blown Insulation-Mineral Fibre            Isolant soufflé-fibres minérales
+  Sprayed Insulation                        Isolation projetée
+  Exterior Insulation and Finish Systems    Systèmes d'isolation par l'extérieur et de revêtement des façades, avec enduit sur isolant
+  Exterior Insulation and Finish Systems-Panelized   Systèmes d'isolation par l'extérieur et de revêtement des façades (système EIFS), avec enduit sur isolant-panneaux préfabriqués
+  Direct-Applied Finish Systems             Systèmes de finition à application directe
+  Vapour Retarders                          Pare-vapeur
+  Air Barriers-Descriptive or Proprietary   Systèmes d'étanchéité à l'air-devis descriptif ou établi par prescription de produits de marque déposée
+  Air Barriers-Performance                  Systèmes d'étanchéité à l'air-performance
+  Asphalt Shingles                          Bardeaux d'asphalte
+  Wood Shingles and Shakes                  Bardeaux de sciage et bardeaux de fente en bois
+  Insulated Metal Roof Panels               Panneaux de toiture métalliques isolés
+  Formed Metal Wall Panels                  Panneaux muraux métalliques profilés
+  Composite Wall Panels                     Panneaux composites pour façades
+  Cementitious Wall Panels                  Panneaux muraux cimentaires
+  Aluminum Siding                           Bardage en aluminium
+  Steel Siding                              Bardage en acier
+  Wood Siding                               Revêtements muraux extérieurs en bois
+  Plastic Siding                            Revêtements muraux extérieurs en plastique
+  Built-up Bituminous Roofing               Couvertures à membrane bitumineuse multicouche
+  Modified Bituminous Membrane Roofing      Couvertures à membrane de bitume modifié
+  Ethylene Propylene Diene Monomer Roofing   Couvertures à membrane EPDM
+  Polyvinyl-Chloride Roofing                Couvertures à membrane PVC
+  Fluid-Applied Protected Membrane Roofing   Couverture à membrane protégée d'application liquide
+  Vegetated Protected Membrane Roofing      Couvertures à membrane protégée-toitures végétalisées
+  Hot Fluid-Applied Rubberized Asphalt Roofing   Couvertures à membrane protégée de bitume caoutchouté d'application liquide à chaud
+  Sheet Metal Roofing                       Couvertures en feuilles métalliques
+  Sheet Metal Flashing and Trim             Solins et accessoires en tôle
+  Manufactured Roof Expansion Joints        Joints de dilatation de toiture usinés
+  Roof Hatches                              Trappes de toiture
+  Applied Fire Protection                   Revêtements ignifuges appliqués par projection
+  Intumescent Fire Protection               Protection intumescente contre les incendies
+  Firestopping                              Protection coupe-feu
+  Joint Sealants                            Produits d'étanchéité pour joints
+  Expansion Joint Cover Assemblies          Couvre-joints pour joints de dilatation
+
+================================================================================
+DIVISION 08 — OPENINGS
+================================================================================
+
+  Historic-Period Wood Doors                Ouvrages historiques-portes d'époque en bois
+  Conservation Treatment for Period Stile and Rail Wood Doors   Traitement de conservation des portes d'époque menuisées à montants et traverses
+  Conservation Treatment for Period Steel Windows   Traitement de conservation des fenêtres d'époque en acier
+  Conservation Treatment for Period Wood Windows   Traitement de conservation des fenêtres d'époque en bois
+  Storm Doors and Frames                    Contre-portes et bâtis
+  Hollow Metal Doors and Frames             Portes et bâtis en métal creux
+  Aluminum Doors and Frames                 Portes et bâtis en aluminium
+  Stainless-Steel Doors and Frames          Portes et bâtis en acier inoxydable
+  Sliding Metal Fire Doors                  Portes coupe-feu métalliques coulissantes
+  Wood Doors                                Portes en bois
+  Sliding Wood and Plastic Doors            Portes coulissantes en bois et en matière plastique
+  Access Doors and Panels                   Portes et panneaux de visite
+  Overhead Coiling Doors and Grilles        Rideaux et grilles métalliques à enroulement vertical
+  Coiling Counter Doors                     Volets à enroulement, pour comptoirs
+  Side Coiling Grilles                      Grilles à enroulement latéral
+  Vault Doors and Frames                    Portes et bâtis de chambre forte
+  Accordion Folding Doors                   Portes accordéon
+  Panel Folding Doors                       Portes pliantes à panneaux
+  Sectional Wood Doors                      Portes sectionnelles en bois
+  Sectional Metal Doors                     Portes sectionnelles en métal
+  Sectional Plastic Doors                   Portes sectionnelles en plastique
+  Multi-Leaf Vertical Lift Doors            Portes à guillotine, en métal, multi-lames
+  Multi-Leaf Vertical Lift Wood Doors       Portes à guillotine multi-lames, en bois
+  Multi-Leaf Vertical Lift Metal Doors      Portes basculantes multilames en métal
+  Flexible Traffic Doors                    Portes va-et-vient souples
+  Swinging All Glass Entrances              Portes d'entrée va-et-vient tout verre
+  Automatic Entrances                       Portes d'entrée automatiques
+  Glazed Aluminum Curtain Walls             Murs-rideaux vitrés à ossature d'aluminium
+  Structural Sealant Glazed Curtain Walls   Murs-rideaux vitrés structuraux
+  Windows                                   Fenêtres
+  Unit Skylights                            Lanterneaux et éléments complémentaires
+  Door Hardware                             Quincaillerie pour portes
+  Glazing                                   Vitrages
+  Security Films                            Films de sécurité
+  Louvres and Vents                         Louvres et évents à lames
+
+================================================================================
+DIVISION 09 — FINISHES
+================================================================================
+
+  Exterior Repainting                       Peinture à neuf des surfaces extérieures
+  Interior Repainting                       Peintures-travaux de remise à neuf intérieurs
+  Conservation Treatment for Period Plastering   Traitement de conservation des enduits d'époque
+  Conservation Treatment for Period Exterior Painting   Traitement de conservation de la peinture extérieure d'époque
+  Conservation Treatment for Period Interior Painting   Traitement de conservation de la peinture intérieure d'époque
+  Gypsum Board Assemblies                   Revêtements en plaques de plâtre
+  Gypsum Board Assemblies for Minor Works   Éléments en plaques de plâtre réalisés dans le cadre de travaux de petite envergure
+  Supports for Plaster and Gypsum Board     Supports pour plaques de plâtre et enduits
+  Non-Structural Metal Framing              Ossatures métalliques non porteuses
+  Gypsum Plastering                         Enduits de plâtre
+  Ceramic Tiling                            Carrelages de céramique
+  Quarry and Paver Tiling                   Carrelages et dallages en grès cérame
+  Acoustical Panel Ceilings                 Éléments acoustiques pour plafonds
+  Linear Metal Ceilings                     Plafonds à lames métalliques
+  Integrated Ceiling Assemblies             Plafonds suspendus
+  Stone Flooring                            Dallages en pierre
+  Wood Parquet Flooring                     Parquets mosaïques
+  Wood Strip and Plank Flooring             Parquets en lames/planches de bois
+  Resilient Wood Flooring Assemblies        Parquets sur matériaux résilients
+  Resilient Flooring for Minor Works        Revêtements de sol souples-travaux de petite envergure
+  Resilient Sheet Flooring                  Revêtements de sol souples en feuilles
+  Resilient Tile Flooring                   Revêtements de sol souples en carreaux
+  Portland Cement Terrazzo Flooring         Revêtements de sol en terrazzo de ciment portland
+  Terrazzo Floor Tile                       Carrelage en terrazzo
+  Resinous Matrix Terrazzo Flooring         Revêtements de sol en terrazzo à liant plastique
+  Tile Carpeting                            Tapis-moquettes en dalles
+  Sheet Carpeting                           Tapis-moquettes en lés
+  Access Flooring                           Planchers surélevés
+  Vinyl-Coated Fabric Wall Coverings        Revêtements muraux en tissu enduit de vinyle
+  Acoustic Room Components                  Composantes acoustiques d'intérieur
+  Painting for Minor Works                  Peintures-travaux de petite envergure
+  Exterior Painting                         Peintures-travaux neufs extérieurs
+  Exterior Painting of Structural Steel     Peinturage extérieur des ouvrages en acier de construction
+  Interior Painting                         Peintures-travaux intérieurs
+  Elastomeric Coatings                      Enduits élastomériques
+  High-Build Glazed Coatings                Systèmes de revêtement glacés à pouvoir garnissant élevé
+  Aggregate Wall Coatings                   Enduits de revêtement mural à granulats apparents
+
+================================================================================
 ================================================================================
 PART 3 - STYLISTIC RULES (verb mood, register, recurring patterns)
 ================================================================================
