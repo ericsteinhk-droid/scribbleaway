@@ -105,24 +105,95 @@ def _build_lexicon_block(lexicon: dict[str, str], direction: str) -> str:
     return "\n".join(lines)
 
 
+_DASH_NORM_RE = re.compile(r'\s*[‐‑‒–—―\-]+\s*')
+
+
+def _normalize_title(s: str) -> str:
+    """Normalize for fuzzy section-title comparison.
+
+    Collapses whitespace and dash variants so that
+    'Maçonnerie - exigences…' matches 'Maçonnerie-exigences…'.
+    """
+    s = s.strip().lower()
+    s = _DASH_NORM_RE.sub('-', s)       # any dash + surrounding spaces → single '-'
+    s = re.sub(r'\s+', ' ', s)           # collapse multiple spaces
+    return s
+
+
 def _lookup_title(title: str, lexicon: dict[str, str], direction: str) -> str | None:
     """
-    Case-insensitive direct lexicon lookup for section titles.
+    Fuzzy direct lexicon lookup for section titles.
     Lexicon keys = EN, values = FR.
+    Normalizes dashes and whitespace before comparison.
     Returns the target-language title if found, None otherwise.
     """
     if not lexicon or not title.strip():
         return None
-    t = title.strip().lower()
+    t = _normalize_title(title)
     if direction == "en→fr":
         for en_key, fr_val in lexicon.items():
-            if en_key.lower() == t:
+            if _normalize_title(en_key) == t:
                 return fr_val
     else:  # fr→en
         for en_key, fr_val in lexicon.items():
-            if fr_val.lower() == t:
+            if _normalize_title(fr_val) == t:
                 return en_key
     return None
+
+
+# Matches "Section NN NN NN – <title>" or "section …" with any dash variant, rest of line
+_SECTION_REF_RE = re.compile(
+    r'((?:Section|section)\s+\d{2}[\s\-]*\d{2}[\s\-]*\d{2}\s*[–—\-]+\s*)([^\n]+)',
+    re.MULTILINE,
+)
+# Same but also accepts ⟦n⟧ in place of the section number (source/masked text)
+_SECTION_REF_SRC_RE = re.compile(
+    r'(?:Section|section)\s+(?:\d{2}[\s\-]*\d{2}[\s\-]*\d{2}|⟦\d+⟧)\s*[–—\-]+\s*([^\n]+)',
+    re.MULTILINE,
+)
+
+
+def apply_lexicon_to_section_refs(
+    source_text: str,
+    translated_text: str,
+    lexicon: dict[str, str],
+    direction: str,
+) -> str:
+    """
+    Replace section title portions in *translated_text* with authoritative
+    lexicon titles by extracting source-language titles from *source_text*.
+
+    Uses positional correspondence (n-th section ref in source ↔ n-th in
+    translated).  Leaves the text unchanged when counts differ or no lexicon
+    entry is found.
+    """
+    if not lexicon:
+        return translated_text
+
+    src_titles = [m.group(1).strip() for m in _SECTION_REF_SRC_RE.finditer(source_text)]
+    tgt_matches = list(_SECTION_REF_RE.finditer(translated_text))
+
+    if not src_titles or not tgt_matches or len(src_titles) != len(tgt_matches):
+        return translated_text
+
+    # Build list of (match, replacement_title) in order, then apply in reverse
+    # so string offsets remain valid.
+    edits: list[tuple[re.Match, str]] = []
+    for src_title, tm in zip(src_titles, tgt_matches):
+        lexicon_title = _lookup_title(src_title, lexicon, direction)
+        if lexicon_title:
+            edits.append((tm, lexicon_title))
+
+    if not edits:
+        return translated_text
+
+    result = translated_text
+    for tm, lexicon_title in reversed(edits):
+        start = tm.start(2)   # start of the title portion (group 2)
+        end   = tm.end(2)
+        result = result[:start] + lexicon_title + result[end:]
+
+    return result
 
 
 # ---------------------------------------------------------------------------
@@ -282,6 +353,12 @@ def translate_document(
         seg.flags.extend(model_flags)
 
         seg.translated_text = restore_and_postprocess(seg, raw, direction)
+
+        # Post-pass: fix inline section ref titles using lexicon + source text
+        if seg.translated_text and _SECTION_REF_RE.search(seg.translated_text):
+            seg.translated_text = apply_lexicon_to_section_refs(
+                seg.source_text, seg.translated_text, lexicon, direction
+            )
 
         done += 1
         _log(f"  [{done}/{total}] para {seg.para_index} ({seg.style_id or 'unstyled'})")
