@@ -250,6 +250,84 @@ _HDR_REMOVE = frozenset({
 _HDR_KEEP = frozenset({W + "pPr", W + "bookmarkStart", W + "bookmarkEnd"})
 
 
+def _right_side_text(p: etree._Element) -> str:
+    """
+    Return the text that appears AFTER the first <w:tab> in paragraph p.
+    This handles the tab-stop two-column layout used in NMS EVOQ headers.
+    Returns empty string if no tab found.
+    """
+    collecting = False
+    parts: list[str] = []
+    for r in p.findall(W + "r"):
+        for child in r:
+            if child.tag == W + "tab":
+                collecting = True
+            elif child.tag == W + "t" and collecting:
+                parts.append(child.text or "")
+    return "".join(parts)
+
+
+def _rewrite_right_side(p: etree._Element, new_text: str, target_lang: str) -> None:
+    """
+    Replace all content after the first <w:tab> in paragraph p with new_text,
+    preserving the tab run and left-column content intact.
+    """
+    tab_run: etree._Element | None = None
+    first_rpr_xml: bytes | None = None
+
+    # Collect rPr from first run after the tab run (for formatting)
+    found_tab_run = False
+    for child in p:
+        if child.tag != W + "r":
+            continue
+        if not found_tab_run:
+            if child.find(W + "tab") is not None:
+                tab_run = child
+                found_tab_run = True
+        else:
+            rpr = child.find(W + "rPr")
+            if rpr is not None and first_rpr_xml is None:
+                first_rpr_xml = etree.tostring(rpr)
+            break
+
+    if tab_run is None:
+        return
+
+    # Strip any <w:t> elements that follow <w:tab> inside the tab run itself
+    tab_seen = False
+    for child in list(tab_run):
+        if child.tag == W + "tab":
+            tab_seen = True
+        elif child.tag == W + "t" and tab_seen:
+            tab_run.remove(child)
+
+    # Remove every element after the tab run
+    removing = False
+    for child in list(p):
+        if child is tab_run:
+            removing = True
+            continue
+        if removing:
+            p.remove(child)
+
+    # Append new run with translated text
+    new_r = etree.SubElement(p, W + "r")
+    if first_rpr_xml is not None:
+        rpr_el = etree.fromstring(first_rpr_xml)
+        lang_el = rpr_el.find(W + "lang")
+        if lang_el is not None:
+            lang_el.set(W + "val", target_lang)
+        else:
+            lang_el = etree.SubElement(rpr_el, W + "lang")
+            lang_el.set(W + "val", target_lang)
+        new_r.insert(0, rpr_el)
+
+    t_el = etree.SubElement(new_r, W + "t")
+    t_el.text = new_text
+    if new_text and (new_text[0].isspace() or new_text[-1].isspace()):
+        t_el.set(f"{{{_XML_NS}}}space", "preserve")
+
+
 def _para_text(p: etree._Element) -> str:
     """Return the plain text of a paragraph element."""
     return "".join(
@@ -303,23 +381,22 @@ def translate_docx_headers(
     log: Callable[[str], None] | None = None,
 ) -> int:
     """
-    Translate the section name in DOCX page headers (header*.xml).
+    Translate the section title in DOCX page headers (header*.xml).
 
-    Handles the standard NMS header layout (Layout D) and three fallbacks:
+    Handles the standard EVOQ/NMS header layout (Layout E) and fallbacks:
 
-      Layout D (primary — standard NMS): multi-row table, same column
-                | Nom du bâtiment | Section 07 13 52       |  ← row 1
-                | Titre projet    | Titre du section devis |  ← row 2: translate right cell
-                | Titre projet    | Page 1 de 1            |
+      Layout E (primary — EVOQ standard): tab-stop two-column paragraphs.
+        Each header "row" is ONE paragraph: left text + <w:tab> + right text.
+        Para 0: "Nom du bâtiment"  [tab]  "Section 07 13 52"
+        Para 1: "Titre projet"     [tab]  "Titre du section devis"  ← translate right side only
+        Para 2: "Titre projet"     [tab]  "Page 1 de 2"
+        Detection: right side of paragraph contains a section number
+        → translate right side of the NEXT paragraph.
 
-      Layout C: number and title are consecutive paragraphs in the same cell
-                <cell>  07 13 52 / Membranes d'étanchéité… </cell>
-
+      Layout D: multi-row table, same column
       Layout A: number and title in the same paragraph
-                "07 13 52 — Membranes d'étanchéité de toiture"
-
-      Layout B: number and title in adjacent cells of the same row
-                | 07 13 52 | Membranes d'étanchéité de toiture |
+      Layout C: consecutive paragraphs in the same table cell
+      Layout B: adjacent cells in the same table row
 
     Returns the count of paragraphs updated.
     """
@@ -343,10 +420,23 @@ def translate_docx_headers(
         root = tree.getroot()
         file_modified = False
         fname = os.path.basename(hpath)
-        translated_els: set[int] = set()  # id()s of already-translated paragraphs
+        translated_ids: set[int] = set()  # id()s of already-translated paragraphs
+
+        def _translate_right_side(p: etree._Element) -> bool:
+            title_text = _right_side_text(p).strip()
+            if not title_text or _SECTION_NUM_RE.search(title_text):
+                return False
+            sys_prompt = build_system_prompt(direction, "heading", lexicon)
+            response: TranslationResponse = client.translate(sys_prompt, title_text)
+            translated_name = post_process(response.translated.strip(), direction)
+            if translated_name == title_text:
+                return False
+            _rewrite_right_side(p, translated_name, target_lang)
+            _log(f"  Header ({fname}) Layout E: {repr(title_text)} → {repr(translated_name)}")
+            translated_ids.add(id(p))
+            return True
 
         def _translate_para(p: etree._Element, layout: str) -> bool:
-            """Translate paragraph p in place. Returns True if changed."""
             title_text = _para_text(p).strip()
             if not title_text or _SECTION_NUM_RE.search(title_text):
                 return False
@@ -357,11 +447,28 @@ def translate_docx_headers(
                 return False
             _rewrite_para(p, translated_name, target_lang)
             _log(f"  Header ({fname}) {layout}: {repr(title_text)} → {repr(translated_name)}")
-            translated_els.add(id(p))
+            translated_ids.add(id(p))
             return True
 
-        # ── Layout D (primary): section number and title in same column,
-        #    consecutive rows of a table ──────────────────────────────────
+        all_paras = list(root.iter(W + "p"))
+
+        # ── Layout E (primary): tab-stop two-column paragraphs ───────────
+        # Right side of paragraph N contains section number
+        # → translate right side of paragraph N+1
+        for i, p in enumerate(all_paras[:-1]):
+            if id(p) in translated_ids:
+                continue
+            right = _right_side_text(p).strip()
+            if not right or not _SECTION_NUM_RE.search(right):
+                continue
+            next_p = all_paras[i + 1]
+            if id(next_p) in translated_ids:
+                continue
+            if _translate_right_side(next_p):
+                file_modified = True
+                updated += 1
+
+        # ── Layout D: multi-row table, section number and title in same column ─
         for tbl in root.iter(W + "tbl"):
             rows = tbl.findall(W + "tr")
             for ri, tr in enumerate(rows[:-1]):
@@ -372,20 +479,22 @@ def translate_docx_headers(
                     ).strip()
                     if not _SECTION_NUM_RE.search(cell_text):
                         continue
-                    # Found section number cell — translate same column, next row
                     next_cells = rows[ri + 1].findall(W + "tc")
                     if ci >= len(next_cells):
                         continue
                     for p in next_cells[ci].findall(W + "p"):
-                        if id(p) in translated_els:
+                        if id(p) in translated_ids:
                             continue
                         if _translate_para(p, "Layout D"):
                             file_modified = True
                             updated += 1
 
         # ── Layout A: number + title in the same paragraph ───────────────
-        for p in root.iter(W + "p"):
-            if id(p) in translated_els:
+        for p in all_paras:
+            if id(p) in translated_ids:
+                continue
+            # Skip tab-layout paragraphs — Layout E handles those
+            if any(r.find(W + "tab") is not None for r in p.findall(W + "r")):
                 continue
             full_text = _para_text(p)
             num_match = _SECTION_NUM_RE.search(full_text)
@@ -404,26 +513,23 @@ def translate_docx_headers(
                 new_text = full_text[:num_match.end()] + sep + translated_name
                 _rewrite_para(p, new_text, target_lang)
                 _log(f"  Header ({fname}) Layout A: {repr(section_name)} → {repr(translated_name)}")
-                translated_els.add(id(p))
+                translated_ids.add(id(p))
                 file_modified = True
                 updated += 1
 
-        # ── Layout C: number + title as consecutive paragraphs in same cell ─
-        all_paras = list(root.iter(W + "p"))
+        # ── Layout C: number + title as consecutive paragraphs, same cell ─
         for i, p in enumerate(all_paras):
-            if id(p) in translated_els:
+            if id(p) in translated_ids:
                 continue
-            full_text = _para_text(p)
-            if not _SECTION_NUM_RE.search(full_text):
+            if any(r.find(W + "tab") is not None for r in p.findall(W + "r")):
+                continue  # tab-layout — handled by Layout E
+            if not _SECTION_NUM_RE.search(_para_text(p)):
                 continue
-            after_num = full_text[_SECTION_NUM_RE.search(full_text).end():]
-            if after_num.strip():
-                continue  # has inline name — Layout A already handled it
             p_parent = p.getparent()
             for next_p in all_paras[i + 1:]:
                 if next_p.getparent() is not p_parent:
                     break
-                if id(next_p) in translated_els:
+                if id(next_p) in translated_ids:
                     break
                 if not _para_text(next_p).strip():
                     continue
@@ -432,7 +538,7 @@ def translate_docx_headers(
                     updated += 1
                 break
 
-        # ── Layout B: number and title in adjacent cells, same row ───────
+        # ── Layout B: adjacent cells same row ────────────────────────────
         for tbl in root.iter(W + "tbl"):
             for tr in tbl.findall(W + "tr"):
                 cells = tr.findall(W + "tc")
@@ -452,7 +558,7 @@ def translate_docx_headers(
                     if ci == num_ci:
                         continue
                     for p in tc.findall(W + "p"):
-                        if id(p) in translated_els:
+                        if id(p) in translated_ids:
                             continue
                         if _translate_para(p, "Layout B"):
                             file_modified = True
