@@ -55,12 +55,13 @@ export async function exportDocx(
   const allPhotos = entries.flatMap((e) => e.photos);
   const photoMap = new Map<string, ArrayBuffer>();
 
-  for (let i = 0; i < allPhotos.length; i++) {
-    onProgress?.(i, allPhotos.length);
-    const buf = await fetchImageBuffer(allPhotos[i].storagePath);
-    if (buf) photoMap.set(allPhotos[i].id, buf);
-  }
-  onProgress?.(allPhotos.length, allPhotos.length);
+  onProgress?.(0, allPhotos.length);
+  let completed = 0;
+  await Promise.all(allPhotos.map(async (photo) => {
+    const buf = await fetchImageBuffer(photo.storagePath);
+    if (buf) photoMap.set(photo.id, buf);
+    onProgress?.(++completed, allPhotos.length);
+  }));
 
   const typeOrder: Entry['type'][] = ['observation', 'avancement', 'discussion', 'directive'];
   const grouped = typeOrder

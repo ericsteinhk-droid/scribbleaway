@@ -66,15 +66,17 @@ export async function exportPdf(
 ): Promise<Blob> {
   const doc = new jsPDF({ unit: 'mm', format: 'letter', orientation: 'portrait' });
 
-  // Pre-fetch all photos
+  // Pre-fetch all photos in parallel
   const allPhotos = entries.flatMap((e) => e.photos);
   const photoMap = new Map<string, string>();
-  for (let i = 0; i < allPhotos.length; i++) {
-    onProgress?.(i, allPhotos.length);
-    const dataUrl = await fetchImageAsDataUrl(allPhotos[i]);
-    if (dataUrl) photoMap.set(allPhotos[i].id, dataUrl);
-  }
-  onProgress?.(allPhotos.length, allPhotos.length);
+
+  onProgress?.(0, allPhotos.length);
+  let completed = 0;
+  await Promise.all(allPhotos.map(async (photo) => {
+    const dataUrl = await fetchImageAsDataUrl(photo);
+    if (dataUrl) photoMap.set(photo.id, dataUrl);
+    onProgress?.(++completed, allPhotos.length);
+  }));
 
   const logoDataUrl = await fetchLogoDataUrl();
   const totalPages = () => (doc as unknown as { internal: { getNumberOfPages: () => number } }).internal.getNumberOfPages();
