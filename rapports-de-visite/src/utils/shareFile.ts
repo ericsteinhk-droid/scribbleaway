@@ -11,24 +11,34 @@ function blobToBase64(blob: Blob): Promise<string> {
   });
 }
 
-async function writeNativeFile(filename: string, data: string): Promise<{ uri: string; directory: Directory }> {
-  // Prefer app-specific external storage — content URIs from this path work better
-  // with email clients (ClipData permission propagation). Fall back to internal cache
-  // if external storage is not mounted.
-  try {
-    const result = await Filesystem.writeFile({ path: filename, data, directory: Directory.External });
-    return { uri: result.uri, directory: Directory.External };
-  } catch {
-    const result = await Filesystem.writeFile({ path: filename, data, directory: Directory.Cache });
-    return { uri: result.uri, directory: Directory.Cache };
-  }
-}
-
 export async function shareOrDownload(blob: Blob, filename: string, mimeType: string): Promise<void> {
   if (Capacitor.isNativePlatform()) {
     const base64 = await blobToBase64(blob);
-    const { uri, directory } = await writeNativeFile(filename, base64);
-    await Share.share({ files: [uri], title: filename, dialogTitle: 'Partager le fichier' });
+
+    // Try External first, fall back to Cache
+    let uri: string;
+    let directory: Directory;
+    try {
+      const r = await Filesystem.writeFile({ path: filename, data: base64, directory: Directory.External });
+      uri = r.uri;
+      directory = Directory.External;
+    } catch (extErr) {
+      let r;
+      try {
+        r = await Filesystem.writeFile({ path: filename, data: base64, directory: Directory.Cache });
+      } catch (cacheErr) {
+        throw new Error('writeFile ext=' + (extErr instanceof Error ? extErr.message : String(extErr))
+          + ' cache=' + (cacheErr instanceof Error ? cacheErr.message : String(cacheErr)));
+      }
+      uri = r.uri;
+      directory = Directory.Cache;
+    }
+
+    try {
+      await Share.share({ files: [uri], title: filename, dialogTitle: 'Partager le fichier' });
+    } catch (shareErr) {
+      throw new Error('Share uri=' + uri + ' err=' + (shareErr instanceof Error ? shareErr.message : String(shareErr)));
+    }
     Filesystem.deleteFile({ path: filename, directory }).catch(() => {});
     return;
   }

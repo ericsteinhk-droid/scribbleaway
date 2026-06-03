@@ -115,15 +115,22 @@ export default function ReportDetail({
   async function handleDocxExport() {
     setDocxProgress('…');
     const firmName = user?.displayName?.split(' — ')[1] ?? 'EVOQ Architecture';
+    let blob: Blob | undefined;
     try {
-      const blob = await exportDocx(report, entries, projectName, projectAddress, firmName, (c, t) => {
+      blob = await exportDocx(report, entries, projectName, projectAddress, firmName, (c, t) => {
         setDocxProgress(`${c}/${t}`);
       });
+    } catch (err) {
+      onError('[v49] DOCX gen: ' + (err instanceof Error ? err.message : String(err)));
+      setDocxProgress(null);
+      return;
+    }
+    try {
       const name = `Rapport-${report.number}-${slugify(projectName)}.docx`;
       await shareOrDownload(blob, name, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
       onSuccess('Document Word exporté.');
     } catch (err) {
-      onError('Export Word: ' + (err instanceof Error ? err.message : String(err)));
+      onError('[v49] DOCX share: ' + (err instanceof Error ? err.message : String(err)));
     } finally {
       setDocxProgress(null);
     }
