@@ -146,11 +146,11 @@ jobs:
           cat > app/src/main/res/xml/file_paths.xml << 'XML'
           <?xml version="1.0" encoding="utf-8"?>
           <paths xmlns:android="http://schemas.android.com/apk/res/android">
-              <external-path name="images" path="." />
-              <external-files-path name="images" path="." />
-              <cache-path name="images" path="." />
-              <external-cache-path name="images" path="." />
-              <files-path name="images" path="." />
+              <external-path name="external" path="." />
+              <external-files-path name="external_files" path="." />
+              <cache-path name="cache" path="." />
+              <external-cache-path name="external_cache" path="." />
+              <files-path name="files" path="." />
           </paths>
           XML
 

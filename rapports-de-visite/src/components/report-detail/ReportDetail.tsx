@@ -121,7 +121,7 @@ export default function ReportDetail({
         setDocxProgress(`${c}/${t}`);
       });
     } catch (err) {
-      onError('[v49] DOCX gen: ' + (err instanceof Error ? err.message : String(err)));
+      onError('Erreur lors de l\'export Word.');
       setDocxProgress(null);
       return;
     }
@@ -130,7 +130,7 @@ export default function ReportDetail({
       await shareOrDownload(blob, name, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
       onSuccess('Document Word exporté.');
     } catch (err) {
-      onError('[v49] DOCX share: ' + (err instanceof Error ? err.message : String(err)));
+      onError('Erreur lors du partage Word.');
     } finally {
       setDocxProgress(null);
     }
