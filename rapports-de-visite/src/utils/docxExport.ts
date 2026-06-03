@@ -5,6 +5,7 @@ import {
 } from 'docx';
 import { getBytes, ref } from 'firebase/storage';
 import { storage } from '../firebase';
+import { resizeImageBlob } from './imageCompression';
 import type { Report, Entry } from '../types';
 import { ENTRY_TYPE_LABELS } from '../types';
 
@@ -27,11 +28,12 @@ const TYPE_COLORS: Record<string, string> = {
 async function fetchImageBuffer(storagePath: string, timeout = 15000): Promise<ArrayBuffer | null> {
   try {
     const storageRef = ref(storage, storagePath);
-    const bytes = await Promise.race([
+    const raw = await Promise.race([
       getBytes(storageRef),
       new Promise<never>((_, rej) => setTimeout(() => rej(new Error('timeout')), timeout)),
     ]) as ArrayBuffer;
-    return bytes;
+    const blob = await resizeImageBlob(new Blob([raw], { type: 'image/jpeg' }), 800, 0.72);
+    return blob.arrayBuffer();
   } catch {
     return null;
   }

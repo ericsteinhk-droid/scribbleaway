@@ -2,6 +2,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { getBlob, ref } from 'firebase/storage';
 import { storage } from '../firebase';
+import { resizeImageBlob } from './imageCompression';
 import type { Report, Entry } from '../types';
 import { ENTRY_TYPE_LABELS } from '../types';
 
@@ -21,7 +22,8 @@ const TYPE_COLORS: Record<string, [number, number, number]> = {
 async function fetchImageAsDataUrl(photo: { storagePath: string }): Promise<string | null> {
   try {
     const storageRef = ref(storage, photo.storagePath);
-    const blob = await getBlob(storageRef);
+    const raw = await getBlob(storageRef);
+    const blob = await resizeImageBlob(raw, 800, 0.72);
     return new Promise((res) => {
       const reader = new FileReader();
       reader.onload = () => res(reader.result as string);
