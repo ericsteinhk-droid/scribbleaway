@@ -1,5 +1,5 @@
 import JSZip from 'jszip';
-import { getDownloadURL, ref } from 'firebase/storage';
+import { getBytes, ref } from 'firebase/storage';
 import { storage } from '../firebase';
 import type { Entry } from '../types';
 import { ENTRY_TYPE_LABELS } from '../types';
@@ -24,25 +24,19 @@ export async function exportZip(
 
   const zip = new JSZip();
 
-  for (let i = 0; i < allPhotos.length; i++) {
-    onProgress?.(i, allPhotos.length);
-    const { photo, entryIndex, photoIndex, type } = allPhotos[i];
-    const folder = slugify(ENTRY_TYPE_LABELS[type]);
-    const filename = `${String(entryIndex + 1).padStart(2, '0')}_${String(photoIndex + 1).padStart(2, '0')}.jpg`;
-
+  onProgress?.(0, allPhotos.length);
+  let completed = 0;
+  await Promise.all(allPhotos.map(async ({ photo, entryIndex, photoIndex, type }) => {
     try {
-      const storageRef = ref(storage, photo.storagePath);
-      const url = await getDownloadURL(storageRef);
-      const resp = await fetch(url);
-      if (!resp.ok) continue;
-      const blob = await resp.blob();
-      zip.folder(folder)!.file(filename, blob);
+      const bytes = await getBytes(ref(storage, photo.storagePath));
+      const folder = slugify(ENTRY_TYPE_LABELS[type]);
+      const filename = `${String(entryIndex + 1).padStart(2, '0')}_${String(photoIndex + 1).padStart(2, '0')}.jpg`;
+      zip.folder(folder)!.file(filename, bytes);
     } catch {
-      // Skip failed photos
+      // skip failed photos
     }
-  }
-
-  onProgress?.(allPhotos.length, allPhotos.length);
+    onProgress?.(++completed, allPhotos.length);
+  }));
 
   return zip.generateAsync({ type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 6 } });
 }

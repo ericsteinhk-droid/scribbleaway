@@ -2,7 +2,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { getBlob, ref } from 'firebase/storage';
 import { storage } from '../firebase';
-import { resizeImageBlob } from './imageCompression';
+import { resizeImageForDocument, type ResizedPhoto } from './imageCompression';
 import type { Report, Entry } from '../types';
 import { ENTRY_TYPE_LABELS } from '../types';
 
@@ -19,17 +19,10 @@ const TYPE_COLORS: Record<string, [number, number, number]> = {
   directive:    [239, 68,  68],
 };
 
-async function fetchImageAsDataUrl(photo: { storagePath: string }): Promise<string | null> {
+async function fetchPhoto(storagePath: string): Promise<ResizedPhoto | null> {
   try {
-    const storageRef = ref(storage, photo.storagePath);
-    const raw = await getBlob(storageRef);
-    const blob = await resizeImageBlob(raw, 800, 0.72);
-    return new Promise((res) => {
-      const reader = new FileReader();
-      reader.onload = () => res(reader.result as string);
-      reader.onerror = () => res(null);
-      reader.readAsDataURL(blob);
-    });
+    const blob = await getBlob(ref(storage, storagePath));
+    return resizeImageForDocument(blob);
   } catch {
     return null;
   }
@@ -66,65 +59,54 @@ export async function exportPdf(
 ): Promise<Blob> {
   const doc = new jsPDF({ unit: 'mm', format: 'letter', orientation: 'portrait' });
 
-  // Pre-fetch all photos in parallel
+  // Fetch all photos in parallel, resized and aspect-ratio preserved
   const allPhotos = entries.flatMap((e) => e.photos);
-  const photoMap = new Map<string, string>();
+  const photoMap = new Map<string, ResizedPhoto>();
 
   onProgress?.(0, allPhotos.length);
   let completed = 0;
   await Promise.all(allPhotos.map(async (photo) => {
-    const dataUrl = await fetchImageAsDataUrl(photo);
-    if (dataUrl) photoMap.set(photo.id, dataUrl);
+    const data = await fetchPhoto(photo.storagePath);
+    if (data) photoMap.set(photo.id, data);
     onProgress?.(++completed, allPhotos.length);
   }));
 
   const logoDataUrl = await fetchLogoDataUrl();
   const totalPages = () => (doc as unknown as { internal: { getNumberOfPages: () => number } }).internal.getNumberOfPages();
 
-  // Group entries by type
   const typeOrder: Entry['type'][] = ['observation', 'avancement', 'discussion', 'directive'];
   const grouped = typeOrder
     .map((t) => ({ type: t, entries: entries.filter((e) => e.type === t) }))
     .filter((g) => g.entries.length > 0);
 
   function addHeader(pageNum: number) {
-    // Logo
     if (logoDataUrl) {
       doc.addImage(logoDataUrl, 'PNG', MARGIN, 12, 30, 10);
     }
-
-    // Report title
     doc.setFontSize(13);
     doc.setFont('helvetica', 'bold');
     const [tr, tg, tb] = hexToRgb(TEAL);
     doc.setTextColor(tr, tg, tb);
     doc.text(`Rapport de visite #${report.number}`, PAGE_W - MARGIN, 14, { align: 'right' });
 
-    // Project name
     doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(60, 60, 60);
     doc.text(projectName, PAGE_W - MARGIN, 20, { align: 'right' });
-    if (projectAddress) {
-      doc.text(projectAddress, PAGE_W - MARGIN, 25, { align: 'right' });
-    }
+    if (projectAddress) doc.text(projectAddress, PAGE_W - MARGIN, 25, { align: 'right' });
 
-    // Divider
     doc.setDrawColor(tr, tg, tb);
     doc.setLineWidth(0.5);
     doc.line(MARGIN, 32, PAGE_W - MARGIN, 32);
 
     if (pageNum === 1) {
-      // Metadata row
       const [y, m, d] = report.date.split('-').map(Number);
       const dateStr = new Date(y, m - 1, d).toLocaleDateString('fr-CA', { year: 'numeric', month: 'long', day: 'numeric' });
       const meta = [
-        ['Date', dateStr],
-        ...(report.time ? [['Heure', report.time]] : []),
+        ['Date', dateStr + (report.time ? ` ${report.time}` : '')],
         ...(report.weather ? [['Météo', report.weather]] : []),
         ['Architecte', report.authorName],
       ];
-
       let mx = MARGIN;
       const mw = CONTENT_W / meta.length;
       doc.setFontSize(8);
@@ -153,9 +135,7 @@ export async function exportPdf(
     }
   }
 
-  // Page 1 header
   addHeader(1);
-
   let curY = 50;
 
   // Attendees
@@ -181,12 +161,7 @@ export async function exportPdf(
     const [cr, cg, cb] = TYPE_COLORS[group.type];
     const label = ENTRY_TYPE_LABELS[group.type];
 
-    // Section header
-    if (curY > PAGE_H - 40) {
-      doc.addPage();
-      addHeader(doc.getNumberOfPages());
-      curY = 42;
-    }
+    if (curY > PAGE_H - 40) { doc.addPage(); addHeader(doc.getNumberOfPages()); curY = 42; }
 
     doc.setFillColor(cr, cg, cb);
     doc.rect(MARGIN, curY - 4, CONTENT_W, 8, 'F');
@@ -198,77 +173,64 @@ export async function exportPdf(
 
     for (let ei = 0; ei < group.entries.length; ei++) {
       const entry = group.entries[ei];
-      if (curY > PAGE_H - 30) {
-        doc.addPage();
-        addHeader(doc.getNumberOfPages());
-        curY = 42;
-      }
 
-      // Entry number + content
+      if (curY > PAGE_H - 30) { doc.addPage(); addHeader(doc.getNumberOfPages()); curY = 42; }
+
+      // Entry text
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(8.5);
       doc.setTextColor(cr, cg, cb);
       doc.text(`${ei + 1}.`, MARGIN, curY);
-
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(30, 30, 30);
       const lines = doc.splitTextToSize(entry.content, CONTENT_W - 8) as string[];
       doc.text(lines, MARGIN + 6, curY);
-      curY += lines.length * 4.5 + 4;
+      curY += lines.length * 4.5 + 3;
 
-      // Photos
+      // Photos: 2 per row, preserving actual aspect ratio
       if (entry.photos.length > 0) {
         const photoW = (CONTENT_W - 6) / 2;
-        const photoH = photoW * 0.66;
 
         for (let pi = 0; pi < entry.photos.length; pi += 2) {
-          if (curY + photoH + 12 > PAGE_H - 15) {
-            doc.addPage();
-            addHeader(doc.getNumberOfPages());
-            curY = 42;
+          const lp = entry.photos[pi];
+          const rp = entry.photos[pi + 1];
+          const ld = photoMap.get(lp.id);
+          const rd = rp ? photoMap.get(rp.id) : undefined;
+
+          // Compute row height from whichever image is taller
+          const lH = ld ? photoW * (ld.height / ld.width) : 0;
+          const rH = rd ? photoW * (rd.height / rd.width) : 0;
+          const rowH = Math.max(lH, rH, photoW * 0.56);
+
+          if (curY + rowH + 10 > PAGE_H - 15) { doc.addPage(); addHeader(doc.getNumberOfPages()); curY = 42; }
+
+          if (ld) {
+            const h = photoW * (ld.height / ld.width);
+            doc.addImage(ld.dataUrl, 'JPEG', MARGIN, curY, photoW, h);
+            if (lp.caption) {
+              doc.setFontSize(7); doc.setFont('helvetica', 'italic'); doc.setTextColor(100, 100, 100);
+              doc.text(lp.caption, MARGIN, curY + h + 3);
+            }
           }
-
-          const leftPhoto = entry.photos[pi];
-          const rightPhoto = entry.photos[pi + 1];
-
-          const leftData = photoMap.get(leftPhoto.id);
-          if (leftData) {
-            doc.addImage(leftData, 'JPEG', MARGIN, curY, photoW, photoH);
-            if (leftPhoto.caption) {
-              doc.setFontSize(7);
-              doc.setFont('helvetica', 'italic');
-              doc.setTextColor(100, 100, 100);
-              doc.text(leftPhoto.caption, MARGIN, curY + photoH + 3);
+          if (rd) {
+            const h = photoW * (rd.height / rd.width);
+            doc.addImage(rd.dataUrl, 'JPEG', MARGIN + photoW + 6, curY, photoW, h);
+            if (rp?.caption) {
+              doc.setFontSize(7); doc.setFont('helvetica', 'italic'); doc.setTextColor(100, 100, 100);
+              doc.text(rp.caption, MARGIN + photoW + 6, curY + h + 3);
             }
           }
 
-          if (rightPhoto) {
-            const rightData = photoMap.get(rightPhoto.id);
-            if (rightData) {
-              doc.addImage(rightData, 'JPEG', MARGIN + photoW + 6, curY, photoW, photoH);
-              if (rightPhoto.caption) {
-                doc.setFontSize(7);
-                doc.setFont('helvetica', 'italic');
-                doc.setTextColor(100, 100, 100);
-                doc.text(rightPhoto.caption, MARGIN + photoW + 6, curY + photoH + 3);
-              }
-            }
-          }
-
-          curY += photoH + (leftPhoto.caption || rightPhoto?.caption ? 8 : 4);
+          curY += rowH + (lp.caption || rp?.caption ? 8 : 4);
         }
-        curY += 4;
+        curY += 2;
       }
     }
     curY += 4;
   }
 
-  // Signature block
-  if (curY > PAGE_H - 40) {
-    doc.addPage();
-    addHeader(doc.getNumberOfPages());
-    curY = 42;
-  }
+  // Signature
+  if (curY > PAGE_H - 40) { doc.addPage(); addHeader(doc.getNumberOfPages()); curY = 42; }
   curY += 8;
   doc.setDrawColor(150, 150, 150);
   doc.setLineWidth(0.3);
@@ -284,6 +246,5 @@ export async function exportPdf(
   doc.text('Architecte', PAGE_W - MARGIN, curY, { align: 'right' });
 
   addFooter();
-
   return doc.output('blob');
 }

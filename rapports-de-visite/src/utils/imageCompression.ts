@@ -39,7 +39,17 @@ export async function compressImage(file: File): Promise<Blob> {
   });
 }
 
-export function resizeImageBlob(blob: Blob, maxWidth: number, quality: number): Promise<Blob> {
+export interface ResizedPhoto {
+  dataUrl: string;
+  width: number;
+  height: number;
+}
+
+export function resizeImageForDocument(
+  blob: Blob,
+  maxWidth = 400,
+  quality = 0.70
+): Promise<ResizedPhoto | null> {
   return new Promise((resolve) => {
     const img = new Image();
     const url = URL.createObjectURL(blob);
@@ -54,9 +64,15 @@ export function resizeImageBlob(blob: Blob, maxWidth: number, quality: number): 
       canvas.height = height;
       canvas.getContext('2d')!.drawImage(img, 0, 0, width, height);
       URL.revokeObjectURL(url);
-      canvas.toBlob((b) => resolve(b ?? blob), 'image/jpeg', quality);
+      canvas.toBlob((b) => {
+        if (!b) { resolve(null); return; }
+        const reader = new FileReader();
+        reader.onload = () => resolve({ dataUrl: reader.result as string, width, height });
+        reader.onerror = () => resolve(null);
+        reader.readAsDataURL(b);
+      }, 'image/jpeg', quality);
     };
-    img.onerror = () => { URL.revokeObjectURL(url); resolve(blob); };
+    img.onerror = () => { URL.revokeObjectURL(url); resolve(null); };
     img.src = url;
   });
 }
