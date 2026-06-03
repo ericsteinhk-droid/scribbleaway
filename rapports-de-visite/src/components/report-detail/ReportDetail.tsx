@@ -105,8 +105,8 @@ export default function ReportDetail({
       const name = `Rapport-${report.number}-${slugify(projectName)}.pdf`;
       await shareOrDownload(blob, name, 'application/pdf');
       onSuccess('PDF exporté.');
-    } catch {
-      onError('Erreur lors de l\'export PDF.');
+    } catch (err) {
+      onError('Export PDF: ' + (err instanceof Error ? err.message : String(err)));
     } finally {
       setPdfProgress(null);
     }
@@ -122,8 +122,8 @@ export default function ReportDetail({
       const name = `Rapport-${report.number}-${slugify(projectName)}.docx`;
       await shareOrDownload(blob, name, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
       onSuccess('Document Word exporté.');
-    } catch {
-      onError('Erreur lors de l\'export Word.');
+    } catch (err) {
+      onError('Export Word: ' + (err instanceof Error ? err.message : String(err)));
     } finally {
       setDocxProgress(null);
     }

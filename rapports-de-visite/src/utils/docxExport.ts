@@ -194,6 +194,7 @@ export async function exportDocx(
               children: [
                 new ImageRun({
                   data: buf,
+                  type: 'jpg',
                   transformation: { width: 500, height: 333 },
                 }),
               ],
