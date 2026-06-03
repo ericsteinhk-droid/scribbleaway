@@ -11,16 +11,25 @@ function blobToBase64(blob: Blob): Promise<string> {
   });
 }
 
+async function writeNativeFile(filename: string, data: string): Promise<{ uri: string; directory: Directory }> {
+  // Prefer app-specific external storage — content URIs from this path work better
+  // with email clients (ClipData permission propagation). Fall back to internal cache
+  // if external storage is not mounted.
+  try {
+    const result = await Filesystem.writeFile({ path: filename, data, directory: Directory.External });
+    return { uri: result.uri, directory: Directory.External };
+  } catch {
+    const result = await Filesystem.writeFile({ path: filename, data, directory: Directory.Cache });
+    return { uri: result.uri, directory: Directory.Cache };
+  }
+}
+
 export async function shareOrDownload(blob: Blob, filename: string, mimeType: string): Promise<void> {
   if (Capacitor.isNativePlatform()) {
     const base64 = await blobToBase64(blob);
-    const { uri } = await Filesystem.writeFile({
-      path: filename,
-      data: base64,
-      directory: Directory.Cache,
-    });
-    await Share.share({ files: [uri], title: filename });
-    Filesystem.deleteFile({ path: filename, directory: Directory.Cache }).catch(() => {});
+    const { uri, directory } = await writeNativeFile(filename, base64);
+    await Share.share({ files: [uri], title: filename, dialogTitle: 'Partager le fichier' });
+    Filesystem.deleteFile({ path: filename, directory }).catch(() => {});
     return;
   }
 

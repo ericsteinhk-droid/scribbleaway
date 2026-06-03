@@ -51,6 +51,69 @@ jobs:
           print('Patched' if patched != src else 'Already patched or pattern not found')
           PYEOF
 
+      # On Android 10+, FLAG_GRANT_READ_URI_PERMISSION on the share intent alone does NOT
+      # propagate through createChooser() to the app the user picks (e.g. Gmail).
+      # The fix is to also set ClipData on the intent with the same URI(s), which lets
+      # Android grant read permission to any app selected from the chooser.
+      # We patch SharePlugin.java here because @capacitor/share v8 does not do this.
+      - name: Patch @capacitor/share — add ClipData for email attachment support
+        working-directory: rapports-de-visite
+        run: |
+          python3 << 'PYEOF'
+          import re, sys
+          f = 'node_modules/@capacitor/share/android/src/main/java/com/capacitorjs/plugins/share/SharePlugin.java'
+          try:
+              src = open(f).read()
+          except FileNotFoundError:
+              print('SharePlugin.java not found — skipping patch')
+              sys.exit(0)
+
+          # Print a diagnostic excerpt so future debugging is easier
+          idx = src.find('FLAG_GRANT_READ_URI_PERMISSION')
+          if idx >= 0:
+              print('=== SharePlugin.java context ===')
+              print(src[max(0, idx-400):idx+300])
+              print('================================')
+          else:
+              print('FLAG_GRANT_READ_URI_PERMISSION not found — printing first 1500 chars:')
+              print(src[:1500])
+
+          if 'ClipData' in src:
+              print('ClipData already present — skipping patch')
+              sys.exit(0)
+
+          # Ensure ClipData is imported
+          if 'import android.content.ClipData' not in src:
+              src = src.replace(
+                  'import android.content.Intent;',
+                  'import android.content.ClipData;\nimport android.content.Intent;',
+                  1)
+
+          # After the FLAG_GRANT_READ_URI_PERMISSION line, inject ClipData setup.
+          # The local variable holding the list of URIs may be named 'uris', 'fileUris',
+          # or similar — we try the two most common names.
+          clip_snippet = (
+              '\n        // Propagate URI read permission through ACTION_CHOOSER on Android 10+\n'
+              '        if (!{VAR}.isEmpty()) {\n'
+              '            android.content.ClipData cd = android.content.ClipData.newRawUri("", {VAR}.get(0));\n'
+              '            for (int _i = 1; _i < {VAR}.size(); _i++) cd.addItem(new android.content.ClipData.Item({VAR}.get(_i)));\n'
+              '            intent.setClipData(cd);\n'
+              '        }'
+          )
+          target = 'intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);'
+          patched = False
+          for var in ('uris', 'fileUris', 'shareUris', 'intentUris'):
+              if var in src and target in src:
+                  src = src.replace(target, target + clip_snippet.replace('{VAR}', var), 1)
+                  patched = True
+                  print(f'Applied ClipData patch using variable name: {var}')
+                  break
+          if not patched:
+              print('WARNING: Could not apply ClipData patch — no matching variable name found')
+
+          open(f, 'w').write(src)
+          PYEOF
+
       - name: Build web assets (Vite)
         working-directory: rapports-de-visite
         env:
