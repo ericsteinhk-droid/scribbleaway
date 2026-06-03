@@ -543,7 +543,8 @@ def _rewrite_right_side(p: etree._Element, new_text: str, target_lang: str) -> N
     tab_run: etree._Element | None = None
     first_rpr_xml: bytes | None = None
 
-    # Collect rPr from first run after the tab run (for formatting)
+    # Prefer the tab run's own rPr (most reliable formatting source);
+    # fall back to the first run after the tab only if the tab run has none.
     found_tab_run = False
     for child in p:
         if child.tag != W + "r":
@@ -552,14 +553,26 @@ def _rewrite_right_side(p: etree._Element, new_text: str, target_lang: str) -> N
             if child.find(W + "tab") is not None:
                 tab_run = child
                 found_tab_run = True
+                rpr = child.find(W + "rPr")
+                if rpr is not None:
+                    first_rpr_xml = etree.tostring(rpr)
         else:
-            rpr = child.find(W + "rPr")
-            if rpr is not None and first_rpr_xml is None:
-                first_rpr_xml = etree.tostring(rpr)
+            if first_rpr_xml is None:
+                rpr = child.find(W + "rPr")
+                if rpr is not None:
+                    first_rpr_xml = etree.tostring(rpr)
             break
 
     if tab_run is None:
         return
+
+    # Final fallback: use paragraph-level rPr (pPr/rPr) when no run-level rPr found
+    if first_rpr_xml is None:
+        pPr = p.find(W + "pPr")
+        if pPr is not None:
+            rpr = pPr.find(W + "rPr")
+            if rpr is not None:
+                first_rpr_xml = etree.tostring(rpr)
 
     # Strip any <w:t> elements that follow <w:tab> inside the tab run itself
     tab_seen = False
