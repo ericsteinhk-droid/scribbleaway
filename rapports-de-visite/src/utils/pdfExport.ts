@@ -1,6 +1,6 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { getDownloadURL, ref } from 'firebase/storage';
+import { getBlob, ref } from 'firebase/storage';
 import { storage } from '../firebase';
 import type { Report, Entry } from '../types';
 import { ENTRY_TYPE_LABELS } from '../types';
@@ -18,13 +18,10 @@ const TYPE_COLORS: Record<string, [number, number, number]> = {
   directive:    [239, 68,  68],
 };
 
-async function fetchImageAsDataUrl(photo: { url: string; storagePath: string }): Promise<string | null> {
+async function fetchImageAsDataUrl(photo: { storagePath: string }): Promise<string | null> {
   try {
     const storageRef = ref(storage, photo.storagePath);
-    const url = await getDownloadURL(storageRef);
-    const resp = await fetch(url);
-    if (!resp.ok) return null;
-    const blob = await resp.blob();
+    const blob = await getBlob(storageRef);
     return new Promise((res) => {
       const reader = new FileReader();
       reader.onload = () => res(reader.result as string);

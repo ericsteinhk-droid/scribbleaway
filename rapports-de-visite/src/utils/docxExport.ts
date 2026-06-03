@@ -3,7 +3,7 @@ import {
   ImageRun, BorderStyle, AlignmentType, HeadingLevel, Footer,
   WidthType, ShadingType, Header,
 } from 'docx';
-import { getDownloadURL, ref } from 'firebase/storage';
+import { getBytes, ref } from 'firebase/storage';
 import { storage } from '../firebase';
 import type { Report, Entry } from '../types';
 import { ENTRY_TYPE_LABELS } from '../types';
@@ -24,16 +24,14 @@ const TYPE_COLORS: Record<string, string> = {
   directive:   'b91c1c',
 };
 
-async function fetchImageBuffer(storagePath: string, timeout = 10000): Promise<ArrayBuffer | null> {
+async function fetchImageBuffer(storagePath: string, timeout = 15000): Promise<ArrayBuffer | null> {
   try {
     const storageRef = ref(storage, storagePath);
-    const url = await Promise.race([
-      getDownloadURL(storageRef),
+    const bytes = await Promise.race([
+      getBytes(storageRef),
       new Promise<never>((_, rej) => setTimeout(() => rej(new Error('timeout')), timeout)),
-    ]) as string;
-    const resp = await fetch(url);
-    if (!resp.ok) return null;
-    return resp.arrayBuffer();
+    ]) as ArrayBuffer;
+    return bytes;
   } catch {
     return null;
   }
