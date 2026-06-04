@@ -1,7 +1,5 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { getBytes, ref } from 'firebase/storage';
-import { storage } from '../firebase';
 import { blobToDataUrl } from './imageCompression';
 import type { Report, Entry } from '../types';
 import { ENTRY_TYPE_LABELS } from '../types';
@@ -19,10 +17,12 @@ const TYPE_COLORS: Record<string, [number, number, number]> = {
   directive:    [239, 68,  68],
 };
 
-// Fetch photo bytes directly — getBytes() is confirmed reliable on Android WebView.
-async function fetchPhotoBytes(storagePath: string): Promise<Uint8Array | null> {
+// Use the stored download URL (token already embedded) — plain fetch, no CORS preflight.
+async function fetchPhotoBytes(downloadUrl: string): Promise<Uint8Array | null> {
   try {
-    const buf = await getBytes(ref(storage, storagePath));
+    const response = await fetch(downloadUrl);
+    if (!response.ok) return null;
+    const buf = await response.arrayBuffer();
     return new Uint8Array(buf);
   } catch {
     return null;
@@ -62,7 +62,7 @@ export async function exportPdf(
   onProgress?.(0, allPhotos.length);
   let completed = 0;
   await Promise.all(allPhotos.map(async (photo) => {
-    const bytes = await fetchPhotoBytes(photo.storagePath);
+    const bytes = await fetchPhotoBytes(photo.url);
     if (bytes) photoMap.set(photo.id, bytes);
     onProgress?.(++completed, allPhotos.length);
   }));

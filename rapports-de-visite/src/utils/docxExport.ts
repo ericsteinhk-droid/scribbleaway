@@ -3,8 +3,6 @@ import {
   ImageRun, BorderStyle, AlignmentType, HeadingLevel, Footer,
   WidthType, ShadingType, Header,
 } from 'docx';
-import { getBytes, ref } from 'firebase/storage';
-import { storage } from '../firebase';
 import type { Report, Entry, Photo } from '../types';
 import { ENTRY_TYPE_LABELS } from '../types';
 
@@ -26,13 +24,21 @@ const TYPE_COLORS: Record<string, string> = {
   directive:   'b91c1c',
 };
 
-async function fetchPhoto(storagePath: string, timeout = 15000): Promise<Uint8Array | null> {
+// Use the stored download URL (token already embedded) — plain fetch, no CORS preflight.
+// Returns a base64 data URI so ImageRun knows the MIME type explicitly.
+async function fetchPhotoDataUri(downloadUrl: string): Promise<string | null> {
   try {
-    const buf = await Promise.race([
-      getBytes(ref(storage, storagePath)),
-      new Promise<never>((_, rej) => setTimeout(() => rej(new Error('timeout')), timeout)),
-    ]) as ArrayBuffer;
-    return new Uint8Array(buf);
+    const response = await fetch(downloadUrl);
+    if (!response.ok) return null;
+    const buf = await response.arrayBuffer();
+    const bytes = new Uint8Array(buf);
+    // Convert to base64 in chunks to avoid call-stack overflow on large images
+    let binary = '';
+    const chunk = 8192;
+    for (let i = 0; i < bytes.length; i += chunk) {
+      binary += String.fromCharCode(...Array.from(bytes.subarray(i, i + chunk)));
+    }
+    return 'data:image/jpeg;base64,' + btoa(binary);
   } catch {
     return null;
   }
@@ -43,7 +49,7 @@ function formatDateFr(dateStr: string) {
   return new Date(y, m - 1, d).toLocaleDateString('fr-CA', { year: 'numeric', month: 'long', day: 'numeric' });
 }
 
-function photoRows(photos: Photo[], photoMap: Map<string, Uint8Array>): (Paragraph | Table)[] {
+function photoRows(photos: Photo[], photoMap: Map<string, string>): (Paragraph | Table)[] {
   const DISP_W = 230; // display px per photo in 2-up layout
   const DISP_H = Math.round(DISP_W * 0.75); // hardcoded 4:3 ratio
   const result: (Paragraph | Table)[] = [];
@@ -56,7 +62,7 @@ function photoRows(photos: Photo[], photoMap: Map<string, Uint8Array>): (Paragra
 
     if (!ld && !rd) continue;
 
-    const makeCell = (d: Uint8Array | undefined, p: Photo | undefined) => {
+    const makeCell = (d: string | undefined, p: Photo | undefined) => {
       const cellChildren: Paragraph[] = [];
       if (d) {
         cellChildren.push(new Paragraph({
@@ -100,12 +106,12 @@ export async function exportDocx(
 ): Promise<Blob> {
   // Fetch all photos in parallel — no canvas, works on Android WebView
   const allPhotos = entries.flatMap((e) => e.photos);
-  const photoMap = new Map<string, Uint8Array>();
+  const photoMap = new Map<string, string>();
 
   onProgress?.(0, allPhotos.length);
   let completed = 0;
   await Promise.all(allPhotos.map(async (photo) => {
-    const data = await fetchPhoto(photo.storagePath);
+    const data = await fetchPhotoDataUri(photo.url);
     if (data) photoMap.set(photo.id, data);
     onProgress?.(++completed, allPhotos.length);
   }));
