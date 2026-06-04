@@ -3,6 +3,7 @@ import {
   ImageRun, BorderStyle, AlignmentType, HeadingLevel, Footer,
   WidthType, ShadingType, Header,
 } from 'docx';
+import JSZip from 'jszip';
 import { Capacitor, CapacitorHttp } from '@capacitor/core';
 import type { Report, Entry, Photo } from '../types';
 import { ENTRY_TYPE_LABELS } from '../types';
@@ -265,5 +266,42 @@ export async function exportDocx(
     }],
   });
 
-  return Packer.toBlob(doc);
+  const blob = await Packer.toBlob(doc);
+  return fixDocxImageTypes(blob);
+}
+
+// docx library hardcodes ".png" extension for every ImageRun regardless of MIME type.
+// Word reads the extension to determine content type, so JPEG data stored as .png renders
+// as a broken image. Post-process the ZIP: rename JPEG-as-PNG files to .jpg and update rels.
+async function fixDocxImageTypes(blob: Blob): Promise<Blob> {
+  const zip = await JSZip.loadAsync(blob);
+  const renamed = new Map<string, string>(); // 'media/foo.png' → 'media/foo.jpg'
+
+  for (const [name, entry] of Object.entries(zip.files)) {
+    if (name.startsWith('word/media/') && name.endsWith('.png')) {
+      const bytes = await entry.async('uint8array');
+      if (bytes[0] === 0xFF && bytes[1] === 0xD8) { // JPEG magic bytes
+        const newName = name.replace(/\.png$/, '.jpg');
+        renamed.set(name.slice('word/'.length), newName.slice('word/'.length));
+        zip.file(newName, bytes);
+        zip.remove(name);
+      }
+    }
+  }
+
+  if (renamed.size === 0) return blob;
+
+  // Update all .rels files to reference the renamed files
+  for (const [name, entry] of Object.entries(zip.files)) {
+    if (name.endsWith('.rels')) {
+      let xml = await entry.async('string');
+      let changed = false;
+      for (const [oldRef, newRef] of renamed) {
+        if (xml.includes(oldRef)) { xml = xml.split(oldRef).join(newRef); changed = true; }
+      }
+      if (changed) zip.file(name, xml);
+    }
+  }
+
+  return zip.generateAsync({ type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 6 } });
 }
