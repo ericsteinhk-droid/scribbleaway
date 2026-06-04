@@ -1,6 +1,4 @@
 import JSZip from 'jszip';
-import { getBytes, ref } from 'firebase/storage';
-import { storage } from '../firebase';
 import type { Entry } from '../types';
 import { ENTRY_TYPE_LABELS } from '../types';
 
@@ -28,10 +26,13 @@ export async function exportZip(
   let completed = 0;
   await Promise.all(allPhotos.map(async ({ photo, entryIndex, photoIndex, type }) => {
     try {
-      const bytes = await getBytes(ref(storage, photo.storagePath));
-      const folder = slugify(ENTRY_TYPE_LABELS[type]);
-      const filename = `${String(entryIndex + 1).padStart(2, '0')}_${String(photoIndex + 1).padStart(2, '0')}.jpg`;
-      zip.folder(folder)!.file(filename, bytes);
+      const response = await fetch(photo.url);
+      if (response.ok) {
+        const bytes = await response.arrayBuffer();
+        const folder = slugify(ENTRY_TYPE_LABELS[type]);
+        const filename = `${String(entryIndex + 1).padStart(2, '0')}_${String(photoIndex + 1).padStart(2, '0')}.jpg`;
+        zip.folder(folder)!.file(filename, bytes);
+      }
     } catch {
       // skip failed photos
     }
