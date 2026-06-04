@@ -5,7 +5,7 @@ import {
 } from 'docx';
 import { getBlob, ref } from 'firebase/storage';
 import { storage } from '../firebase';
-import { resizeImageForDocument, type ResizedPhoto } from './imageCompression';
+import { blobToDataUrl } from './imageCompression';
 import type { Report, Entry, Photo } from '../types';
 import { ENTRY_TYPE_LABELS } from '../types';
 
@@ -27,13 +27,13 @@ const TYPE_COLORS: Record<string, string> = {
   directive:   'b91c1c',
 };
 
-async function fetchPhoto(storagePath: string, timeout = 15000): Promise<ResizedPhoto | null> {
+async function fetchPhoto(storagePath: string, timeout = 15000): Promise<string | null> {
   try {
     const blob = await Promise.race([
       getBlob(ref(storage, storagePath)),
       new Promise<never>((_, rej) => setTimeout(() => rej(new Error('timeout')), timeout)),
     ]) as Blob;
-    return resizeImageForDocument(blob);
+    return blobToDataUrl(blob);
   } catch {
     return null;
   }
@@ -44,8 +44,9 @@ function formatDateFr(dateStr: string) {
   return new Date(y, m - 1, d).toLocaleDateString('fr-CA', { year: 'numeric', month: 'long', day: 'numeric' });
 }
 
-function photoRows(photos: Photo[], photoMap: Map<string, ResizedPhoto>): (Paragraph | Table)[] {
+function photoRows(photos: Photo[], photoMap: Map<string, string>): (Paragraph | Table)[] {
   const DISP_W = 230; // display px per photo in 2-up layout
+  const DISP_H = Math.round(DISP_W * 0.75); // hardcoded 4:3 ratio
   const result: (Paragraph | Table)[] = [];
 
   for (let pi = 0; pi < photos.length; pi += 2) {
@@ -56,12 +57,11 @@ function photoRows(photos: Photo[], photoMap: Map<string, ResizedPhoto>): (Parag
 
     if (!ld && !rd) continue;
 
-    const makeCell = (d: ResizedPhoto | undefined, p: Photo | undefined) => {
+    const makeCell = (d: string | undefined, p: Photo | undefined) => {
       const cellChildren: Paragraph[] = [];
       if (d) {
-        const h = Math.round(DISP_W * d.height / d.width);
         cellChildren.push(new Paragraph({
-          children: [new ImageRun({ data: d.dataUrl, transformation: { width: DISP_W, height: h } })],
+          children: [new ImageRun({ data: d, transformation: { width: DISP_W, height: DISP_H } })],
           spacing: { after: p?.caption ? 40 : 80 },
         }));
         if (p?.caption) {
@@ -99,9 +99,9 @@ export async function exportDocx(
   firmName: string,
   onProgress?: (current: number, total: number) => void
 ): Promise<Blob> {
-  // Fetch all photos in parallel
+  // Fetch all photos in parallel — no canvas, works on Android WebView
   const allPhotos = entries.flatMap((e) => e.photos);
-  const photoMap = new Map<string, ResizedPhoto>();
+  const photoMap = new Map<string, string>();
 
   onProgress?.(0, allPhotos.length);
   let completed = 0;

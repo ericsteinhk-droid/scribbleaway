@@ -2,7 +2,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { getBlob, ref } from 'firebase/storage';
 import { storage } from '../firebase';
-import { resizeImageForDocument, type ResizedPhoto } from './imageCompression';
+import { blobToDataUrl } from './imageCompression';
 import type { Report, Entry } from '../types';
 import { ENTRY_TYPE_LABELS } from '../types';
 
@@ -19,10 +19,11 @@ const TYPE_COLORS: Record<string, [number, number, number]> = {
   directive:    [239, 68,  68],
 };
 
-async function fetchPhoto(storagePath: string): Promise<ResizedPhoto | null> {
+// Fetch photo from Firebase and return as data URL — no canvas, works on Android WebView.
+async function fetchPhotoDataUrl(storagePath: string): Promise<string | null> {
   try {
     const blob = await getBlob(ref(storage, storagePath));
-    return resizeImageForDocument(blob);
+    return blobToDataUrl(blob);
   } catch {
     return null;
   }
@@ -32,12 +33,7 @@ async function fetchLogoDataUrl(): Promise<string | null> {
   try {
     const resp = await fetch('/evoq_logo.png');
     const blob = await resp.blob();
-    return new Promise((res) => {
-      const reader = new FileReader();
-      reader.onload = () => res(reader.result as string);
-      reader.onerror = () => res(null);
-      reader.readAsDataURL(blob);
-    });
+    return blobToDataUrl(blob);
   } catch {
     return null;
   }
@@ -59,15 +55,15 @@ export async function exportPdf(
 ): Promise<Blob> {
   const doc = new jsPDF({ unit: 'mm', format: 'letter', orientation: 'portrait' });
 
-  // Fetch all photos in parallel, resized and aspect-ratio preserved
+  // Fetch all photos in parallel — raw data URLs, no canvas
   const allPhotos = entries.flatMap((e) => e.photos);
-  const photoMap = new Map<string, ResizedPhoto>();
+  const photoMap = new Map<string, string>();
 
   onProgress?.(0, allPhotos.length);
   let completed = 0;
   await Promise.all(allPhotos.map(async (photo) => {
-    const data = await fetchPhoto(photo.storagePath);
-    if (data) photoMap.set(photo.id, data);
+    const dataUrl = await fetchPhotoDataUrl(photo.storagePath);
+    if (dataUrl) photoMap.set(photo.id, dataUrl);
     onProgress?.(++completed, allPhotos.length);
   }));
 
@@ -187,9 +183,10 @@ export async function exportPdf(
       doc.text(lines, MARGIN + 6, curY);
       curY += lines.length * 4.5 + 3;
 
-      // Photos: 2 per row, preserving actual aspect ratio
+      // Photos: 2 per row, 4:3 aspect ratio, only rendered if photo data is available
       if (entry.photos.length > 0) {
         const photoW = (CONTENT_W - 6) / 2;
+        const photoH = photoW * 0.75; // 4:3
 
         for (let pi = 0; pi < entry.photos.length; pi += 2) {
           const lp = entry.photos[pi];
@@ -197,31 +194,26 @@ export async function exportPdf(
           const ld = photoMap.get(lp.id);
           const rd = rp ? photoMap.get(rp.id) : undefined;
 
-          // Compute row height from whichever image is taller
-          const lH = ld ? photoW * (ld.height / ld.width) : 0;
-          const rH = rd ? photoW * (rd.height / rd.width) : 0;
-          const rowH = Math.max(lH, rH, photoW * 0.56);
+          if (!ld && !rd) continue; // skip row if neither photo loaded
 
-          if (curY + rowH + 10 > PAGE_H - 15) { doc.addPage(); addHeader(doc.getNumberOfPages()); curY = 42; }
+          if (curY + photoH + 10 > PAGE_H - 15) { doc.addPage(); addHeader(doc.getNumberOfPages()); curY = 42; }
 
           if (ld) {
-            const h = photoW * (ld.height / ld.width);
-            doc.addImage(ld.dataUrl, 'JPEG', MARGIN, curY, photoW, h);
+            doc.addImage(ld, 'JPEG', MARGIN, curY, photoW, photoH);
             if (lp.caption) {
               doc.setFontSize(7); doc.setFont('helvetica', 'italic'); doc.setTextColor(100, 100, 100);
-              doc.text(lp.caption, MARGIN, curY + h + 3);
+              doc.text(lp.caption, MARGIN, curY + photoH + 3);
             }
           }
           if (rd) {
-            const h = photoW * (rd.height / rd.width);
-            doc.addImage(rd.dataUrl, 'JPEG', MARGIN + photoW + 6, curY, photoW, h);
+            doc.addImage(rd, 'JPEG', MARGIN + photoW + 6, curY, photoW, photoH);
             if (rp?.caption) {
               doc.setFontSize(7); doc.setFont('helvetica', 'italic'); doc.setTextColor(100, 100, 100);
-              doc.text(rp.caption, MARGIN + photoW + 6, curY + h + 3);
+              doc.text(rp.caption, MARGIN + photoW + 6, curY + photoH + 3);
             }
           }
 
-          curY += rowH + (lp.caption || rp?.caption ? 8 : 4);
+          curY += photoH + (lp.caption || rp?.caption ? 8 : 4);
         }
         curY += 2;
       }

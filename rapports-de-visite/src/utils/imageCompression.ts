@@ -39,40 +39,12 @@ export async function compressImage(file: File): Promise<Blob> {
   });
 }
 
-export interface ResizedPhoto {
-  dataUrl: string;
-  width: number;
-  height: number;
-}
-
-export function resizeImageForDocument(
-  blob: Blob,
-  maxWidth = 400,
-  quality = 0.70
-): Promise<ResizedPhoto | null> {
+// Convert a Blob to a base64 data URL using FileReader — no canvas, works reliably on Android WebView.
+export function blobToDataUrl(blob: Blob): Promise<string | null> {
   return new Promise((resolve) => {
-    const img = new Image();
-    const url = URL.createObjectURL(blob);
-    img.onload = () => {
-      let { width, height } = img;
-      if (width > maxWidth) {
-        height = Math.round(height * maxWidth / width);
-        width = maxWidth;
-      }
-      const canvas = document.createElement('canvas');
-      canvas.width = width;
-      canvas.height = height;
-      canvas.getContext('2d')!.drawImage(img, 0, 0, width, height);
-      URL.revokeObjectURL(url);
-      canvas.toBlob((b) => {
-        if (!b) { resolve(null); return; }
-        const reader = new FileReader();
-        reader.onload = () => resolve({ dataUrl: reader.result as string, width, height });
-        reader.onerror = () => resolve(null);
-        reader.readAsDataURL(b);
-      }, 'image/jpeg', quality);
-    };
-    img.onerror = () => { URL.revokeObjectURL(url); resolve(null); };
-    img.src = url;
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = () => resolve(null);
+    reader.readAsDataURL(blob);
   });
 }
