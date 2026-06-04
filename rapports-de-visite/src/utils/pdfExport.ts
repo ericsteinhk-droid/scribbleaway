@@ -60,11 +60,17 @@ async function fetchPhoto(downloadUrl: string): Promise<{ bytes: Uint8Array; w: 
   }
 }
 
-async function fetchLogoDataUrl(): Promise<string | null> {
+async function fetchLogo(): Promise<{ dataUrl: string; w: number; h: number } | null> {
   try {
     const resp = await fetch('/evoq_logo.png');
-    const blob = await resp.blob();
-    return blobToDataUrl(blob);
+    const buf = await resp.arrayBuffer();
+    const bytes = new Uint8Array(buf);
+    // PNG IHDR: signature (8) + length (4) + "IHDR" (4) + width (4) + height (4)
+    const w = bytes.length >= 24 ? (bytes[16] << 24 | bytes[17] << 16 | bytes[18] << 8 | bytes[19]) >>> 0 : 0;
+    const h = bytes.length >= 24 ? (bytes[20] << 24 | bytes[21] << 16 | bytes[22] << 8 | bytes[23]) >>> 0 : 0;
+    const dataUrl = await blobToDataUrl(new Blob([buf], { type: 'image/png' }));
+    if (!dataUrl) return null;
+    return { dataUrl, w: w || 1, h: h || 1 };
   } catch {
     return null;
   }
@@ -98,7 +104,7 @@ export async function exportPdf(
     onProgress?.(++completed, allPhotos.length);
   }));
 
-  const logoDataUrl = await fetchLogoDataUrl();
+  const logo = await fetchLogo();
   const totalPages = () => (doc as unknown as { internal: { getNumberOfPages: () => number } }).internal.getNumberOfPages();
 
   const typeOrder: Entry['type'][] = ['observation', 'avancement', 'discussion', 'directive'];
@@ -107,8 +113,10 @@ export async function exportPdf(
     .filter((g) => g.entries.length > 0);
 
   function addHeader(pageNum: number) {
-    if (logoDataUrl) {
-      doc.addImage(logoDataUrl, 'PNG', MARGIN, 12, 30, 10);
+    if (logo) {
+      const logoW = 30; // fixed width in mm
+      const logoH = logoW * (logo.h / logo.w);
+      doc.addImage(logo.dataUrl, 'PNG', MARGIN, 12, logoW, logoH);
     }
     doc.setFontSize(13);
     doc.setFont('helvetica', 'bold');
