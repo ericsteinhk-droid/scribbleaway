@@ -53,10 +53,8 @@ async function fetchPhoto(downloadUrl: string): Promise<{ uri: string; w: number
       const resp = await CapacitorHttp.get({ url: downloadUrl, responseType: 'arraybuffer' });
       if (resp.status !== 200) return null;
       base64 = resp.data as string;
-      // Decode only the first ~512 bytes to parse dimensions
-      const prefix = atob(base64.slice(0, 684));
-      bytes = new Uint8Array(prefix.length);
-      for (let i = 0; i < prefix.length; i++) bytes[i] = prefix.charCodeAt(i);
+      // Decode full bytes — EXIF blocks on phone photos can push SOF past 50KB
+      bytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
     } else {
       const response = await fetch(downloadUrl);
       if (!response.ok) return null;
