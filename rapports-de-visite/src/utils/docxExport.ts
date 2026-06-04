@@ -1,7 +1,7 @@
 import {
   Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
   ImageRun, BorderStyle, AlignmentType, HeadingLevel, Footer,
-  WidthType, ShadingType, Header, TableBorders,
+  WidthType, ShadingType, Header,
 } from 'docx';
 import { getBlob, ref } from 'firebase/storage';
 import { storage } from '../firebase';
@@ -11,6 +11,7 @@ import { ENTRY_TYPE_LABELS } from '../types';
 
 const TEAL = '00a99e';
 const NONE = { style: BorderStyle.NONE, size: 0, color: 'ffffff' };
+const NO_BORDERS = { top: NONE, bottom: NONE, left: NONE, right: NONE, insideHorizontal: NONE, insideVertical: NONE };
 
 const TYPE_SHADES: Record<string, string> = {
   observation: 'dbeafe',
@@ -83,7 +84,7 @@ function photoRows(photos: Photo[], photoMap: Map<string, ResizedPhoto>): (Parag
     result.push(new Table({
       width: { size: 100, type: WidthType.PERCENTAGE },
       rows: [new TableRow({ children: [makeCell(ld, lp), makeCell(rd, rp)] })],
-      borders: TableBorders.NONE,
+      borders: NO_BORDERS,
     }));
   }
 
