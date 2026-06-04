@@ -3,6 +3,7 @@ import {
   ImageRun, BorderStyle, AlignmentType, HeadingLevel, Footer,
   WidthType, ShadingType, Header,
 } from 'docx';
+import { Capacitor, CapacitorHttp } from '@capacitor/core';
 import type { Report, Entry, Photo } from '../types';
 import { ENTRY_TYPE_LABELS } from '../types';
 
@@ -24,21 +25,27 @@ const TYPE_COLORS: Record<string, string> = {
   directive:   'b91c1c',
 };
 
-// Use the stored download URL (token already embedded) — plain fetch, no CORS preflight.
+// On Android, CapacitorHttp routes via OkHttp — bypasses WebView CORS entirely.
 // Returns a base64 data URI so ImageRun knows the MIME type explicitly.
 async function fetchPhotoDataUri(downloadUrl: string): Promise<string | null> {
   try {
-    const response = await fetch(downloadUrl);
-    if (!response.ok) return null;
-    const buf = await response.arrayBuffer();
-    const bytes = new Uint8Array(buf);
-    // Convert to base64 in chunks to avoid call-stack overflow on large images
-    let binary = '';
-    const chunk = 8192;
-    for (let i = 0; i < bytes.length; i += chunk) {
-      binary += String.fromCharCode(...Array.from(bytes.subarray(i, i + chunk)));
+    let base64: string;
+    if (Capacitor.isNativePlatform()) {
+      const resp = await CapacitorHttp.get({ url: downloadUrl, responseType: 'arraybuffer' });
+      if (resp.status !== 200) return null;
+      base64 = resp.data as string; // native bridge returns arraybuffer as base64
+    } else {
+      const response = await fetch(downloadUrl);
+      if (!response.ok) return null;
+      const bytes = new Uint8Array(await response.arrayBuffer());
+      let binary = '';
+      const chunk = 8192;
+      for (let i = 0; i < bytes.length; i += chunk) {
+        binary += String.fromCharCode(...Array.from(bytes.subarray(i, i + chunk)));
+      }
+      base64 = btoa(binary);
     }
-    return 'data:image/jpeg;base64,' + btoa(binary);
+    return 'data:image/jpeg;base64,' + base64;
   } catch {
     return null;
   }

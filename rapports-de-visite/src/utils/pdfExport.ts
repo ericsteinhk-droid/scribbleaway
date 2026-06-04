@@ -1,5 +1,6 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { Capacitor, CapacitorHttp } from '@capacitor/core';
 import { blobToDataUrl } from './imageCompression';
 import type { Report, Entry } from '../types';
 import { ENTRY_TYPE_LABELS } from '../types';
@@ -17,13 +18,22 @@ const TYPE_COLORS: Record<string, [number, number, number]> = {
   directive:    [239, 68,  68],
 };
 
-// Use the stored download URL (token already embedded) — plain fetch, no CORS preflight.
+// On Android, CapacitorHttp routes via OkHttp — bypasses WebView CORS entirely.
+// On web, plain fetch works fine.
 async function fetchPhotoBytes(downloadUrl: string): Promise<Uint8Array | null> {
   try {
+    if (Capacitor.isNativePlatform()) {
+      const resp = await CapacitorHttp.get({ url: downloadUrl, responseType: 'arraybuffer' });
+      if (resp.status !== 200) return null;
+      // Native returns arraybuffer as a base64 string over the JS bridge
+      const binary = atob(resp.data as string);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      return bytes;
+    }
     const response = await fetch(downloadUrl);
     if (!response.ok) return null;
-    const buf = await response.arrayBuffer();
-    return new Uint8Array(buf);
+    return new Uint8Array(await response.arrayBuffer());
   } catch {
     return null;
   }
