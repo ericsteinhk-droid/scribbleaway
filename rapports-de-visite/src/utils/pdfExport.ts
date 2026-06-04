@@ -1,6 +1,6 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { getBlob, ref } from 'firebase/storage';
+import { getBytes, ref } from 'firebase/storage';
 import { storage } from '../firebase';
 import { blobToDataUrl } from './imageCompression';
 import type { Report, Entry } from '../types';
@@ -19,11 +19,11 @@ const TYPE_COLORS: Record<string, [number, number, number]> = {
   directive:    [239, 68,  68],
 };
 
-// Fetch photo from Firebase and return as data URL — no canvas, works on Android WebView.
-async function fetchPhotoDataUrl(storagePath: string): Promise<string | null> {
+// Fetch photo bytes directly — getBytes() is confirmed reliable on Android WebView.
+async function fetchPhotoBytes(storagePath: string): Promise<Uint8Array | null> {
   try {
-    const blob = await getBlob(ref(storage, storagePath));
-    return blobToDataUrl(blob);
+    const buf = await getBytes(ref(storage, storagePath));
+    return new Uint8Array(buf);
   } catch {
     return null;
   }
@@ -55,15 +55,15 @@ export async function exportPdf(
 ): Promise<Blob> {
   const doc = new jsPDF({ unit: 'mm', format: 'letter', orientation: 'portrait' });
 
-  // Fetch all photos in parallel — raw data URLs, no canvas
+  // Fetch all photo bytes in parallel — Uint8Array, no Blob/FileReader/canvas needed
   const allPhotos = entries.flatMap((e) => e.photos);
-  const photoMap = new Map<string, string>();
+  const photoMap = new Map<string, Uint8Array>();
 
   onProgress?.(0, allPhotos.length);
   let completed = 0;
   await Promise.all(allPhotos.map(async (photo) => {
-    const dataUrl = await fetchPhotoDataUrl(photo.storagePath);
-    if (dataUrl) photoMap.set(photo.id, dataUrl);
+    const bytes = await fetchPhotoBytes(photo.storagePath);
+    if (bytes) photoMap.set(photo.id, bytes);
     onProgress?.(++completed, allPhotos.length);
   }));
 
