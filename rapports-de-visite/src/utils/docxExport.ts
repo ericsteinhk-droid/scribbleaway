@@ -25,19 +25,42 @@ const TYPE_COLORS: Record<string, string> = {
   directive:   'b91c1c',
 };
 
+// Parse JPEG dimensions from raw bytes (finds SOF marker).
+function parseJpegDims(bytes: Uint8Array): { w: number; h: number } {
+  let i = 2;
+  while (i + 8 < bytes.length) {
+    if (bytes[i] !== 0xFF) break;
+    const marker = bytes[i + 1];
+    if (marker >= 0xC0 && marker <= 0xCF && marker !== 0xC4 && marker !== 0xC8 && marker !== 0xCC) {
+      const h = (bytes[i + 5] << 8) | bytes[i + 6];
+      const w = (bytes[i + 7] << 8) | bytes[i + 8];
+      if (w > 0 && h > 0) return { w, h };
+    }
+    if (marker === 0xD9 || marker === 0xDA) break;
+    const segLen = (bytes[i + 2] << 8) | bytes[i + 3];
+    if (segLen < 2) break;
+    i += 2 + segLen;
+  }
+  return { w: 4, h: 3 };
+}
+
 // On Android, CapacitorHttp routes via OkHttp — bypasses WebView CORS entirely.
-// Returns a base64 data URI so ImageRun knows the MIME type explicitly.
-async function fetchPhotoDataUri(downloadUrl: string): Promise<string | null> {
+async function fetchPhoto(downloadUrl: string): Promise<{ uri: string; w: number; h: number } | null> {
   try {
+    let bytes: Uint8Array;
     let base64: string;
     if (Capacitor.isNativePlatform()) {
       const resp = await CapacitorHttp.get({ url: downloadUrl, responseType: 'arraybuffer' });
       if (resp.status !== 200) return null;
-      base64 = resp.data as string; // native bridge returns arraybuffer as base64
+      base64 = resp.data as string;
+      // Decode only the first ~512 bytes to parse dimensions
+      const prefix = atob(base64.slice(0, 684));
+      bytes = new Uint8Array(prefix.length);
+      for (let i = 0; i < prefix.length; i++) bytes[i] = prefix.charCodeAt(i);
     } else {
       const response = await fetch(downloadUrl);
       if (!response.ok) return null;
-      const bytes = new Uint8Array(await response.arrayBuffer());
+      bytes = new Uint8Array(await response.arrayBuffer());
       let binary = '';
       const chunk = 8192;
       for (let i = 0; i < bytes.length; i += chunk) {
@@ -45,7 +68,7 @@ async function fetchPhotoDataUri(downloadUrl: string): Promise<string | null> {
       }
       base64 = btoa(binary);
     }
-    return 'data:image/jpeg;base64,' + base64;
+    return { uri: 'data:image/jpeg;base64,' + base64, ...parseJpegDims(bytes) };
   } catch {
     return null;
   }
@@ -56,9 +79,8 @@ function formatDateFr(dateStr: string) {
   return new Date(y, m - 1, d).toLocaleDateString('fr-CA', { year: 'numeric', month: 'long', day: 'numeric' });
 }
 
-function photoRows(photos: Photo[], photoMap: Map<string, string>): (Paragraph | Table)[] {
+function photoRows(photos: Photo[], photoMap: Map<string, { uri: string; w: number; h: number }>): (Paragraph | Table)[] {
   const DISP_W = 230; // display px per photo in 2-up layout
-  const DISP_H = Math.round(DISP_W * 0.75); // hardcoded 4:3 ratio
   const result: (Paragraph | Table)[] = [];
 
   for (let pi = 0; pi < photos.length; pi += 2) {
@@ -69,11 +91,12 @@ function photoRows(photos: Photo[], photoMap: Map<string, string>): (Paragraph |
 
     if (!ld && !rd) continue;
 
-    const makeCell = (d: string | undefined, p: Photo | undefined) => {
+    const makeCell = (d: { uri: string; w: number; h: number } | undefined, p: Photo | undefined) => {
       const cellChildren: Paragraph[] = [];
       if (d) {
+        const dispH = Math.round(DISP_W * d.h / d.w);
         cellChildren.push(new Paragraph({
-          children: [new ImageRun({ data: d, transformation: { width: DISP_W, height: DISP_H } })],
+          children: [new ImageRun({ data: d.uri, transformation: { width: DISP_W, height: dispH } })],
           spacing: { after: p?.caption ? 40 : 80 },
         }));
         if (p?.caption) {
@@ -113,12 +136,12 @@ export async function exportDocx(
 ): Promise<Blob> {
   // Fetch all photos in parallel — no canvas, works on Android WebView
   const allPhotos = entries.flatMap((e) => e.photos);
-  const photoMap = new Map<string, string>();
+  const photoMap = new Map<string, { uri: string; w: number; h: number }>();
 
   onProgress?.(0, allPhotos.length);
   let completed = 0;
   await Promise.all(allPhotos.map(async (photo) => {
-    const data = await fetchPhotoDataUri(photo.url);
+    const data = await fetchPhoto(photo.url);
     if (data) photoMap.set(photo.id, data);
     onProgress?.(++completed, allPhotos.length);
   }));

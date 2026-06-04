@@ -18,22 +18,43 @@ const TYPE_COLORS: Record<string, [number, number, number]> = {
   directive:    [239, 68,  68],
 };
 
+// Parse JPEG dimensions from raw bytes (finds SOF marker).
+function parseJpegDims(bytes: Uint8Array): { w: number; h: number } {
+  let i = 2; // skip SOI (FF D8)
+  while (i + 8 < bytes.length) {
+    if (bytes[i] !== 0xFF) break;
+    const marker = bytes[i + 1];
+    // SOF markers: C0-CF except C4 (DHT), C8, CC
+    if (marker >= 0xC0 && marker <= 0xCF && marker !== 0xC4 && marker !== 0xC8 && marker !== 0xCC) {
+      const h = (bytes[i + 5] << 8) | bytes[i + 6];
+      const w = (bytes[i + 7] << 8) | bytes[i + 8];
+      if (w > 0 && h > 0) return { w, h };
+    }
+    if (marker === 0xD9 || marker === 0xDA) break;
+    const segLen = (bytes[i + 2] << 8) | bytes[i + 3];
+    if (segLen < 2) break;
+    i += 2 + segLen;
+  }
+  return { w: 4, h: 3 }; // fallback — 4:3 landscape
+}
+
 // On Android, CapacitorHttp routes via OkHttp — bypasses WebView CORS entirely.
 // On web, plain fetch works fine.
-async function fetchPhotoBytes(downloadUrl: string): Promise<Uint8Array | null> {
+async function fetchPhoto(downloadUrl: string): Promise<{ bytes: Uint8Array; w: number; h: number } | null> {
   try {
+    let bytes: Uint8Array;
     if (Capacitor.isNativePlatform()) {
       const resp = await CapacitorHttp.get({ url: downloadUrl, responseType: 'arraybuffer' });
       if (resp.status !== 200) return null;
-      // Native returns arraybuffer as a base64 string over the JS bridge
       const binary = atob(resp.data as string);
-      const bytes = new Uint8Array(binary.length);
+      bytes = new Uint8Array(binary.length);
       for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-      return bytes;
+    } else {
+      const response = await fetch(downloadUrl);
+      if (!response.ok) return null;
+      bytes = new Uint8Array(await response.arrayBuffer());
     }
-    const response = await fetch(downloadUrl);
-    if (!response.ok) return null;
-    return new Uint8Array(await response.arrayBuffer());
+    return { bytes, ...parseJpegDims(bytes) };
   } catch {
     return null;
   }
@@ -67,13 +88,13 @@ export async function exportPdf(
 
   // Fetch all photo bytes in parallel — Uint8Array, no Blob/FileReader/canvas needed
   const allPhotos = entries.flatMap((e) => e.photos);
-  const photoMap = new Map<string, Uint8Array>();
+  const photoMap = new Map<string, { bytes: Uint8Array; w: number; h: number }>();
 
   onProgress?.(0, allPhotos.length);
   let completed = 0;
   await Promise.all(allPhotos.map(async (photo) => {
-    const bytes = await fetchPhotoBytes(photo.url);
-    if (bytes) photoMap.set(photo.id, bytes);
+    const data = await fetchPhoto(photo.url);
+    if (data) photoMap.set(photo.id, data);
     onProgress?.(++completed, allPhotos.length);
   }));
 
@@ -193,10 +214,9 @@ export async function exportPdf(
       doc.text(lines, MARGIN + 6, curY);
       curY += lines.length * 4.5 + 3;
 
-      // Photos: 2 per row, 4:3 aspect ratio, only rendered if photo data is available
+      // Photos: 2 per row, correct aspect ratio per photo
       if (entry.photos.length > 0) {
         const photoW = (CONTENT_W - 6) / 2;
-        const photoH = photoW * 0.75; // 4:3
 
         for (let pi = 0; pi < entry.photos.length; pi += 2) {
           const lp = entry.photos[pi];
@@ -204,26 +224,30 @@ export async function exportPdf(
           const ld = photoMap.get(lp.id);
           const rd = rp ? photoMap.get(rp.id) : undefined;
 
-          if (!ld && !rd) continue; // skip row if neither photo loaded
+          if (!ld && !rd) continue;
 
-          if (curY + photoH + 10 > PAGE_H - 15) { doc.addPage(); addHeader(doc.getNumberOfPages()); curY = 42; }
+          const ldH = ld ? photoW * (ld.h / ld.w) : 0;
+          const rdH = rd ? photoW * (rd.h / rd.w) : 0;
+          const rowH = Math.max(ldH, rdH);
+
+          if (curY + rowH + 10 > PAGE_H - 15) { doc.addPage(); addHeader(doc.getNumberOfPages()); curY = 42; }
 
           if (ld) {
-            doc.addImage(ld, 'JPEG', MARGIN, curY, photoW, photoH);
+            doc.addImage(ld.bytes, 'JPEG', MARGIN, curY, photoW, ldH);
             if (lp.caption) {
               doc.setFontSize(7); doc.setFont('helvetica', 'italic'); doc.setTextColor(100, 100, 100);
-              doc.text(lp.caption, MARGIN, curY + photoH + 3);
+              doc.text(lp.caption, MARGIN, curY + ldH + 3);
             }
           }
           if (rd) {
-            doc.addImage(rd, 'JPEG', MARGIN + photoW + 6, curY, photoW, photoH);
+            doc.addImage(rd.bytes, 'JPEG', MARGIN + photoW + 6, curY, photoW, rdH);
             if (rp?.caption) {
               doc.setFontSize(7); doc.setFont('helvetica', 'italic'); doc.setTextColor(100, 100, 100);
-              doc.text(rp.caption, MARGIN + photoW + 6, curY + photoH + 3);
+              doc.text(rp.caption, MARGIN + photoW + 6, curY + rdH + 3);
             }
           }
 
-          curY += photoH + (lp.caption || rp?.caption ? 8 : 4);
+          curY += rowH + (lp.caption || rp?.caption ? 8 : 4);
         }
         curY += 2;
       }
