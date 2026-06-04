@@ -26,40 +26,29 @@ const TYPE_COLORS: Record<string, string> = {
   directive:   'b91c1c',
 };
 
-// Parse JPEG dimensions from raw bytes (finds SOF marker).
-function parseJpegDims(bytes: Uint8Array): { w: number; h: number } {
-  let i = 2;
-  while (i + 8 < bytes.length) {
-    if (bytes[i] !== 0xFF) break;
-    const marker = bytes[i + 1];
-    if (marker >= 0xC0 && marker <= 0xCF && marker !== 0xC4 && marker !== 0xC8 && marker !== 0xCC) {
-      const h = (bytes[i + 5] << 8) | bytes[i + 6];
-      const w = (bytes[i + 7] << 8) | bytes[i + 8];
-      if (w > 0 && h > 0) return { w, h };
-    }
-    if (marker === 0xD9 || marker === 0xDA) break;
-    const segLen = (bytes[i + 2] << 8) | bytes[i + 3];
-    if (segLen < 2) break;
-    i += 2 + segLen;
-  }
-  return { w: 4, h: 3 };
+// Use the browser's Image element to get display dimensions — this correctly
+// applies EXIF orientation, so portrait shots stored as landscape are handled right.
+function getImageDims(dataUri: string): Promise<{ w: number; h: number }> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => resolve({ w: img.naturalWidth, h: img.naturalHeight });
+    img.onerror = () => resolve({ w: 4, h: 3 });
+    img.src = dataUri;
+  });
 }
 
 // On Android, CapacitorHttp routes via OkHttp — bypasses WebView CORS entirely.
 async function fetchPhoto(downloadUrl: string): Promise<{ uri: string; w: number; h: number } | null> {
   try {
-    let bytes: Uint8Array;
     let base64: string;
     if (Capacitor.isNativePlatform()) {
       const resp = await CapacitorHttp.get({ url: downloadUrl, responseType: 'arraybuffer' });
       if (resp.status !== 200) return null;
       base64 = resp.data as string;
-      // Decode full bytes — EXIF blocks on phone photos can push SOF past 50KB
-      bytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
     } else {
       const response = await fetch(downloadUrl);
       if (!response.ok) return null;
-      bytes = new Uint8Array(await response.arrayBuffer());
+      const bytes = new Uint8Array(await response.arrayBuffer());
       let binary = '';
       const chunk = 8192;
       for (let i = 0; i < bytes.length; i += chunk) {
@@ -67,7 +56,8 @@ async function fetchPhoto(downloadUrl: string): Promise<{ uri: string; w: number
       }
       base64 = btoa(binary);
     }
-    return { uri: 'data:image/jpeg;base64,' + base64, ...parseJpegDims(bytes) };
+    const uri = 'data:image/jpeg;base64,' + base64;
+    return { uri, ...await getImageDims(uri) };
   } catch {
     return null;
   }
