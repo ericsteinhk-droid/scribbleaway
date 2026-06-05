@@ -69,7 +69,8 @@ function formatDateFr(dateStr: string) {
 }
 
 function photoRows(photos: Photo[], photoMap: Map<string, { uri: string; w: number; h: number }>): (Paragraph | Table)[] {
-  const DISP_W = 230; // display px per photo in 2-up layout
+  const DISP_H = 160;     // px — all photos share this height; width varies with aspect ratio
+  const MAX_DISP_W = 280; // px — cap so portrait photos stay within a 50% table cell
   const result: (Paragraph | Table)[] = [];
 
   for (let pi = 0; pi < photos.length; pi += 2) {
@@ -83,9 +84,11 @@ function photoRows(photos: Photo[], photoMap: Map<string, { uri: string; w: numb
     const makeCell = (d: { uri: string; w: number; h: number } | undefined, p: Photo | undefined) => {
       const cellChildren: Paragraph[] = [];
       if (d) {
-        const dispH = Math.round(DISP_W * d.h / d.w);
+        let dispW = Math.round(DISP_H * d.w / d.h);
+        let dispH = DISP_H;
+        if (dispW > MAX_DISP_W) { dispH = Math.round(DISP_H * MAX_DISP_W / dispW); dispW = MAX_DISP_W; }
         cellChildren.push(new Paragraph({
-          children: [new ImageRun({ data: d.uri, transformation: { width: DISP_W, height: dispH } })],
+          children: [new ImageRun({ data: d.uri, transformation: { width: dispW, height: dispH } })],
           spacing: { after: p?.caption ? 40 : 80 },
         }));
         if (p?.caption) {

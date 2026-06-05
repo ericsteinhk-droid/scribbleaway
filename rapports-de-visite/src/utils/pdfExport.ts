@@ -222,9 +222,10 @@ export async function exportPdf(
       doc.text(lines, MARGIN + 6, curY);
       curY += lines.length * 4.5 + 3;
 
-      // Photos: 2 per row, correct aspect ratio per photo
+      // Photos: 2 per row, constant height so portrait photos don't create wasted vertical space
       if (entry.photos.length > 0) {
-        const photoW = (CONTENT_W - 6) / 2;
+        const PHOTO_H = 55;   // mm — all photos share this height; width varies with aspect ratio
+        const PHOTO_GAP = 4;  // mm between photos in the same row
 
         for (let pi = 0; pi < entry.photos.length; pi += 2) {
           const lp = entry.photos[pi];
@@ -234,24 +235,37 @@ export async function exportPdf(
 
           if (!ld && !rd) continue;
 
-          const ldH = ld ? photoW * (ld.h / ld.w) : 0;
-          const rdH = rd ? photoW * (rd.h / rd.w) : 0;
-          const rowH = Math.max(ldH, rdH);
+          let rowH = PHOTO_H;
+          let lW = ld ? rowH * (ld.w / ld.h) : 0;
+          let rW = rd ? rowH * (rd.w / rd.h) : 0;
+
+          // Scale the pair down proportionally if they're too wide together
+          if (ld && rd) {
+            const totalW = lW + PHOTO_GAP + rW;
+            if (totalW > CONTENT_W) {
+              const scale = (CONTENT_W - PHOTO_GAP) / (lW + rW);
+              lW *= scale; rW *= scale; rowH *= scale;
+            }
+          } else if (ld && lW > CONTENT_W) {
+            rowH *= CONTENT_W / lW; lW = CONTENT_W;
+          } else if (rd && rW > CONTENT_W) {
+            rowH *= CONTENT_W / rW; rW = CONTENT_W;
+          }
 
           if (curY + rowH + 10 > PAGE_H - 15) { doc.addPage(); addHeader(doc.getNumberOfPages()); curY = 42; }
 
           if (ld) {
-            doc.addImage(ld.bytes, 'JPEG', MARGIN, curY, photoW, ldH);
+            doc.addImage(ld.bytes, 'JPEG', MARGIN, curY, lW, rowH);
             if (lp.caption) {
               doc.setFontSize(7); doc.setFont('helvetica', 'italic'); doc.setTextColor(100, 100, 100);
-              doc.text(lp.caption, MARGIN, curY + ldH + 3);
+              doc.text(lp.caption, MARGIN, curY + rowH + 3);
             }
           }
           if (rd) {
-            doc.addImage(rd.bytes, 'JPEG', MARGIN + photoW + 6, curY, photoW, rdH);
+            doc.addImage(rd.bytes, 'JPEG', MARGIN + lW + PHOTO_GAP, curY, rW, rowH);
             if (rp?.caption) {
               doc.setFontSize(7); doc.setFont('helvetica', 'italic'); doc.setTextColor(100, 100, 100);
-              doc.text(rp.caption, MARGIN + photoW + 6, curY + rdH + 3);
+              doc.text(rp.caption, MARGIN + lW + PHOTO_GAP, curY + rowH + 3);
             }
           }
 
