@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import {
   collection, query, orderBy, onSnapshot,
-  addDoc, updateDoc, deleteDoc, doc, serverTimestamp,
+  addDoc, updateDoc, deleteDoc, doc, serverTimestamp, Timestamp,
 } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { useAuth } from '../../contexts/AuthContext';
@@ -61,7 +61,7 @@ export default function ReportDetail({
   useEffect(() => {
     const q = query(collection(db, basePath), orderBy('createdAt', 'asc'));
     const unsub = onSnapshot(q, (snap) => {
-      setEntries(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Entry)));
+      setEntries(snap.docs.map((d) => ({ id: d.id, ...d.data({ serverTimestamps: 'estimate' }) } as Entry)));
       setLoading(false);
     });
     return unsub;
@@ -163,7 +163,7 @@ export default function ReportDetail({
     } else {
       await addDoc(collection(db, basePath), {
         type, content, photos,
-        createdAt: serverTimestamp(),
+        createdAt: Timestamp.fromDate(new Date()),
         updatedAt: serverTimestamp(),
       });
       onSuccess('Entrée ajoutée.');
