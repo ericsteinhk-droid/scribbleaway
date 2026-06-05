@@ -11,11 +11,11 @@ interface DraftData {
 }
 
 function getAnthropicKey(): string {
-  return localStorage.getItem('rdv-anthropic-key') || import.meta.env.VITE_ANTHROPIC_API_KEY || '';
+  return localStorage.getItem('rdv-anthropic-key') || '';
 }
 
 function getOpenAIKey(): string {
-  return localStorage.getItem('rdv-openai-key') || import.meta.env.VITE_OPENAI_API_KEY || '';
+  return localStorage.getItem('rdv-openai-key') || '';
 }
 
 interface Props {
