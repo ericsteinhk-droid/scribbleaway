@@ -10,6 +10,7 @@ import {
   doc,
   serverTimestamp,
   getCountFromServer,
+  Timestamp,
 } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { useAuth } from '../../contexts/AuthContext';
@@ -25,7 +26,7 @@ interface Props {
   onSuccess: (msg: string) => void;
 }
 
-type ReportData = Omit<Report, 'id' | 'number' | 'createdAt' | 'updatedAt' | 'entryCount' | 'attendeeCount'>;
+type ReportData = Omit<Report, 'id' | 'createdAt' | 'updatedAt' | 'entryCount' | 'attendeeCount'>;
 
 export default function ReportsList({ projectId, projectName, onOpenReport, onError, onSuccess }: Props) {
   const { user } = useAuth();
@@ -65,14 +66,13 @@ export default function ReportsList({ projectId, projectName, onOpenReport, onEr
     return unsub;
   }, [user, projectId]);
 
-  async function getNextNumber() {
-    const snap = await getCountFromServer(collection(db, basePath));
-    return snap.data().count + 1;
-  }
+  // Derive next suggested number from already-loaded reports — no extra Firestore read needed
+  const suggestedNumber = reports.length > 0
+    ? Math.max(...reports.map((r) => r.number)) + 1
+    : 1;
 
   async function handleSave(data: ReportData) {
     if (!user) return;
-    // Firestore rejects undefined values — strip them before writing
     const clean = Object.fromEntries(
       Object.entries(data).filter(([, v]) => v !== undefined)
     );
@@ -82,17 +82,14 @@ export default function ReportsList({ projectId, projectName, onOpenReport, onEr
           ...clean,
           updatedAt: serverTimestamp(),
         });
-        // Also update project updatedAt
         await updateDoc(doc(db, `users/${user.uid}/projects/${projectId}`), {
           updatedAt: serverTimestamp(),
         });
         onSuccess('Rapport mis à jour.');
       } else {
-        const number = await getNextNumber();
         await addDoc(collection(db, basePath), {
           ...clean,
-          number,
-          createdAt: serverTimestamp(),
+          createdAt: Timestamp.fromDate(new Date()),
           updatedAt: serverTimestamp(),
         });
         await updateDoc(doc(db, `users/${user.uid}/projects/${projectId}`), {
@@ -227,6 +224,7 @@ export default function ReportsList({ projectId, projectName, onOpenReport, onEr
         >
           <ReportForm
             initial={editReport ?? undefined}
+            suggestedNumber={editReport ? undefined : suggestedNumber}
             onSave={handleSave}
             onCancel={() => { setShowForm(false); setEditReport(null); }}
           />

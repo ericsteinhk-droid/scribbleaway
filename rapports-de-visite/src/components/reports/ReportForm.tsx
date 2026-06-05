@@ -2,14 +2,18 @@ import { useState, FormEvent } from 'react';
 import type { Report } from '../../types';
 import { WEATHER_OPTIONS } from '../../types';
 
+type ReportData = Omit<Report, 'id' | 'createdAt' | 'updatedAt' | 'entryCount' | 'attendeeCount'>;
+
 interface Props {
   initial?: Report;
-  onSave: (data: Omit<Report, 'id' | 'number' | 'createdAt' | 'updatedAt' | 'entryCount' | 'attendeeCount'>) => Promise<void>;
+  suggestedNumber?: number;
+  onSave: (data: ReportData) => Promise<void>;
   onCancel: () => void;
 }
 
-export default function ReportForm({ initial, onSave, onCancel }: Props) {
+export default function ReportForm({ initial, suggestedNumber, onSave, onCancel }: Props) {
   const today = new Date().toISOString().split('T')[0];
+  const [number, setNumber] = useState(initial?.number ?? suggestedNumber ?? 1);
   const [date, setDate] = useState(initial?.date ?? today);
   const [time, setTime] = useState(initial?.time ?? '');
   const [weather, setWeather] = useState(initial?.weather ?? '');
@@ -33,6 +37,7 @@ export default function ReportForm({ initial, onSave, onCancel }: Props) {
     e.preventDefault();
     setSaving(true);
     await onSave({
+      number: Math.max(1, Math.floor(number)),
       date,
       time: time || undefined,
       weather: weather || undefined,
@@ -44,7 +49,22 @@ export default function ReportForm({ initial, onSave, onCancel }: Props) {
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-      <div className="grid grid-cols-2 gap-3">
+      {/* Number + Date + Time — 3-column row */}
+      <div className="grid grid-cols-[auto_1fr_auto] gap-3 items-end">
+        <div>
+          <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+            N° *
+          </label>
+          <input
+            type="number"
+            min={1}
+            step={1}
+            required
+            value={number}
+            onChange={(e) => setNumber(parseInt(e.target.value) || 1)}
+            className="w-20 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-evoq text-center"
+          />
+        </div>
         <div>
           <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
             Date *
