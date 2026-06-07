@@ -207,6 +207,80 @@ def check_heading_numbering(segments: list[Segment]) -> list[str]:
 
 
 # ---------------------------------------------------------------------------
+# Auto-remediation
+# ---------------------------------------------------------------------------
+def remediate_heading_numbering(
+    work_dir: str,
+    segments: list[Segment],
+    failures: list[str],
+) -> int:
+    """
+    Re-open document.xml from work_dir and prepend any missing numeric prefixes
+    to heading paragraphs identified by check_heading_numbering.
+    Returns the number of paragraphs patched.
+    """
+    _HN_RE = re.compile(
+        r"HEADING NUMBERING para (\d+): numeric prefix '([^']+)'"
+    )
+    fixes: dict[int, str] = {}
+    for f in failures:
+        m = _HN_RE.search(f)
+        if m:
+            fixes[int(m.group(1))] = m.group(2)
+    if not fixes:
+        return 0
+
+    REMOVE_TAGS = frozenset({
+        W + "r", W + "hyperlink", W + "proofErr", W + "del", W + "ins",
+        W + "fldSimple", W + "sdt",
+    })
+    KEEP_TAGS = frozenset({W + "pPr", W + "bookmarkStart", W + "bookmarkEnd"})
+    XML_NS = "http://www.w3.org/XML/1998/namespace"
+
+    path = os.path.join(work_dir, "word", "document.xml")
+    tree = etree.parse(path)
+    root = tree.getroot()
+    fixed = 0
+
+    for idx, p in enumerate(root.iter(W + "p")):
+        if idx not in fixes:
+            continue
+        prefix = fixes[idx]
+        runs = list(p.iter(W + "r"))
+        cur_text = "".join(
+            "".join(t.text or "" for t in r.findall(W + "t"))
+            for r in runs
+        )
+        if cur_text.strip().startswith(prefix):
+            continue
+        new_text = prefix + " " + cur_text.lstrip()
+        first_rpr_xml = None
+        for r in runs:
+            rpr = r.find(W + "rPr")
+            if rpr is not None:
+                first_rpr_xml = etree.tostring(rpr)
+                break
+        for child in list(p):
+            if child.tag in REMOVE_TAGS:
+                p.remove(child)
+            elif child.tag not in KEEP_TAGS:
+                p.remove(child)
+        new_r = etree.SubElement(p, W + "r")
+        if first_rpr_xml is not None:
+            rpr_el = etree.fromstring(first_rpr_xml)
+            new_r.insert(0, rpr_el)
+        t_el = etree.SubElement(new_r, W + "t")
+        t_el.text = new_text
+        if new_text and (new_text[0].isspace() or new_text[-1].isspace()):
+            t_el.set(f"{{{XML_NS}}}space", "preserve")
+        fixed += 1
+
+    if fixed:
+        tree.write(path, xml_declaration=True, encoding="UTF-8", standalone=True)
+    return fixed
+
+
+# ---------------------------------------------------------------------------
 # Public entry point
 # ---------------------------------------------------------------------------
 def run_checks(

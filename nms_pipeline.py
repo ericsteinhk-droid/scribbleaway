@@ -35,8 +35,9 @@ from nms_preprocess import (
     discover_styles,
     _parse,
 )
-from nms_translate import translate_document, load_lexicon, translate_docx_headers
-from nms_checks import run_checks, write_checks_report
+import nms_cache
+from nms_translate import translate_document, load_lexicon, translate_docx_headers, translate_footnotes, estimate_translation_cost
+from nms_checks import run_checks, write_checks_report, remediate_heading_numbering
 from nms_tn import generate_tn
 from api_client import ApiClient
 from config import Config
@@ -189,6 +190,10 @@ def run_pipeline(
     checks_report      = str(info_dir / f"{stem}_checks.txt")
     tn_report          = str(info_dir / f"{stem}_TN.txt")
 
+    # Initialise translation memory
+    nms_cache.init_cache(cfg.cache_path)
+    _log(f"  Translation memory: {nms_cache.count()} cached segment(s).")
+
     # ── Step 0: Pre-strip manifest ──────────────────────────────────────
     _log("Step 0/4: Generating pre-strip manifest…")
     _generate_prestrip_manifest(src_docx, prestrip_manifest, manifest_scan)
@@ -254,6 +259,17 @@ def run_pipeline(
     if hdr_count:
         _log(f"  {hdr_count} page-header section name(s) translated.")
 
+    fn_count = translate_footnotes(
+        work_dir=trans_work,
+        source_lang=rpt.source_lang,
+        direction=direction,
+        client=client,
+        lexicon=lexicon,
+        log=_log,
+    )
+    if fn_count:
+        _log(f"  Footnotes/endnotes: {fn_count} paragraph(s) translated.")
+
     repack(trans_work, translated_docx)
     _log(f"  Written: {translated_docx}")
     _log(f"  {client.usage_summary()}")
@@ -275,6 +291,16 @@ def run_pipeline(
             _log(f"    FAIL: {f}")
     else:
         _log("  All checks passed.")
+
+    # ── Auto-remediate fixable check failures ───────────────────────────
+    hn_failures = [f for f in failures if f.startswith("HEADING NUMBERING")]
+    if hn_failures:
+        n_fixed = remediate_heading_numbering(trans_work, segments, hn_failures)
+        if n_fixed:
+            _log(f"  Auto-fixed {n_fixed} heading numbering issue(s).")
+            repack(trans_work, translated_docx)
+            failures = [f for f in failures if not f.startswith("HEADING NUMBERING")]
+            write_checks_report(failures, checks_report)
 
     # ── Step 4: Translator's Notes ──────────────────────────────────────
     _log("Step 4/4: Generating Translator's Notes…")

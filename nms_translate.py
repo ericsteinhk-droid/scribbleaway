@@ -30,6 +30,7 @@ _XML_NS = "http://www.w3.org/XML/1998/namespace"
 
 from api_client import ApiClient, TranslationResponse
 from nms_segment import Segment, extract_segments, apply_translations, restore_and_postprocess, post_process
+import nms_cache
 
 
 # ---------------------------------------------------------------------------
@@ -103,6 +104,56 @@ def load_lexicon(path: Path) -> dict[str, str]:
                 continue
             lexicon[en] = fr
     return lexicon
+
+
+def estimate_translation_cost(src_docx: str) -> dict:
+    """
+    Quick pre-flight: count translatable paragraphs/chars and estimate API cost.
+    Uses zipfile + lxml — no API calls.
+    """
+    import zipfile as _zip
+    try:
+        with _zip.ZipFile(src_docx) as z:
+            with z.open("word/document.xml") as f:
+                tree = etree.parse(f)
+    except Exception as e:
+        return {"error": str(e)}
+
+    root = tree.getroot()
+    total_chars = 0
+    para_count = 0
+    for p in root.iter(W + "p"):
+        text = "".join(t.text or "" for t in p.iter(W + "t")).strip()
+        if text:
+            total_chars += len(text)
+            para_count += 1
+
+    if para_count == 0:
+        return {"para_count": 0, "total_chars": 0, "est_cost_usd": 0.0}
+
+    chars_per_tok = 3.5
+    content_toks = total_chars / chars_per_tok
+    sys_toks = 2500
+
+    # Sonnet 4.6 pricing
+    INPUT_PRICE  = 3.00 / 1_000_000
+    OUTPUT_PRICE = 15.00 / 1_000_000
+    CACHE_PRICE  = 0.30 / 1_000_000
+
+    avg_per_para = content_toks / para_count
+    cost = (
+        (avg_per_para + sys_toks) * INPUT_PRICE
+        + max(0, para_count - 1) * (avg_per_para * INPUT_PRICE + sys_toks * CACHE_PRICE)
+        + content_toks * OUTPUT_PRICE
+    )
+
+    return {
+        "para_count": para_count,
+        "total_chars": total_chars,
+        "est_input_tokens": int(content_toks + sys_toks * para_count),
+        "est_output_tokens": int(content_toks),
+        "est_cost_usd": round(cost, 4),
+    }
 
 
 def _build_lexicon_block(lexicon: dict[str, str], direction: str) -> str:
@@ -409,6 +460,17 @@ def translate_document(
                 seg.masked_text, seg.placeholders, lexicon, direction
             )
 
+        # ── Translation memory: check cache before API call ───────────────
+        _ck = nms_cache.cache_key(seg.source_text, direction, client.model)
+        _cached = nms_cache.lookup(_ck)
+        if _cached is not None:
+            seg.translated_text = _cached
+            done += 1
+            if progress_cb:
+                progress_cb(done, total)
+            _log(f"  [{done}/{total}] para {seg.para_index} cache-hit")
+            continue
+
         # Table cells: suppress before/after context — adjacent cells are from
         # different columns/rows and can cause the model to confuse context with
         # the content being translated (root cause of cell-content contamination).
@@ -434,6 +496,10 @@ def translate_document(
             seg.translated_text = apply_lexicon_to_section_refs(
                 seg.source_text, seg.translated_text, lexicon, direction
             )
+
+        # ── Store in translation memory (only clean translations) ─────────
+        if not seg.missing_placeholders and not model_flags:
+            nms_cache.store(_ck, seg.translated_text)
 
         done += 1
         _log(f"  [{done}/{total}] para {seg.para_index} ({seg.style_id or 'unstyled'})")
@@ -506,6 +572,112 @@ def fix_numbering_labels(work_dir: str, direction: str, log: Callable[[str], Non
     if updated:
         tree.write(num_path, xml_declaration=True, encoding="UTF-8", standalone=True)
     return updated
+
+
+# ---------------------------------------------------------------------------
+# Footnote / endnote translation
+# ---------------------------------------------------------------------------
+def translate_footnotes(
+    work_dir: str,
+    source_lang: str,
+    direction: str,
+    client: "ApiClient",
+    lexicon: dict[str, str],
+    log: Callable[[str], None] | None = None,
+) -> int:
+    """
+    Translate word/footnotes.xml and word/endnotes.xml if present.
+    Preserves footnote/endnote reference marker runs (no <w:t>) in place.
+    Returns total paragraphs translated.
+    """
+    def _log(msg: str) -> None:
+        if log:
+            log(msg)
+
+    target_lang = _target_lang(direction, source_lang)
+    SKIP_TYPES = {"separator", "continuationSeparator", "continuationNotice"}
+    REMOVE_TAGS = frozenset({
+        W + "hyperlink", W + "proofErr", W + "del", W + "ins",
+        W + "fldSimple", W + "sdt",
+    })
+    KEEP_TAGS = frozenset({W + "pPr", W + "bookmarkStart", W + "bookmarkEnd"})
+    total = 0
+
+    for fname, note_tag in [("footnotes.xml", W + "footnote"), ("endnotes.xml", W + "endnote")]:
+        path = os.path.join(work_dir, "word", fname)
+        if not os.path.isfile(path):
+            continue
+
+        tree = etree.parse(path)
+        root = tree.getroot()
+        file_modified = False
+        file_count = 0
+
+        for note in root.findall(note_tag):
+            if note.get(W + "type", "") in SKIP_TYPES:
+                continue
+            for p in note.findall(W + "p"):
+                all_runs = list(p.findall(W + "r"))
+                text_runs = [r for r in all_runs if r.findall(W + "t")]
+                text = "".join(
+                    "".join(t.text or "" for t in r.findall(W + "t"))
+                    for r in text_runs
+                ).strip()
+                if not text:
+                    continue
+
+                direct = _lookup_title(text, lexicon, direction)
+                if direct:
+                    translated = post_process(direct, direction)
+                else:
+                    sys_prompt = build_system_prompt(direction, "body", lexicon)
+                    resp = client.translate(sys_prompt, text)
+                    raw_t, _ = _extract_flags(resp.translated)
+                    translated = post_process(raw_t, direction)
+
+                if translated == text:
+                    continue
+
+                first_rpr_xml = None
+                for r in text_runs:
+                    rpr = r.find(W + "rPr")
+                    if rpr is not None:
+                        first_rpr_xml = etree.tostring(rpr)
+                        break
+
+                for child in list(p):
+                    if child in text_runs:
+                        p.remove(child)
+                    elif child.tag in REMOVE_TAGS:
+                        p.remove(child)
+                    elif child.tag not in KEEP_TAGS and child not in all_runs:
+                        p.remove(child)
+
+                new_r = etree.SubElement(p, W + "r")
+                if first_rpr_xml is not None:
+                    rpr_el = etree.fromstring(first_rpr_xml)
+                    lang_el = rpr_el.find(W + "lang")
+                    if lang_el is not None:
+                        lang_el.set(W + "val", target_lang)
+                    else:
+                        lang_el = etree.SubElement(rpr_el, W + "lang")
+                        lang_el.set(W + "val", target_lang)
+                    new_r.insert(0, rpr_el)
+
+                t_el = etree.SubElement(new_r, W + "t")
+                t_el.text = translated
+                if translated and (translated[0].isspace() or translated[-1].isspace()):
+                    t_el.set(f"{{{_XML_NS}}}space", "preserve")
+
+                file_modified = True
+                file_count += 1
+                total += 1
+
+        if file_modified:
+            tree.write(path, xml_declaration=True, encoding="UTF-8", standalone=True)
+            _log(f"  {fname}: {file_count} paragraph(s) translated.")
+
+    return total
 
 
 # ---------------------------------------------------------------------------

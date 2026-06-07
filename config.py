@@ -10,7 +10,7 @@ from __future__ import annotations
 import json
 import os
 import sys
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 APP_DIR = Path(os.environ.get("APPDATA", Path.home())) / "NMSTranslator"
@@ -24,6 +24,7 @@ class Config:
     model: str
     lexicon_path: Path
     work_dir: Path
+    cache_path: Path = field(default_factory=lambda: APP_DIR / "cache.db")
 
     def validate(self) -> list[str]:
         errors: list[str] = []
@@ -86,6 +87,7 @@ def load() -> Config | None:
         model=d.get("model", "claude-sonnet-4-6"),
         lexicon_path=lexicon_path,
         work_dir=work_dir,
+        cache_path=APP_DIR / "cache.db",
     )
 
 
