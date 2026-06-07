@@ -5,7 +5,7 @@ import {
 } from 'docx';
 import JSZip from 'jszip';
 import { Capacitor, CapacitorHttp } from '@capacitor/core';
-import type { Report, Entry, Photo } from '../types';
+import type { Report, Entry, Photo, Letterhead } from '../types';
 import { ENTRY_TYPE_LABELS } from '../types';
 
 const TEAL = '00a99e';
@@ -124,6 +124,7 @@ export async function exportDocx(
   projectName: string,
   projectAddress: string | undefined,
   firmName: string,
+  letterhead: Letterhead = 'evoq',
   onProgress?: (current: number, total: number) => void
 ): Promise<Blob> {
   // Fetch all photos in parallel — no canvas, works on Android WebView
@@ -145,23 +146,62 @@ export async function exportDocx(
 
   const children: (Paragraph | Table)[] = [];
 
-  // Header: firm name
-  children.push(new Paragraph({
-    text: firmName,
-    heading: HeadingLevel.HEADING_1,
-    style: 'Heading1',
-    run: { color: TEAL },
-  }));
-
-  // Report title
-  children.push(new Paragraph({
-    children: [new TextRun({
-      text: `Rapport de visite #${report.number} — ${projectName}`,
-      bold: true, size: 28, color: '222222',
-    })],
-    border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: TEAL } },
-    spacing: { after: 200 },
-  }));
+  if (letterhead === 'evoq') {
+    // Header: firm name
+    children.push(new Paragraph({
+      text: 'EVOQ architecture',
+      heading: HeadingLevel.HEADING_1,
+      style: 'Heading1',
+      run: { color: TEAL },
+    }));
+    // Firm address
+    children.push(new Paragraph({
+      children: [new TextRun({
+        text: '1435, rue Saint-Alexandre, bureau 1000, Montr\xE9al (Qu\xE9bec) H3A 2G4 \xB7 T. 514.393.9490',
+        size: 16, color: '888888',
+      })],
+      spacing: { after: 100 },
+    }));
+    // Report title
+    children.push(new Paragraph({
+      children: [new TextRun({
+        text: `Rapport de visite #${report.number} — ${projectName}`,
+        bold: true, size: 28, color: '222222',
+      })],
+      border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: TEAL } },
+      spacing: { after: 200 },
+    }));
+  } else {
+    // nfoe-evoq
+    children.push(new Paragraph({
+      text: 'N\xB7F\xB7O\xB7E+EVOQ',
+      heading: HeadingLevel.HEADING_1,
+      style: 'Heading1',
+      run: { color: '111111' },
+    }));
+    children.push(new Paragraph({
+      children: [new TextRun({
+        text: 'Consortium NFOE | EVOQ architecture',
+        bold: true, size: 20, color: '222222',
+      })],
+      spacing: { after: 60 },
+    }));
+    children.push(new Paragraph({
+      children: [new TextRun({
+        text: 'T. 514.397.2616  \xB7  F. 514.861.5242  \xB7  361, rue Saint-Jacques, bureau 1500, Montr\xE9al, Qu\xE9bec H2Y 0K2',
+        size: 16, color: '888888',
+      })],
+      spacing: { after: 200 },
+    }));
+    children.push(new Paragraph({
+      children: [new TextRun({
+        text: `Rapport de visite #${report.number} — ${projectName}`,
+        bold: true, size: 28, color: '222222',
+      })],
+      border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: TEAL } },
+      spacing: { after: 200 },
+    }));
+  }
 
   // Metadata table
   const dateStr = formatDateFr(report.date) + (report.time ? ` ${report.time}` : '');

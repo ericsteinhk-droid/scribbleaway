@@ -13,7 +13,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { useAuth } from '../../contexts/AuthContext';
-import type { Project } from '../../types';
+import type { Project, Letterhead } from '../../types';
 import ProjectForm from './ProjectForm';
 import Modal from '../Modal';
 
@@ -63,13 +63,14 @@ export default function ProjectsDashboard({ onOpenProject, onError, onSuccess }:
     return unsub;
   }, [user]);
 
-  async function handleSave(name: string, address?: string) {
+  async function handleSave(name: string, address?: string, letterhead?: Letterhead) {
     if (!user) return;
     try {
       if (editProject) {
         await updateDoc(doc(db, `users/${user.uid}/projects/${editProject.id}`), {
           name,
           address: address ?? '',
+          letterhead: letterhead ?? 'evoq',
           updatedAt: serverTimestamp(),
         });
         onSuccess('Projet mis à jour.');
@@ -77,6 +78,7 @@ export default function ProjectsDashboard({ onOpenProject, onError, onSuccess }:
         await addDoc(collection(db, `users/${user.uid}/projects`), {
           name,
           address: address ?? '',
+          letterhead: letterhead ?? 'evoq',
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
         });

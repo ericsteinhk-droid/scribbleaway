@@ -14,7 +14,7 @@ import ReportsList from './components/reports/ReportsList';
 import ReportForm from './components/reports/ReportForm';
 import ReportDetail from './components/report-detail/ReportDetail';
 import Modal from './components/Modal';
-import type { NavState, Project, Report } from './types';
+import type { NavState, Project, Report, Letterhead } from './types';
 import {
   doc, updateDoc, serverTimestamp, onSnapshot,
 } from 'firebase/firestore';
@@ -82,6 +82,7 @@ function AppShell() {
       projectId: project.id,
       projectName: project.name,
       projectAddress: project.address,
+      projectLetterhead: project.letterhead ?? 'evoq',
     });
   }
 
@@ -117,7 +118,7 @@ function AppShell() {
     return undefined;
   }
 
-  async function handleSaveEditReport(data: Omit<Report, 'id' | 'number' | 'createdAt' | 'updatedAt' | 'entryCount' | 'attendeeCount'>) {
+  async function handleSaveEditReport(data: Omit<Report, 'id' | 'createdAt' | 'updatedAt' | 'entryCount' | 'attendeeCount'>) {
     if (!editReportModal || !nav.projectId) return;
     const clean = Object.fromEntries(Object.entries(data).filter(([, v]) => v !== undefined));
     try {
@@ -156,6 +157,7 @@ function AppShell() {
           <ReportsList
             projectId={nav.projectId}
             projectName={nav.projectName ?? ''}
+            letterhead={nav.projectLetterhead ?? 'evoq'}
             onOpenReport={goToReportDetail}
             onError={(m) => addToast(m, 'error')}
             onSuccess={(m) => addToast(m, 'success')}
@@ -167,6 +169,7 @@ function AppShell() {
             projectId={nav.projectId}
             projectName={nav.projectName ?? ''}
             projectAddress={nav.projectAddress}
+            letterhead={nav.projectLetterhead ?? 'evoq'}
             reportId={nav.reportId}
             onError={(m) => addToast(m, 'error')}
             onSuccess={(m) => addToast(m, 'success')}
@@ -207,12 +210,13 @@ import { useEffect as useEff, useState as useSt } from 'react';
 import { getDoc } from 'firebase/firestore';
 
 function ReportDetailWrapper({
-  projectId, projectName, projectAddress, reportId,
+  projectId, projectName, projectAddress, letterhead, reportId,
   onError, onSuccess, onNeedApiKey, onEditReport, onExportActionsReady,
 }: {
   projectId: string;
   projectName: string;
   projectAddress?: string;
+  letterhead: Letterhead;
   reportId: string;
   onError: (m: string) => void;
   onSuccess: (m: string) => void;
@@ -248,6 +252,7 @@ function ReportDetailWrapper({
       projectId={projectId}
       projectName={projectName}
       projectAddress={projectAddress}
+      letterhead={letterhead}
       onError={onError}
       onSuccess={onSuccess}
       onNeedApiKey={onNeedApiKey}

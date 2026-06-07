@@ -1,9 +1,12 @@
 import type { Timestamp } from 'firebase/firestore';
 
+export type Letterhead = 'evoq' | 'nfoe-evoq';
+
 export interface Project {
   id: string;
   name: string;
   address?: string;
+  letterhead?: Letterhead;
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }
@@ -52,6 +55,7 @@ export interface NavState {
   projectId?: string;
   projectName?: string;
   projectAddress?: string;
+  projectLetterhead?: Letterhead;
   reportId?: string;
   reportNumber?: number;
 }

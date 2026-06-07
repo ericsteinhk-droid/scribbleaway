@@ -5,7 +5,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { useAuth } from '../../contexts/AuthContext';
-import type { Report, Entry, EntryType, Photo } from '../../types';
+import type { Report, Entry, EntryType, Photo, Letterhead } from '../../types';
 import { ENTRY_TYPE_LABELS, ENTRY_TYPE_COLORS } from '../../types';
 import EntryForm from './EntryForm';
 import PhotoGrid from './PhotoGrid';
@@ -24,6 +24,7 @@ interface Props {
   projectId: string;
   projectName: string;
   projectAddress?: string;
+  letterhead?: Letterhead;
   onError: (msg: string) => void;
   onSuccess: (msg: string) => void;
   onNeedApiKey: (type: 'anthropic' | 'openai') => void;
@@ -36,6 +37,7 @@ export default function ReportDetail({
   projectId,
   projectName,
   projectAddress,
+  letterhead,
   onError,
   onSuccess,
   onNeedApiKey,
@@ -99,7 +101,7 @@ export default function ReportDetail({
   async function handlePdfExport() {
     setPdfProgress('…');
     try {
-      const blob = await exportPdf(report, entries, projectName, projectAddress, (c, t) => {
+      const blob = await exportPdf(report, entries, projectName, projectAddress, letterhead ?? 'evoq', (c, t) => {
         setPdfProgress(`${c}/${t}`);
       });
       const name = `Rapport-${report.number}-${slugify(projectName)}.pdf`;
@@ -117,7 +119,7 @@ export default function ReportDetail({
     const firmName = user?.displayName?.split(' — ')[1] ?? 'EVOQ Architecture';
     let blob: Blob | undefined;
     try {
-      blob = await exportDocx(report, entries, projectName, projectAddress, firmName, (c, t) => {
+      blob = await exportDocx(report, entries, projectName, projectAddress, firmName, letterhead ?? 'evoq', (c, t) => {
         setDocxProgress(`${c}/${t}`);
       });
     } catch (err) {

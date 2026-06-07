@@ -1,21 +1,23 @@
 import { useState, FormEvent } from 'react';
-import type { Project } from '../../types';
+import type { Project, Letterhead } from '../../types';
 
 interface Props {
   initial?: Project;
-  onSave: (name: string, address?: string) => Promise<void>;
+  suggestedLetterhead?: Letterhead;
+  onSave: (name: string, address?: string, letterhead?: Letterhead) => Promise<void>;
   onCancel: () => void;
 }
 
-export default function ProjectForm({ initial, onSave, onCancel }: Props) {
+export default function ProjectForm({ initial, suggestedLetterhead, onSave, onCancel }: Props) {
   const [name, setName] = useState(initial?.name ?? '');
   const [address, setAddress] = useState(initial?.address ?? '');
+  const [letterhead, setLetterhead] = useState<Letterhead>(initial?.letterhead ?? suggestedLetterhead ?? 'evoq');
   const [saving, setSaving] = useState(false);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setSaving(true);
-    await onSave(name.trim(), address.trim() || undefined);
+    await onSave(name.trim(), address.trim() || undefined, letterhead);
     setSaving(false);
   }
 
@@ -45,6 +47,27 @@ export default function ProjectForm({ initial, onSave, onCancel }: Props) {
           placeholder="123, rue Principale, Montréal, QC"
           className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-evoq"
         />
+      </div>
+      <div>
+        <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+          En-tête
+        </label>
+        <div className="flex gap-2">
+          {(['evoq', 'nfoe-evoq'] as Letterhead[]).map((lh) => (
+            <button
+              key={lh}
+              type="button"
+              onClick={() => setLetterhead(lh)}
+              className={`flex-1 py-2 px-3 rounded-lg border text-xs font-medium transition-colors ${
+                letterhead === lh
+                  ? 'border-evoq bg-evoq-light text-evoq dark:bg-evoq/10'
+                  : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300'
+              }`}
+            >
+              {lh === 'evoq' ? 'EVOQ architecture' : 'N\xB7F\xB7O\xB7E+EVOQ'}
+            </button>
+          ))}
+        </div>
       </div>
       <div className="flex gap-3 pt-2">
         <button
