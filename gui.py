@@ -202,24 +202,40 @@ class _TermDialog(tk.Toplevel):
 # Lexicon manager dialog
 # ---------------------------------------------------------------------------
 class LexiconManager(tk.Toplevel):
-    """Modal dialog for viewing and editing the bilingual lexicon."""
+    """
+    Modal dialog for viewing and editing the bilingual lexicon.
+
+    The MASTER lexicon file is NEVER written to — all user changes are saved
+    to a separate _custom.txt file in the same folder.  Custom entries override
+    master entries with the same EN key at translation time.
+
+    Colour coding:
+      Gray  — master entry (read-only; can be overridden but not deleted)
+      Blue  — custom-only entry (added by the user)
+      Green — custom override of a master entry
+    """
+
+    _TAG_MASTER   = "master"
+    _TAG_CUSTOM   = "custom"
+    _TAG_OVERRIDE = "override"
 
     def __init__(self, parent: tk.Widget, lex_path: Path):
         super().__init__(parent)
         self.title("Manage Lexicon")
         self.resizable(True, True)
-        self.minsize(660, 440)
+        self.minsize(700, 460)
         self.configure(bg=BG)
         self.grab_set()
-        self._path = lex_path
+        self._master_path = lex_path
+        self._custom_path = lex_path.parent / (lex_path.stem + "_custom.txt")
         self._dirty = False
 
         self._build_ui()
         self._load()
 
         self.update_idletasks()
-        w = max(self.winfo_width(), 660)
-        h = max(self.winfo_height(), 440)
+        w = max(self.winfo_width(), 700)
+        h = max(self.winfo_height(), 460)
         sw, sh = self.winfo_screenwidth(), self.winfo_screenheight()
         self.geometry(f"{w}x{h}+{(sw - w) // 2}+{(sh - h) // 2}")
 
@@ -238,17 +254,37 @@ class LexiconManager(tk.Toplevel):
             bg=BG, fg="#555555", font=("Segoe UI", 8),
         ).pack(side="right")
 
+        # Legend
+        leg = tk.Frame(self, bg=BG, padx=PAD)
+        leg.pack(fill="x")
+        for colour, label in [
+            ("#888888", "Master (read-only)"),
+            (ACCENT,    "Custom (new)"),
+            ("#006600", "Custom override of master"),
+        ]:
+            tk.Label(leg, text="■", fg=colour, bg=BG,
+                     font=("Segoe UI", 9)).pack(side="left")
+            tk.Label(leg, text=label, bg=BG,
+                     font=("Segoe UI", 8), fg=colour).pack(
+                side="left", padx=(1, PAD)
+            )
+
         mid = tk.Frame(self, bg=BG)
-        mid.pack(fill="both", expand=True, padx=PAD, pady=(0, PAD))
+        mid.pack(fill="both", expand=True, padx=PAD, pady=(2, PAD))
 
         cols = ("en", "fr")
-        self._tree = ttk.Treeview(mid, columns=cols, show="headings", selectmode="browse")
+        self._tree = ttk.Treeview(
+            mid, columns=cols, show="headings", selectmode="browse"
+        )
         self._tree.heading("en", text="English Term",
                            command=lambda: self._sort("en"))
         self._tree.heading("fr", text="French Term",
                            command=lambda: self._sort("fr"))
         self._tree.column("en", width=290, minwidth=120)
-        self._tree.column("fr", width=290, minwidth=120)
+        self._tree.column("fr", width=310, minwidth=120)
+        self._tree.tag_configure(self._TAG_MASTER,   foreground="#888888")
+        self._tree.tag_configure(self._TAG_CUSTOM,   foreground=ACCENT)
+        self._tree.tag_configure(self._TAG_OVERRIDE, foreground="#006600")
         vsb = ttk.Scrollbar(mid, orient="vertical", command=self._tree.yview)
         self._tree.configure(yscrollcommand=vsb.set)
         self._tree.pack(side="left", fill="both", expand=True)
@@ -275,14 +311,29 @@ class LexiconManager(tk.Toplevel):
 
     def _load(self) -> None:
         from nms_translate import load_lexicon
-        self._lexicon: dict[str, str] = load_lexicon(self._path)
+        self._master: dict[str, str] = load_lexicon(self._master_path)
+        self._custom: dict[str, str] = (
+            load_lexicon(self._custom_path)
+            if self._custom_path.is_file() else {}
+        )
         self._apply_filter()
+
+    def _merged(self) -> dict[str, str]:
+        m = dict(self._master)
+        m.update(self._custom)
+        return m
+
+    def _tag(self, en: str) -> str:
+        if en in self._custom:
+            return self._TAG_OVERRIDE if en in self._master else self._TAG_CUSTOM
+        return self._TAG_MASTER
 
     def _apply_filter(self) -> None:
         q = self._search_var.get().strip().lower()
         self._tree.delete(*self._tree.get_children())
+        merged = self._merged()
         pairs = sorted(
-            self._lexicon.items(),
+            merged.items(),
             key=lambda kv: kv[0 if self._sort_col == "en" else 1].lower(),
             reverse=self._sort_rev,
         )
@@ -290,11 +341,14 @@ class LexiconManager(tk.Toplevel):
         for en, fr in pairs:
             if q and q not in en.lower() and q not in fr.lower():
                 continue
-            self._tree.insert("", "end", iid=en, values=(en, fr))
+            self._tree.insert("", "end", iid=en, values=(en, fr),
+                               tags=(self._tag(en),))
             shown += 1
-        total = len(self._lexicon)
+        total = len(merged)
+        n_cust = len(self._custom)
         self._count_var.set(
-            f"{shown} of {total} entries" if q else f"{total} entries"
+            f"{shown} of {total} entries ({n_cust} custom)" if not q
+            else f"{shown} of {total} shown"
         )
 
     def _sort(self, col: str) -> None:
@@ -306,11 +360,11 @@ class LexiconManager(tk.Toplevel):
         self._apply_filter()
 
     def _add(self) -> None:
-        dlg = _TermDialog(self, "Add Term", "", "")
+        dlg = _TermDialog(self, "Add Custom Term", "", "")
         self.wait_window(dlg)
         if dlg.result:
             en, fr = dlg.result
-            self._lexicon[en] = fr
+            self._custom[en] = fr
             self._dirty = True
             self._apply_filter()
             try:
@@ -324,14 +378,14 @@ class LexiconManager(tk.Toplevel):
         if not sel:
             return
         en_old = sel[0]
-        fr_old = self._lexicon.get(en_old, "")
+        fr_old = self._custom.get(en_old) or self._master.get(en_old, "")
         dlg = _TermDialog(self, "Edit Term", en_old, fr_old)
         self.wait_window(dlg)
         if dlg.result:
             en_new, fr_new = dlg.result
-            if en_new != en_old:
-                del self._lexicon[en_old]
-            self._lexicon[en_new] = fr_new
+            if en_new != en_old and en_old in self._custom:
+                del self._custom[en_old]
+            self._custom[en_new] = fr_new
             self._dirty = True
             self._apply_filter()
             try:
@@ -345,26 +399,50 @@ class LexiconManager(tk.Toplevel):
         if not sel:
             return
         en = sel[0]
+        if en not in self._custom:
+            messagebox.showinfo(
+                "Read-only entry",
+                f"'{en}' is a master lexicon entry and cannot be deleted.\n\n"
+                "To override it, select Edit — your custom value will take "
+                "precedence during translation.",
+                parent=self,
+            )
+            return
+        is_override = en in self._master
+        action = (
+            "Remove custom override (master entry will be restored)"
+            if is_override else "Delete custom entry"
+        )
         if messagebox.askyesno(
-            "Delete",
-            f"Delete term:\n  {en}  →  {self._lexicon.get(en, '')}?",
+            "Confirm delete",
+            f"{action}:\n  {en}  →  {self._custom[en]}",
             parent=self,
         ):
-            del self._lexicon[en]
+            del self._custom[en]
             self._dirty = True
             self._apply_filter()
 
     def _save(self) -> None:
+        if not self._custom:
+            messagebox.showinfo(
+                "Nothing to save", "No custom terms have been added.", parent=self
+            )
+            self._dirty = False
+            return
         try:
-            with open(self._path, "w", encoding="utf-8") as f:
-                f.write("# NMS/DDN Bilingual Lexicon — managed by EVOQ Spec Translator\n")
+            with open(self._custom_path, "w", encoding="utf-8") as f:
+                f.write("# NMS/DDN Custom Terms — EVOQ Spec Translator\n")
+                f.write("# Entries here override the master lexicon.\n")
                 f.write("# Format: English term<TAB>French term\n")
                 f.write("# ============================================================\n")
-                for en, fr in sorted(self._lexicon.items()):
+                for en, fr in sorted(self._custom.items()):
                     f.write(f"{en}\t{fr}\n")
             self._dirty = False
             messagebox.showinfo(
-                "Saved", f"Lexicon saved: {self._path.name}", parent=self
+                "Saved",
+                f"{len(self._custom)} custom term(s) saved to:\n"
+                f"{self._custom_path.name}",
+                parent=self,
             )
         except Exception as e:
             messagebox.showerror("Save failed", str(e), parent=self)
@@ -372,7 +450,9 @@ class LexiconManager(tk.Toplevel):
     def _close(self) -> None:
         if self._dirty:
             if messagebox.askyesno(
-                "Unsaved changes", "Save changes before closing?", parent=self
+                "Unsaved changes",
+                "Save custom terms before closing?",
+                parent=self,
             ):
                 self._save()
         self.destroy()

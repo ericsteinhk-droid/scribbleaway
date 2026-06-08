@@ -106,6 +106,19 @@ def load_lexicon(path: Path) -> dict[str, str]:
     return lexicon
 
 
+def load_lexicons(master_path: Path, custom_path: Path | None = None) -> dict[str, str]:
+    """
+    Load the master lexicon then overlay custom terms.
+    Custom entries take precedence on any key conflict.
+    The master file is NEVER written to; only custom_path is ever modified.
+    """
+    lexicon = load_lexicon(master_path)
+    if custom_path and custom_path.is_file():
+        custom = load_lexicon(custom_path)
+        lexicon.update(custom)
+    return lexicon
+
+
 def estimate_translation_cost(src_docx: str) -> dict:
     """
     Quick pre-flight: count translatable paragraphs/chars and estimate API cost.

@@ -36,7 +36,7 @@ from nms_preprocess import (
     _parse,
 )
 import nms_cache
-from nms_translate import translate_document, load_lexicon, translate_docx_headers, translate_footnotes, estimate_translation_cost
+from nms_translate import translate_document, load_lexicon, load_lexicons, translate_docx_headers, translate_footnotes, estimate_translation_cost
 from nms_checks import run_checks, write_checks_report, remediate_heading_numbering
 from nms_tn import generate_tn
 from api_client import ApiClient
@@ -233,8 +233,14 @@ def run_pipeline(
     # ── Step 2: Translate ───────────────────────────────────────────────
     _log("Step 2/4: Translating…")
     client = ApiClient(api_key=cfg.api_key, model=cfg.model)
-    lexicon = load_lexicon(cfg.lexicon_path)
-    _log(f"  Lexicon: {len(lexicon)} terms loaded from {cfg.lexicon_path.name}")
+    custom_lex_path = cfg.lexicon_path.parent / (cfg.lexicon_path.stem + "_custom.txt")
+    lexicon = load_lexicons(cfg.lexicon_path, custom_lex_path)
+    n_master = len(load_lexicon(cfg.lexicon_path))
+    n_custom = len(lexicon) - n_master
+    if n_custom > 0:
+        _log(f"  Lexicon: {n_master} master + {n_custom} custom term(s) = {len(lexicon)} total")
+    else:
+        _log(f"  Lexicon: {n_master} terms from {cfg.lexicon_path.name}")
 
     heading_styleids = {h[2] for h in rpt.heading_styles}
 
