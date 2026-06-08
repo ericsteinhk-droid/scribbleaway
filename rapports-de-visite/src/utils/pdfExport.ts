@@ -60,9 +60,9 @@ async function fetchPhoto(downloadUrl: string): Promise<{ bytes: Uint8Array; w: 
   }
 }
 
-async function fetchLogo(): Promise<{ dataUrl: string; w: number; h: number } | null> {
+async function fetchPngLogo(path: string): Promise<{ dataUrl: string; w: number; h: number } | null> {
   try {
-    const resp = await fetch('/evoq_logo.png');
+    const resp = await fetch(path);
     const buf = await resp.arrayBuffer();
     const bytes = new Uint8Array(buf);
     // PNG IHDR: signature (8) + length (4) + "IHDR" (4) + width (4) + height (4)
@@ -75,6 +75,9 @@ async function fetchLogo(): Promise<{ dataUrl: string; w: number; h: number } | 
     return null;
   }
 }
+
+const fetchLogo = () => fetchPngLogo('/evoq_logo.png');
+const fetchNfoeLogo = () => fetchPngLogo('/nfoe_evoq_logo.png');
 
 function hexToRgb(hex: string): [number, number, number] {
   const r = parseInt(hex.slice(1, 3), 16);
@@ -105,7 +108,7 @@ export async function exportPdf(
     onProgress?.(++completed, allPhotos.length);
   }));
 
-  const logo = letterhead === 'evoq' ? await fetchLogo() : null;
+  const logo = letterhead === 'evoq' ? await fetchLogo() : await fetchNfoeLogo();
   const totalPages = () => (doc as unknown as { internal: { getNumberOfPages: () => number } }).internal.getNumberOfPages();
 
   const typeOrder: Entry['type'][] = ['observation', 'avancement', 'discussion', 'directive'];
@@ -169,10 +172,16 @@ export async function exportPdf(
       return 34;
     } else {
       // nfoe-evoq
-      doc.setFontSize(16);
-      doc.setFont('helvetica', 'bold');
-      doc.setTextColor(0, 0, 0);
-      doc.text('N\xB7F\xB7O\xB7E+EVOQ', MARGIN, 20);
+      if (logo) {
+        const logoW = 52;
+        const logoH = logoW * (logo.h / logo.w);
+        doc.addImage(logo.dataUrl, 'PNG', MARGIN, 10, logoW, logoH);
+      } else {
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(0, 0, 0);
+        doc.text('N\xB7F\xB7O\xB7E+EVOQ', MARGIN, 20);
+      }
 
       doc.setFontSize(8.5);
       doc.setFont('helvetica', 'bold');
@@ -390,7 +399,7 @@ export async function exportGroupedPdf(
     onProgress?.(++completed, allPhotos.length);
   }));
 
-  const logo = letterhead === 'evoq' ? await fetchLogo() : null;
+  const logo = letterhead === 'evoq' ? await fetchLogo() : await fetchNfoeLogo();
   const doc = new jsPDF({ unit: 'mm', format: 'letter', orientation: 'portrait' });
   const totalPages = () => (doc as unknown as { internal: { getNumberOfPages: () => number } }).internal.getNumberOfPages();
   const [tr, tg, tb] = hexToRgb(TEAL);
@@ -427,10 +436,16 @@ export async function exportGroupedPdf(
       return 34;
     } else {
       // nfoe-evoq
-      doc.setFontSize(16);
-      doc.setFont('helvetica', 'bold');
-      doc.setTextColor(0, 0, 0);
-      doc.text('N\xB7F\xB7O\xB7E+EVOQ', MARGIN, 20);
+      if (logo) {
+        const logoW = 52;
+        const logoH = logoW * (logo.h / logo.w);
+        doc.addImage(logo.dataUrl, 'PNG', MARGIN, 10, logoW, logoH);
+      } else {
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(0, 0, 0);
+        doc.text('N\xB7F\xB7O\xB7E+EVOQ', MARGIN, 20);
+      }
 
       doc.setFontSize(8.5);
       doc.setFont('helvetica', 'bold');

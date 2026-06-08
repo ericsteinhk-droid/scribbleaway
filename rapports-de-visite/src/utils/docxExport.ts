@@ -37,6 +37,20 @@ function getImageDims(dataUri: string): Promise<{ w: number; h: number }> {
   });
 }
 
+async function fetchPngAsBytes(path: string): Promise<{ data: ArrayBuffer; w: number; h: number } | null> {
+  try {
+    const resp = await fetch(path);
+    if (!resp.ok) return null;
+    const buf = await resp.arrayBuffer();
+    const bytes = new Uint8Array(buf);
+    const w = bytes.length >= 24 ? (bytes[16] << 24 | bytes[17] << 16 | bytes[18] << 8 | bytes[19]) >>> 0 : 0;
+    const h = bytes.length >= 24 ? (bytes[20] << 24 | bytes[21] << 16 | bytes[22] << 8 | bytes[23]) >>> 0 : 0;
+    return { data: buf, w: w || 1, h: h || 1 };
+  } catch {
+    return null;
+  }
+}
+
 // On Android, CapacitorHttp routes via OkHttp — bypasses WebView CORS entirely.
 async function fetchPhoto(downloadUrl: string): Promise<{ uri: string; w: number; h: number } | null> {
   try {
@@ -139,6 +153,8 @@ export async function exportDocx(
     onProgress?.(++completed, allPhotos.length);
   }));
 
+  const nfoeLogo = letterhead === 'nfoe-evoq' ? await fetchPngAsBytes('/nfoe_evoq_logo.png') : null;
+
   const typeOrder: Entry['type'][] = ['observation', 'avancement', 'discussion', 'directive'];
   const grouped = typeOrder
     .map((t) => ({ type: t, entries: entries.filter((e) => e.type === t) }))
@@ -173,12 +189,21 @@ export async function exportDocx(
     }));
   } else {
     // nfoe-evoq
-    children.push(new Paragraph({
-      text: 'N\xB7F\xB7O\xB7E+EVOQ',
-      heading: HeadingLevel.HEADING_1,
-      style: 'Heading1',
-      run: { color: '111111' },
-    }));
+    if (nfoeLogo) {
+      const logoDisplayW = 250;
+      const logoDisplayH = Math.round(logoDisplayW * nfoeLogo.h / nfoeLogo.w);
+      children.push(new Paragraph({
+        children: [new ImageRun({ data: nfoeLogo.data, transformation: { width: logoDisplayW, height: logoDisplayH } })],
+        spacing: { after: 80 },
+      }));
+    } else {
+      children.push(new Paragraph({
+        text: 'N\xB7F\xB7O\xB7E+EVOQ',
+        heading: HeadingLevel.HEADING_1,
+        style: 'Heading1',
+        run: { color: '111111' },
+      }));
+    }
     children.push(new Paragraph({
       children: [new TextRun({
         text: 'Consortium NFOE | EVOQ architecture',
