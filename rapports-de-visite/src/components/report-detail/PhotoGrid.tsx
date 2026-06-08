@@ -5,6 +5,7 @@ import { ref as storageRef, uploadBytesResumable, getDownloadURL, deleteObject }
 import { storage } from '../../firebase';
 import { compressImage } from '../../utils/imageCompression';
 import type { Photo } from '../../types';
+import PhotoAnnotator from './PhotoAnnotator';
 
 interface Props {
   photos: Photo[];
@@ -36,6 +37,7 @@ export default function PhotoGrid({ photos, storagePath, onPhotosChange, onError
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<Photo | null>(null);
+  const [annotateTarget, setAnnotateTarget] = useState<Photo | null>(null);
   const [editCaptionId, setEditCaptionId] = useState<string | null>(null);
   const [captionDraft, setCaptionDraft] = useState('');
 
@@ -206,6 +208,18 @@ export default function PhotoGrid({ photos, storagePath, onPhotosChange, onError
           {photos.map((photo) => (
             <div key={photo.id} className="relative">
               <img src={photo.url} alt={photo.caption || 'Photo'} className="w-full aspect-[4/3] object-cover rounded-lg" />
+              {/* Annotate button */}
+              <button
+                type="button"
+                onClick={() => setAnnotateTarget(photo)}
+                aria-label="Annoter la photo"
+                className="absolute top-1 left-1 w-7 h-7 flex items-center justify-center rounded-full bg-gray-800/80 text-white shadow-md hover:bg-gray-700"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                </svg>
+              </button>
+              {/* Delete button */}
               <button
                 type="button"
                 onClick={() => setDeleteTarget(photo)}
@@ -230,6 +244,20 @@ export default function PhotoGrid({ photos, storagePath, onPhotosChange, onError
             </div>
           ))}
         </div>
+      )}
+
+      {/* Photo annotator */}
+      {annotateTarget && (
+        <PhotoAnnotator
+          photo={annotateTarget}
+          storagePath={storagePath}
+          onSave={(updated) => {
+            onPhotosChange(photos.map((p) => p.id === updated.id ? updated : p));
+            setAnnotateTarget(null);
+          }}
+          onClose={() => setAnnotateTarget(null)}
+          onError={onError}
+        />
       )}
 
       {/* Delete confirmation */}

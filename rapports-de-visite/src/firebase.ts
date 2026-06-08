@@ -1,6 +1,6 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
+import { initializeFirestore, getFirestore, persistentLocalCache } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 
 const firebaseConfig = {
@@ -15,5 +15,9 @@ const firebaseConfig = {
 const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 
 export const auth = getAuth(app);
-export const db = getFirestore(app);
+// initializeFirestore must only be called once; the try/catch handles HMR re-evaluation
+export const db = (() => {
+  try { return initializeFirestore(app, { localCache: persistentLocalCache() }); }
+  catch { return getFirestore(app); }
+})();
 export const storage = getStorage(app);

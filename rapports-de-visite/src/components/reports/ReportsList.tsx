@@ -45,6 +45,7 @@ export default function ReportsList({ projectId, projectName, letterhead, onOpen
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [groupedExporting, setGroupedExporting] = useState(false);
   const [groupedProgress, setGroupedProgress] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
 
   const basePath = `users/${user!.uid}/projects/${projectId}/reports`;
 
@@ -78,6 +79,14 @@ export default function ReportsList({ projectId, projectName, letterhead, onOpen
   const suggestedNumber = reports.length > 0
     ? Math.max(...reports.map((r) => r.number)) + 1
     : 1;
+
+  const q = search.trim().toLowerCase();
+  const filtered = q === '' ? reports : reports.filter((r) =>
+    String(r.number).includes(q) ||
+    formatDate(r.date).toLowerCase().includes(q) ||
+    r.authorName.toLowerCase().includes(q) ||
+    (r.weather ?? '').toLowerCase().includes(q)
+  );
 
   async function handleSave(data: ReportData) {
     if (!user) return;
@@ -200,6 +209,22 @@ export default function ReportsList({ projectId, projectName, letterhead, onOpen
         )}
       </div>
 
+      {/* Search bar */}
+      {!loading && reports.length > 2 && (
+        <div className="relative mb-4">
+          <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M17 11A6 6 0 105 11a6 6 0 0012 0z" />
+          </svg>
+          <input
+            type="search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Rechercher…"
+            className="w-full pl-9 pr-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-evoq"
+          />
+        </div>
+      )}
+
       {loading && (
         <div className="flex justify-center py-16">
           <div className="w-8 h-8 border-2 border-evoq border-t-transparent rounded-full animate-spin" />
@@ -215,8 +240,12 @@ export default function ReportsList({ projectId, projectName, letterhead, onOpen
         </div>
       )}
 
+      {!loading && filtered.length === 0 && reports.length > 0 && (
+        <p className="text-center text-sm text-gray-400 dark:text-gray-600 py-8">Aucun résultat.</p>
+      )}
+
       <div className="flex flex-col gap-3">
-        {reports.map((r) => {
+        {filtered.map((r) => {
           const isSelected = selectedIds.has(r.id);
           return (
             <div

@@ -52,6 +52,7 @@ export default function ReportDetail({
   const [deleteTarget, setDeleteTarget] = useState<Entry | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [showAttendees, setShowAttendees] = useState(false);
+  const [entrySearch, setEntrySearch] = useState('');
 
   // Export states
   const [pdfProgress, setPdfProgress] = useState<string | null>(null);
@@ -189,8 +190,12 @@ export default function ReportDetail({
   }
 
   const typeOrder: EntryType[] = ['observation', 'avancement', 'discussion', 'directive'];
+  const sq = entrySearch.trim().toLowerCase();
   const grouped = typeOrder
-    .map((t) => ({ type: t, entries: entries.filter((e) => e.type === t) }))
+    .map((t) => ({
+      type: t,
+      entries: entries.filter((e) => e.type === t && (sq === '' || e.content.toLowerCase().includes(sq))),
+    }))
     .filter((g) => g.entries.length > 0);
 
   function formatDate(s: string) {
@@ -236,6 +241,22 @@ export default function ReportDetail({
         )}
       </div>
 
+      {/* Entry search */}
+      {!loading && entries.length > 3 && (
+        <div className="relative mb-4">
+          <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M17 11A6 6 0 105 11a6 6 0 0012 0z" />
+          </svg>
+          <input
+            type="search"
+            value={entrySearch}
+            onChange={(e) => setEntrySearch(e.target.value)}
+            placeholder="Filtrer les entrées…"
+            className="w-full pl-9 pr-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-evoq"
+          />
+        </div>
+      )}
+
       {loading && (
         <div className="flex justify-center py-16">
           <div className="w-8 h-8 border-2 border-evoq border-t-transparent rounded-full animate-spin" />
@@ -246,6 +267,10 @@ export default function ReportDetail({
         <div className="text-center py-16 text-gray-400 dark:text-gray-600">
           <p className="text-sm">Aucune entrée. Appuyez sur + pour ajouter.</p>
         </div>
+      )}
+
+      {!loading && entries.length > 0 && grouped.length === 0 && sq !== '' && (
+        <p className="text-center text-sm text-gray-400 dark:text-gray-600 py-8">Aucun résultat pour «&nbsp;{entrySearch}&nbsp;».</p>
       )}
 
       {/* Grouped entries */}
