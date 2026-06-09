@@ -25,7 +25,8 @@ class Config:
     lexicon_path: Path
     work_dir: Path
     cache_path: Path = field(default_factory=lambda: APP_DIR / "cache.db")
-    header_mode: str = "full"   # "full" | "lexicon_only" | "skip"
+    header_mode: str = "skip"   # "full" | "lexicon_only" | "skip"
+    ui_lang: str = "en"
 
     def validate(self) -> list[str]:
         errors: list[str] = []
@@ -89,7 +90,8 @@ def load() -> Config | None:
         lexicon_path=lexicon_path,
         work_dir=work_dir,
         cache_path=APP_DIR / "cache.db",
-        header_mode=d.get("header_mode", "full"),
+        header_mode=d.get("header_mode", "skip"),
+        ui_lang=d.get("ui_lang", "en"),
     )
 
 
@@ -99,6 +101,7 @@ def save(
     model: str = "claude-sonnet-4-6",
     work_dir: str = "",
     header_mode: str | None = None,
+    ui_lang: str | None = None,
 ) -> None:
     APP_DIR.mkdir(parents=True, exist_ok=True)
     tmp = Path(os.environ.get("TEMP", os.environ.get("TMP", "/tmp")))
@@ -120,5 +123,22 @@ def save(
     }
     if header_mode is not None:
         d["header_mode"] = header_mode
+    if ui_lang is not None:
+        d["ui_lang"] = ui_lang
     with open(CONFIG_FILE, "w", encoding="utf-8") as f:
         json.dump(d, f, indent=2)
+
+
+def save_ui_lang(lang: str) -> None:
+    """Persist UI language preference without touching other config fields."""
+    APP_DIR.mkdir(parents=True, exist_ok=True)
+    existing: dict = {}
+    if CONFIG_FILE.exists():
+        try:
+            with open(CONFIG_FILE, encoding="utf-8") as f:
+                existing = json.load(f)
+        except Exception:
+            pass
+    existing["ui_lang"] = lang
+    with open(CONFIG_FILE, "w", encoding="utf-8") as f:
+        json.dump(existing, f, indent=2)
