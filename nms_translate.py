@@ -845,6 +845,7 @@ def translate_docx_headers(
     client: ApiClient,
     lexicon: dict[str, str],
     log: Callable[[str], None] | None = None,
+    lexicon_only: bool = False,
 ) -> int:
     """
     Translate the section title in DOCX page headers (header*.xml).
@@ -896,6 +897,8 @@ def translate_docx_headers(
             if direct:
                 translated_name = post_process(direct, direction)
                 source = "lexicon"
+            elif lexicon_only:
+                return False  # no API call — leave text unchanged
             else:
                 sys_prompt = build_system_prompt(direction, "heading", lexicon)
                 response: TranslationResponse = client.translate(sys_prompt, title_text)
@@ -916,6 +919,8 @@ def translate_docx_headers(
             if direct:
                 translated_name = post_process(direct, direction)
                 source = "lexicon"
+            elif lexicon_only:
+                return False  # no API call — leave text unchanged
             else:
                 sys_prompt = build_system_prompt(direction, "heading", lexicon)
                 response: TranslationResponse = client.translate(sys_prompt, title_text)
@@ -988,6 +993,8 @@ def translate_docx_headers(
             if direct:
                 translated_name = post_process(direct, direction)
                 src_a = "lexicon"
+            elif lexicon_only:
+                continue  # no API call — leave text unchanged
             else:
                 sys_prompt = build_system_prompt(direction, "heading", lexicon)
                 response = client.translate(sys_prompt, section_name)

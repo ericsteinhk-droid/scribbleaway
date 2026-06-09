@@ -25,6 +25,7 @@ class Config:
     lexicon_path: Path
     work_dir: Path
     cache_path: Path = field(default_factory=lambda: APP_DIR / "cache.db")
+    header_mode: str = "full"   # "full" | "lexicon_only" | "skip"
 
     def validate(self) -> list[str]:
         errors: list[str] = []
@@ -88,6 +89,7 @@ def load() -> Config | None:
         lexicon_path=lexicon_path,
         work_dir=work_dir,
         cache_path=APP_DIR / "cache.db",
+        header_mode=d.get("header_mode", "full"),
     )
 
 
@@ -96,14 +98,27 @@ def save(
     lexicon_path: str,
     model: str = "claude-sonnet-4-6",
     work_dir: str = "",
+    header_mode: str | None = None,
 ) -> None:
     APP_DIR.mkdir(parents=True, exist_ok=True)
     tmp = Path(os.environ.get("TEMP", os.environ.get("TMP", "/tmp")))
+    # Preserve any existing fields not being explicitly set (e.g. header_mode
+    # written by the main window should not be wiped when Settings is saved).
+    existing: dict = {}
+    if CONFIG_FILE.exists():
+        try:
+            with open(CONFIG_FILE, encoding="utf-8") as f:
+                existing = json.load(f)
+        except Exception:
+            pass
     d = {
+        **existing,
         "api_key": api_key.strip(),
         "model": model,
         "lexicon_path": str(lexicon_path),
         "work_dir": work_dir or str(tmp / _WORK_SUBDIR),
     }
+    if header_mode is not None:
+        d["header_mode"] = header_mode
     with open(CONFIG_FILE, "w", encoding="utf-8") as f:
         json.dump(d, f, indent=2)

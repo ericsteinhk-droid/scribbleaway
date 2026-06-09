@@ -255,15 +255,22 @@ def run_pipeline(
         log=_log,
         progress_cb=progress_cb,
     )
-    hdr_count = translate_docx_headers(
-        work_dir=trans_work,
-        direction=direction,
-        client=client,
-        lexicon=lexicon,
-        log=_log,
-    )
-    if hdr_count:
-        _log(f"  {hdr_count} page-header section name(s) translated.")
+    header_mode = cfg.header_mode
+    if header_mode == "skip":
+        _log("  Headers: skipped (header_mode=skip — no content sent to API).")
+        hdr_count = 0
+    else:
+        hdr_count = translate_docx_headers(
+            work_dir=trans_work,
+            direction=direction,
+            client=client,
+            lexicon=lexicon,
+            log=_log,
+            lexicon_only=(header_mode == "lexicon_only"),
+        )
+        if hdr_count:
+            mode_note = " (lexicon only)" if header_mode == "lexicon_only" else ""
+            _log(f"  {hdr_count} page-header section name(s) translated{mode_note}.")
 
     fn_count = translate_footnotes(
         work_dir=trans_work,

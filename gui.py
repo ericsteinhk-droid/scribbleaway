@@ -31,6 +31,31 @@ _run_pipeline = None
 APP_TITLE    = "EVOQ Spec Translator"
 APP_SUBTITLE = "Full-Featured Edition"
 PAD = 8
+
+_HEADER_MODE_TIPS = {
+    "full": (
+        "Translate headers fully (default)\n\n"
+        "All header content — including project name, client name, and section "
+        "title — is sent to the Anthropic API for translation.\n\n"
+        "Use this mode only when the header contains no confidential information."
+    ),
+    "lexicon_only": (
+        "Lexicon-only header translation  ✓ Recommended for confidential documents\n\n"
+        "Headers are translated using the lexicon only — no API calls are made for "
+        "header content. Standard NMS section titles are translated correctly "
+        "because they are in the lexicon. Project-specific text (client name, "
+        "project name, address) is not in the lexicon and is left in the source "
+        "language for manual update.\n\n"
+        "Nothing in the header is transmitted over the internet."
+    ),
+    "skip": (
+        "Skip header translation\n\n"
+        "Headers are left entirely in the source language. No header content is "
+        "sent to the internet. Update the header manually after translation.\n\n"
+        "Choose this option when confidentiality is the top priority and you "
+        "prefer to handle the header yourself."
+    ),
+}
 BG = "#f0f0f0"
 ACCENT = "#0055a5"
 LOGO_FILE = "evoq_logo.png"
@@ -55,6 +80,45 @@ def load_logo(max_w: int, max_h: int) -> ImageTk.PhotoImage | None:
 
 # ---------------------------------------------------------------------------
 # Privacy notice (bilingual, modal)
+# ---------------------------------------------------------------------------
+class Tooltip:
+    """Show a multi-line tooltip when the user hovers over a widget."""
+
+    def __init__(self, widget: tk.Widget, text: str) -> None:
+        self._widget = widget
+        self._text = text
+        self._win: tk.Toplevel | None = None
+        widget.bind("<Enter>", self._show, add="+")
+        widget.bind("<Leave>", self._hide, add="+")
+        widget.bind("<ButtonPress>", self._hide, add="+")
+
+    def _show(self, _event=None) -> None:
+        if self._win:
+            return
+        x = self._widget.winfo_rootx() + 20
+        y = self._widget.winfo_rooty() + self._widget.winfo_height() + 4
+        self._win = tw = tk.Toplevel(self._widget)
+        tw.wm_overrideredirect(True)
+        tw.wm_geometry(f"+{x}+{y}")
+        tk.Label(
+            tw,
+            text=self._text,
+            justify="left",
+            background="#fffde7",
+            relief="solid",
+            borderwidth=1,
+            font=("Segoe UI", 8),
+            wraplength=300,
+            padx=6,
+            pady=4,
+        ).pack()
+
+    def _hide(self, _event=None) -> None:
+        if self._win:
+            self._win.destroy()
+            self._win = None
+
+
 # ---------------------------------------------------------------------------
 class PrivacyNotice(tk.Toplevel):
     def __init__(self, parent: tk.Tk):
@@ -710,6 +774,9 @@ class App(tk.Tk):
             )
             self.destroy()
             return
+        # Restore header mode into the radio button (widget exists by now)
+        if hasattr(self, "_header_mode_var"):
+            self._header_mode_var.set(self._cfg.header_mode)
         errors = self._cfg.validate()
         if errors:
             messagebox.showwarning(
@@ -779,10 +846,30 @@ class App(tk.Tk):
             tk.Radiobutton(
                 dir_frame, text=label, variable=self._dir_var, value=val, bg=BG
             ).pack(side="left", padx=(0, PAD))
+        # ── Header translation mode ──
+        tk.Label(frm, text="Headers:", bg=BG, width=12, anchor="e").grid(
+            row=1, column=0, padx=(0, 4), pady=4, sticky="e"
+        )
+        self._header_mode_var = tk.StringVar(value="full")
+        hdr_frame = tk.Frame(frm, bg=BG)
+        hdr_frame.grid(row=1, column=1, sticky="w", pady=4)
+        _hdr_options = [
+            ("full",         "Translate fully"),
+            ("lexicon_only", "Lexicon only — no API"),
+            ("skip",         "Skip — preserve source"),
+        ]
+        for val, label in _hdr_options:
+            rb = tk.Radiobutton(
+                hdr_frame, text=label, variable=self._header_mode_var,
+                value=val, bg=BG,
+            )
+            rb.pack(side="left", padx=(0, PAD))
+            Tooltip(rb, _HEADER_MODE_TIPS[val])
+
         tk.Label(
             frm, text="Output: same folder as each source file",
             bg=BG, fg="#666666", font=("Segoe UI", 8), anchor="w",
-        ).grid(row=1, column=1, padx=(0, 4), pady=(0, 4), sticky="w")
+        ).grid(row=2, column=1, padx=(0, 4), pady=(0, 4), sticky="w")
         frm.columnconfigure(1, weight=1)
 
         # ── Settings / Estimate cost bar ──
@@ -948,6 +1035,17 @@ class App(tk.Tk):
         if errors:
             messagebox.showerror("Config error", "\n".join(errors))
             return
+
+        # Persist the chosen header mode to config so it survives restarts
+        self._cfg.header_mode = self._header_mode_var.get()
+        from config import save as _cfg_save
+        _cfg_save(
+            api_key=self._cfg.api_key,
+            lexicon_path=str(self._cfg.lexicon_path),
+            model=self._cfg.model,
+            work_dir=str(self._cfg.work_dir),
+            header_mode=self._cfg.header_mode,
+        )
 
         self._clear_log()
         self._set_running(True)
