@@ -2,9 +2,10 @@
 gui.py — EVOQ Spec Translator desktop GUI (tkinter, light mode).
 
 Startup sequence:
-  1. Privacy notice (bilingual, modal — must acknowledge to proceed)
-  2. First-run wizard if config.json is missing
-  3. Main window
+  1. Language picker (first run only, shown over splash)
+  2. Privacy notice (bilingual, modal)
+  3. First-run wizard if config.json is missing
+  4. Main window
 
 Threading: pipeline runs in a daemon thread; all UI updates via after().
 """
@@ -22,40 +23,17 @@ from PIL import Image, ImageTk
 
 import config as cfg_module
 from config import Config, load, save, find_lexicon_near_exe
+import ui_strings
+from ui_strings import t
 
 # run_pipeline is imported lazily in App._finish_init so the splash screen
 # is visible during the slow lxml/anthropic import chain.
 _run_pipeline = None
 
-
 APP_TITLE    = "EVOQ Spec Translator"
 APP_SUBTITLE = "Full-Featured Edition"
 PAD = 8
 
-_HEADER_MODE_TIPS = {
-    "full": (
-        "Translate headers fully (default)\n\n"
-        "All header content — including project name, client name, and section "
-        "title — is sent to the Anthropic API for translation.\n\n"
-        "Use this mode only when the header contains no confidential information."
-    ),
-    "lexicon_only": (
-        "Lexicon-only header translation  ✓ Recommended for confidential documents\n\n"
-        "Headers are translated using the lexicon only — no API calls are made for "
-        "header content. Standard NMS section titles are translated correctly "
-        "because they are in the lexicon. Project-specific text (client name, "
-        "project name, address) is not in the lexicon and is left in the source "
-        "language for manual update.\n\n"
-        "Nothing in the header is transmitted over the internet."
-    ),
-    "skip": (
-        "Skip header translation\n\n"
-        "Headers are left entirely in the source language. No header content is "
-        "sent to the internet. Update the header manually after translation.\n\n"
-        "Choose this option when confidentiality is the top priority and you "
-        "prefer to handle the header yourself."
-    ),
-}
 BG = "#f0f0f0"
 ACCENT = "#0055a5"
 LOGO_FILE = "evoq_logo.png"
@@ -79,7 +57,7 @@ def load_logo(max_w: int, max_h: int) -> ImageTk.PhotoImage | None:
 
 
 # ---------------------------------------------------------------------------
-# Privacy notice (bilingual, modal)
+# Tooltip helper
 # ---------------------------------------------------------------------------
 class Tooltip:
     """Show a multi-line tooltip when the user hovers over a widget."""
@@ -119,6 +97,8 @@ class Tooltip:
             self._win = None
 
 
+# ---------------------------------------------------------------------------
+# Privacy notice (intentionally bilingual regardless of selected lang)
 # ---------------------------------------------------------------------------
 class PrivacyNotice(tk.Toplevel):
     def __init__(self, parent: tk.Tk):
@@ -207,6 +187,68 @@ class PrivacyNotice(tk.Toplevel):
 
 
 # ---------------------------------------------------------------------------
+# Language picker (first run, shown while splash is visible)
+# ---------------------------------------------------------------------------
+class LanguagePicker(tk.Toplevel):
+    """Bilingual modal for choosing the interface language on first run."""
+
+    def __init__(self, parent: tk.Widget):
+        super().__init__(parent)
+        self.title("Language / Langue")
+        self.resizable(False, False)
+        self.configure(bg="white")
+        self.grab_set()
+        self.attributes("-topmost", True)
+
+        logo = load_logo(200, 47)
+        if logo:
+            lbl = tk.Label(self, image=logo, bg="white")
+            lbl.image = logo
+            lbl.pack(padx=40, pady=(24, 8))
+        else:
+            tk.Label(
+                self, text=APP_TITLE, font=("Segoe UI", 13, "bold"),
+                bg="white", fg=ACCENT,
+            ).pack(padx=40, pady=(24, 8))
+
+        tk.Label(
+            self,
+            text="Select interface language\nChoisissez la langue de l'interface",
+            font=("Segoe UI", 10, "bold"),
+            bg="white",
+            justify="center",
+        ).pack(pady=(8, 16))
+
+        bf = tk.Frame(self, bg="white")
+        bf.pack(pady=(0, 28))
+        tk.Button(
+            bf, text="English", width=14,
+            font=("Segoe UI", 10, "bold"),
+            bg=ACCENT, fg="white", activebackground="#003d7a",
+            relief="flat", cursor="hand2",
+            command=lambda: self._pick("en"),
+        ).pack(side="left", padx=12)
+        tk.Button(
+            bf, text="Français", width=14,
+            font=("Segoe UI", 10, "bold"),
+            bg=ACCENT, fg="white", activebackground="#003d7a",
+            relief="flat", cursor="hand2",
+            command=lambda: self._pick("fr"),
+        ).pack(side="left", padx=12)
+
+        self.protocol("WM_DELETE_WINDOW", lambda: self._pick("en"))
+
+        self.update_idletasks()
+        w, h = self.winfo_reqwidth(), self.winfo_reqheight()
+        sw, sh = self.winfo_screenwidth(), self.winfo_screenheight()
+        self.geometry(f"+{(sw - w) // 2}+{(sh - h) // 2}")
+
+    def _pick(self, lang: str) -> None:
+        ui_strings.set_lang(lang)
+        self.destroy()
+
+
+# ---------------------------------------------------------------------------
 # Lexicon term add/edit dialog
 # ---------------------------------------------------------------------------
 class _TermDialog(tk.Toplevel):
@@ -218,7 +260,7 @@ class _TermDialog(tk.Toplevel):
         self.grab_set()
         self.result: tuple[str, str] | None = None
 
-        tk.Label(self, text="English:", bg=BG).grid(
+        tk.Label(self, text=t("term_en"), bg=BG).grid(
             row=0, column=0, padx=PAD, pady=PAD, sticky="e"
         )
         self._en = tk.StringVar(value=en)
@@ -226,7 +268,7 @@ class _TermDialog(tk.Toplevel):
             row=0, column=1, padx=(0, PAD), pady=PAD
         )
 
-        tk.Label(self, text="French:", bg=BG).grid(
+        tk.Label(self, text=t("term_fr"), bg=BG).grid(
             row=1, column=0, padx=PAD, pady=4, sticky="e"
         )
         self._fr = tk.StringVar(value=fr)
@@ -237,10 +279,10 @@ class _TermDialog(tk.Toplevel):
         bf = tk.Frame(self, bg=BG)
         bf.grid(row=2, column=0, columnspan=2, pady=(PAD, PAD))
         tk.Button(
-            bf, text="OK", width=10, bg=ACCENT, fg="white",
+            bf, text=t("term_ok"), width=10, bg=ACCENT, fg="white",
             activebackground="#003d7a", relief="flat", command=self._ok,
         ).pack(side="left", padx=4)
-        tk.Button(bf, text="Cancel", width=10, command=self.destroy).pack(
+        tk.Button(bf, text=t("term_cancel"), width=10, command=self.destroy).pack(
             side="left", padx=4
         )
 
@@ -256,7 +298,9 @@ class _TermDialog(tk.Toplevel):
         en = self._en.get().strip()
         fr = self._fr.get().strip()
         if not en or not fr:
-            messagebox.showwarning("Incomplete", "Both fields are required.", parent=self)
+            messagebox.showwarning(
+                t("term_incomplete"), t("term_incomplete_msg"), parent=self
+            )
             return
         self.result = (en, fr)
         self.destroy()
@@ -285,7 +329,7 @@ class LexiconManager(tk.Toplevel):
 
     def __init__(self, parent: tk.Widget, lex_path: Path):
         super().__init__(parent)
-        self.title("Manage Lexicon")
+        self.title(t("lex_title"))
         self.resizable(True, True)
         self.minsize(700, 460)
         self.configure(bg=BG)
@@ -306,7 +350,7 @@ class LexiconManager(tk.Toplevel):
     def _build_ui(self) -> None:
         top = tk.Frame(self, bg=BG, padx=PAD, pady=PAD)
         top.pack(fill="x")
-        tk.Label(top, text="Search:", bg=BG).pack(side="left")
+        tk.Label(top, text=t("lex_search"), bg=BG).pack(side="left")
         self._search_var = tk.StringVar()
         self._search_var.trace_add("write", lambda *_: self._apply_filter())
         tk.Entry(top, textvariable=self._search_var, width=30).pack(
@@ -322,9 +366,9 @@ class LexiconManager(tk.Toplevel):
         leg = tk.Frame(self, bg=BG, padx=PAD)
         leg.pack(fill="x")
         for colour, label in [
-            ("#888888", "Master (read-only)"),
-            (ACCENT,    "Custom (new)"),
-            ("#006600", "Custom override of master"),
+            ("#888888", t("lex_master")),
+            (ACCENT,    t("lex_custom")),
+            ("#006600", t("lex_override")),
         ]:
             tk.Label(leg, text="■", fg=colour, bg=BG,
                      font=("Segoe UI", 9)).pack(side="left")
@@ -340,9 +384,9 @@ class LexiconManager(tk.Toplevel):
         self._tree = ttk.Treeview(
             mid, columns=cols, show="headings", selectmode="browse"
         )
-        self._tree.heading("en", text="English Term",
+        self._tree.heading("en", text=t("lex_col_en"),
                            command=lambda: self._sort("en"))
-        self._tree.heading("fr", text="French Term",
+        self._tree.heading("fr", text=t("lex_col_fr"),
                            command=lambda: self._sort("fr"))
         self._tree.column("en", width=290, minwidth=120)
         self._tree.column("fr", width=310, minwidth=120)
@@ -358,17 +402,17 @@ class LexiconManager(tk.Toplevel):
         btn_col = tk.Frame(self, bg=BG, padx=PAD, pady=PAD)
         btn_col.pack(side="right", fill="y")
         for label, cmd in [
-            ("Add",    self._add),
-            ("Edit",   self._edit_selected),
-            ("Delete", self._delete_selected),
+            (t("lex_add"),    self._add),
+            (t("lex_edit"),   self._edit_selected),
+            (t("lex_delete"), self._delete_selected),
         ]:
             tk.Button(btn_col, text=label, width=10, command=cmd).pack(pady=(0, 4))
         ttk.Separator(btn_col, orient="horizontal").pack(fill="x", pady=6)
         tk.Button(
-            btn_col, text="Save", width=10, bg=ACCENT, fg="white",
+            btn_col, text=t("lex_save"), width=10, bg=ACCENT, fg="white",
             activebackground="#003d7a", relief="flat", command=self._save,
         ).pack(pady=(0, 4))
-        tk.Button(btn_col, text="Close", width=10, command=self._close).pack()
+        tk.Button(btn_col, text=t("lex_close"), width=10, command=self._close).pack()
 
         self._sort_col = "en"
         self._sort_rev = False
@@ -411,8 +455,8 @@ class LexiconManager(tk.Toplevel):
         total = len(merged)
         n_cust = len(self._custom)
         self._count_var.set(
-            f"{shown} of {total} entries ({n_cust} custom)" if not q
-            else f"{shown} of {total} shown"
+            t("lex_count", shown=shown, total=total, n=n_cust) if not q
+            else t("lex_filtered", shown=shown, total=total)
         )
 
     def _sort(self, col: str) -> None:
@@ -424,7 +468,7 @@ class LexiconManager(tk.Toplevel):
         self._apply_filter()
 
     def _add(self) -> None:
-        dlg = _TermDialog(self, "Add Custom Term", "", "")
+        dlg = _TermDialog(self, t("lex_add_title"), "", "")
         self.wait_window(dlg)
         if dlg.result:
             en, fr = dlg.result
@@ -443,7 +487,7 @@ class LexiconManager(tk.Toplevel):
             return
         en_old = sel[0]
         fr_old = self._custom.get(en_old) or self._master.get(en_old, "")
-        dlg = _TermDialog(self, "Edit Term", en_old, fr_old)
+        dlg = _TermDialog(self, t("lex_edit_title"), en_old, fr_old)
         self.wait_window(dlg)
         if dlg.result:
             en_new, fr_new = dlg.result
@@ -465,20 +509,15 @@ class LexiconManager(tk.Toplevel):
         en = sel[0]
         if en not in self._custom:
             messagebox.showinfo(
-                "Read-only entry",
-                f"'{en}' is a master lexicon entry and cannot be deleted.\n\n"
-                "To override it, select Edit — your custom value will take "
-                "precedence during translation.",
+                t("lex_ro_title"),
+                t("lex_ro_msg", en=en),
                 parent=self,
             )
             return
         is_override = en in self._master
-        action = (
-            "Remove custom override (master entry will be restored)"
-            if is_override else "Delete custom entry"
-        )
+        action = t("lex_del_override") if is_override else t("lex_del_custom")
         if messagebox.askyesno(
-            "Confirm delete",
+            t("lex_confirm_del"),
             f"{action}:\n  {en}  →  {self._custom[en]}",
             parent=self,
         ):
@@ -489,7 +528,7 @@ class LexiconManager(tk.Toplevel):
     def _save(self) -> None:
         if not self._custom:
             messagebox.showinfo(
-                "Nothing to save", "No custom terms have been added.", parent=self
+                t("lex_nothing"), t("lex_nothing_msg"), parent=self
             )
             self._dirty = False
             return
@@ -503,19 +542,18 @@ class LexiconManager(tk.Toplevel):
                     f.write(f"{en}\t{fr}\n")
             self._dirty = False
             messagebox.showinfo(
-                "Saved",
-                f"{len(self._custom)} custom term(s) saved to:\n"
-                f"{self._custom_path.name}",
+                t("lex_saved"),
+                t("lex_saved_msg", n=len(self._custom), name=self._custom_path.name),
                 parent=self,
             )
         except Exception as e:
-            messagebox.showerror("Save failed", str(e), parent=self)
+            messagebox.showerror(t("lex_save_failed"), str(e), parent=self)
 
     def _close(self) -> None:
         if self._dirty:
             if messagebox.askyesno(
-                "Unsaved changes",
-                "Save custom terms before closing?",
+                t("lex_unsaved"),
+                t("lex_unsaved_msg"),
                 parent=self,
             ):
                 self._save()
@@ -534,7 +572,7 @@ class SetupWizard(tk.Toplevel):
     ):
         super().__init__(parent)
         self.title(
-            f"Setup — {APP_TITLE}" if first_run else f"Settings — {APP_TITLE}"
+            t("wiz_title_first") if first_run else t("wiz_title_settings")
         )
         self.resizable(False, False)
         self.configure(bg=BG)
@@ -542,16 +580,12 @@ class SetupWizard(tk.Toplevel):
         self.config_saved = False
         self._first_run = first_run
 
-        heading = (
-            "Configuration initiale / Initial Setup"
-            if first_run
-            else "Settings / Paramètres"
-        )
+        heading = t("wiz_heading_first") if first_run else t("wiz_heading_settings")
         tk.Label(
             self, text=heading, font=("Segoe UI", 10, "bold"), bg=BG,
         ).grid(row=0, column=0, columnspan=3, padx=PAD * 2, pady=(PAD * 2, PAD), sticky="w")
 
-        tk.Label(self, text="Anthropic API key:", bg=BG).grid(
+        tk.Label(self, text=t("wiz_api_key"), bg=BG).grid(
             row=1, column=0, padx=PAD * 2, pady=4, sticky="w"
         )
         self._key_var = tk.StringVar(value=current_cfg.api_key if current_cfg else "")
@@ -562,9 +596,9 @@ class SetupWizard(tk.Toplevel):
         if first_run:
             discovered = find_lexicon_near_exe()
             lex_note = (
-                f"Default lexicon: {discovered.name}"
+                t("wiz_lex_found", name=discovered.name)
                 if discovered
-                else "No lexicon found in app folder — use Settings to add one."
+                else t("wiz_lex_missing")
             )
             tk.Label(
                 self, text=lex_note, bg=BG, fg="#555555", font=("Segoe UI", 8), anchor="w",
@@ -572,42 +606,60 @@ class SetupWizard(tk.Toplevel):
             self._lex_var = None
         else:
             current_lex = str(current_cfg.lexicon_path) if current_cfg else ""
-            tk.Label(self, text="Lexicon file (.txt):", bg=BG).grid(
+            tk.Label(self, text=t("wiz_lex_file"), bg=BG).grid(
                 row=2, column=0, padx=PAD * 2, pady=4, sticky="w"
             )
             self._lex_var = tk.StringVar(value=current_lex)
             tk.Entry(self, textvariable=self._lex_var, width=40).grid(
                 row=2, column=1, padx=(0, 4), pady=4, sticky="ew"
             )
-            tk.Button(self, text="Browse…", command=self._browse_lex).grid(
+            tk.Button(self, text=t("wiz_browse"), command=self._browse_lex).grid(
                 row=2, column=2, padx=(0, PAD * 2), pady=4
             )
 
+        # Language selector row
+        lang_row = tk.Frame(self, bg=BG)
+        lang_row.grid(row=3, column=0, columnspan=3, padx=PAD * 2, pady=(4, 0), sticky="w")
+        tk.Label(lang_row, text=t("wiz_lang_label"), bg=BG).pack(side="left")
+        self._lang_var = tk.StringVar(value=ui_strings.get_lang())
+        tk.Radiobutton(
+            lang_row, text="English", variable=self._lang_var,
+            value="en", bg=BG,
+        ).pack(side="left", padx=(8, 4))
+        tk.Radiobutton(
+            lang_row, text="Français", variable=self._lang_var,
+            value="fr", bg=BG,
+        ).pack(side="left", padx=(0, 4))
+        tk.Label(
+            self, text=t("wiz_lang_note"), bg=BG, fg="#888888",
+            font=("Segoe UI", 8),
+        ).grid(row=4, column=0, columnspan=3, padx=PAD * 2, pady=(0, 4), sticky="w")
+
         tk.Button(
             self,
-            text="Save & Continue",
+            text=t("wiz_save"),
             command=self._save,
             width=18,
             bg=ACCENT,
             fg="white",
             activebackground="#003d7a",
             relief="flat",
-        ).grid(row=3, column=0, columnspan=3, padx=PAD * 2, pady=(PAD, PAD // 2))
+        ).grid(row=5, column=0, columnspan=3, padx=PAD * 2, pady=(PAD, PAD // 2))
 
         tk.Button(
             self,
-            text="Manage Lexicon…",
+            text=t("wiz_manage_lex"),
             command=self._open_lexicon_manager,
             width=18,
             relief="flat",
             fg=ACCENT,
             bg=BG,
             cursor="hand2",
-        ).grid(row=4, column=0, columnspan=3, padx=PAD * 2, pady=(PAD // 2, 2))
+        ).grid(row=6, column=0, columnspan=3, padx=PAD * 2, pady=(PAD // 2, 2))
 
         tk.Button(
             self,
-            text="Clear Translation Cache…",
+            text=t("wiz_clear_cache"),
             command=self._clear_cache,
             width=22,
             relief="flat",
@@ -615,7 +667,7 @@ class SetupWizard(tk.Toplevel):
             bg=BG,
             cursor="hand2",
             font=("Segoe UI", 8),
-        ).grid(row=5, column=0, columnspan=3, padx=PAD * 2, pady=(0, PAD * 2))
+        ).grid(row=7, column=0, columnspan=3, padx=PAD * 2, pady=(0, PAD * 2))
 
         self.columnconfigure(1, weight=1)
 
@@ -631,7 +683,7 @@ class SetupWizard(tk.Toplevel):
         key = self._key_var.get().strip()
         if not key.startswith("sk-ant-"):
             messagebox.showerror(
-                "Invalid key", "API key must start with sk-ant-…", parent=self
+                t("wiz_invalid_key"), t("wiz_invalid_key_msg"), parent=self
             )
             return
 
@@ -642,13 +694,14 @@ class SetupWizard(tk.Toplevel):
             lex = self._lex_var.get().strip()
             if not lex or not Path(lex).exists():
                 messagebox.showerror(
-                    "Missing lexicon",
-                    "Please select a valid lexicon .txt file.",
-                    parent=self,
+                    t("wiz_missing_lex"), t("wiz_missing_lex_msg"), parent=self
                 )
                 return
 
         save(api_key=key, lexicon_path=lex)
+        # Persist language (may differ from what LanguagePicker set earlier)
+        ui_strings.set_lang(self._lang_var.get())
+        cfg_module.save_ui_lang(self._lang_var.get())
         self.config_saved = True
         self.destroy()
 
@@ -660,9 +713,7 @@ class SetupWizard(tk.Toplevel):
                 lex_path_str = str(found)
             else:
                 messagebox.showinfo(
-                    "No lexicon",
-                    "Save settings with a valid lexicon path first.",
-                    parent=self,
+                    t("lex_title"), t("no_lex_msg"), parent=self
                 )
                 return
         LexiconManager(self, Path(lex_path_str))
@@ -672,16 +723,16 @@ class SetupWizard(tk.Toplevel):
         n = nms_cache.count()
         if n == 0:
             messagebox.showinfo(
-                "Cache empty", "Translation cache is already empty.", parent=self
+                t("cache_empty"), t("cache_empty_msg"), parent=self
             )
             return
         if messagebox.askyesno(
-            "Clear cache",
-            f"Delete all {n} cached translation(s)?\n\nThis cannot be undone.",
+            t("cache_confirm"),
+            t("cache_confirm_msg", n=n),
             parent=self,
         ):
             nms_cache.clear()
-            messagebox.showinfo("Cleared", "Translation cache cleared.", parent=self)
+            messagebox.showinfo(t("cache_cleared"), t("cache_cleared_msg"), parent=self)
 
 
 # ---------------------------------------------------------------------------
@@ -740,6 +791,15 @@ class App(tk.Tk):
         except ImportError:
             pass
 
+        # Resolve UI language BEFORE building widgets so t() returns correct text
+        _early_cfg = load()
+        if _early_cfg is not None:
+            ui_strings.set_lang(_early_cfg.ui_lang)
+        else:
+            # First run: show bilingual language picker while splash is visible
+            lp = LanguagePicker(self)
+            self.wait_window(lp)
+
         splash.destroy()
 
         self.title(f"{APP_TITLE} — {APP_SUBTITLE}")
@@ -766,11 +826,13 @@ class App(tk.Tk):
         self._cfg = load()
         if self._cfg is None:
             self._run_wizard()
+            # Persist language chosen in LanguagePicker (wizard may have updated it too)
+            cfg_module.save_ui_lang(ui_strings.get_lang())
             self._cfg = load()
         if self._cfg is None:
             messagebox.showerror(
-                "Setup incomplete",
-                "Configuration was not saved. Please restart and complete setup.",
+                t("dlg_setup_incomplete"),
+                t("dlg_setup_incomplete_msg"),
             )
             self.destroy()
             return
@@ -780,9 +842,10 @@ class App(tk.Tk):
         errors = self._cfg.validate()
         if errors:
             messagebox.showwarning(
-                "Config issues",
-                "Problems with saved configuration:\n\n" + "\n".join(errors) +
-                "\n\nOpen Settings to fix.",
+                t("dlg_cfg_issues"),
+                "Problems with saved configuration:\n\n"
+                + "\n".join(errors)
+                + t("dlg_cfg_fix"),
             )
 
     def _run_wizard(self) -> None:
@@ -812,7 +875,7 @@ class App(tk.Tk):
         # ── File queue ──
         fq = tk.Frame(self, bg=BG, padx=PAD, pady=PAD)
         fq.pack(fill="x")
-        tk.Label(fq, text="Files to translate:", bg=BG, anchor="w").grid(
+        tk.Label(fq, text=t("main_files"), bg=BG, anchor="w").grid(
             row=0, column=0, columnspan=2, sticky="w", pady=(0, 2)
         )
         self._file_list: list[str] = []
@@ -825,49 +888,55 @@ class App(tk.Tk):
         self._listbox.configure(yscrollcommand=sb.set)
         btn_col = tk.Frame(fq, bg=BG)
         btn_col.grid(row=1, column=2, sticky="n", padx=(4, 0))
-        tk.Button(btn_col, text="Add Files…", width=12,
+        tk.Button(btn_col, text=t("main_add_files"), width=12,
                   command=self._add_files).pack(pady=(0, 3))
-        tk.Button(btn_col, text="Add Folder…", width=12,
+        tk.Button(btn_col, text=t("main_add_folder"), width=12,
                   command=self._add_folder).pack(pady=(0, 3))
-        tk.Button(btn_col, text="Remove", width=12,
+        tk.Button(btn_col, text=t("main_remove"), width=12,
                   command=self._remove_selected).pack()
         fq.columnconfigure(0, weight=1)
 
         # ── Direction + output note ──
         frm = tk.Frame(self, bg=BG, padx=PAD)
         frm.pack(fill="x")
-        tk.Label(frm, text="Direction:", bg=BG, width=12, anchor="e").grid(
+        tk.Label(frm, text=t("main_direction"), bg=BG, width=12, anchor="e").grid(
             row=0, column=0, padx=(0, 4), pady=4, sticky="e"
         )
         self._dir_var = tk.StringVar(value="fr→en")
         dir_frame = tk.Frame(frm, bg=BG)
         dir_frame.grid(row=0, column=1, sticky="w", pady=4)
-        for val, label in [("fr→en", "French → English"), ("en→fr", "English → French")]:
+        for val, label in [("fr→en", t("main_fren")), ("en→fr", t("main_enfr"))]:
             tk.Radiobutton(
                 dir_frame, text=label, variable=self._dir_var, value=val, bg=BG
             ).pack(side="left", padx=(0, PAD))
+
         # ── Header translation mode ──
-        tk.Label(frm, text="Headers:", bg=BG, width=12, anchor="e").grid(
+        tk.Label(frm, text=t("main_headers"), bg=BG, width=12, anchor="e").grid(
             row=1, column=0, padx=(0, 4), pady=4, sticky="e"
         )
-        self._header_mode_var = tk.StringVar(value="full")
+        self._header_mode_var = tk.StringVar(value="skip")
         hdr_frame = tk.Frame(frm, bg=BG)
         hdr_frame.grid(row=1, column=1, sticky="w", pady=4)
         _hdr_options = [
-            ("full",         "Translate fully"),
-            ("lexicon_only", "Lexicon only — no API"),
-            ("skip",         "Skip — preserve source"),
+            ("full",         t("main_hdr_full")),
+            ("lexicon_only", t("main_hdr_lex")),
+            ("skip",         t("main_hdr_skip")),
         ]
+        _hdr_tip_keys = {
+            "full":         "tip_hdr_full",
+            "lexicon_only": "tip_hdr_lex",
+            "skip":         "tip_hdr_skip",
+        }
         for val, label in _hdr_options:
             rb = tk.Radiobutton(
                 hdr_frame, text=label, variable=self._header_mode_var,
                 value=val, bg=BG,
             )
             rb.pack(side="left", padx=(0, PAD))
-            Tooltip(rb, _HEADER_MODE_TIPS[val])
+            Tooltip(rb, t(_hdr_tip_keys[val]))
 
         tk.Label(
-            frm, text="Output: same folder as each source file",
+            frm, text=t("main_out_note"),
             bg=BG, fg="#666666", font=("Segoe UI", 8), anchor="w",
         ).grid(row=2, column=1, padx=(0, 4), pady=(0, 4), sticky="w")
         frm.columnconfigure(1, weight=1)
@@ -876,11 +945,11 @@ class App(tk.Tk):
         sf = tk.Frame(self, bg=BG)
         sf.pack(fill="x", padx=PAD)
         tk.Button(
-            sf, text="Settings…", command=self._open_settings,
+            sf, text=t("main_settings"), command=self._open_settings,
             relief="flat", fg=ACCENT, cursor="hand2", bg=BG,
         ).pack(side="right")
         tk.Button(
-            sf, text="Estimate API cost…", command=self._estimate_cost,
+            sf, text=t("main_estimate"), command=self._estimate_cost,
             relief="flat", fg=ACCENT, cursor="hand2", bg=BG,
             font=("Segoe UI", 9),
         ).pack(side="left")
@@ -888,7 +957,7 @@ class App(tk.Tk):
         # ── Translate button ──
         self._btn = tk.Button(
             self,
-            text="Translate",
+            text=t("main_translate"),
             command=self._start_translation,
             font=("Segoe UI", 11, "bold"),
             bg=ACCENT,
@@ -913,7 +982,7 @@ class App(tk.Tk):
         ).pack(side="left", padx=(6, 0))
 
         # ── Log ──
-        tk.Label(self, text="Progress log:", bg=BG, anchor="w").pack(
+        tk.Label(self, text=t("main_log"), bg=BG, anchor="w").pack(
             fill="x", padx=PAD, pady=(2, 0)
         )
         self._log = scrolledtext.ScrolledText(
@@ -929,7 +998,7 @@ class App(tk.Tk):
         self._log.pack(fill="both", expand=True, padx=PAD, pady=(0, PAD))
 
         # ── Status bar ──
-        self._status_var = tk.StringVar(value="Ready.")
+        self._status_var = tk.StringVar(value=t("status_ready"))
         tk.Label(
             self, textvariable=self._status_var,
             bd=1, relief="sunken", anchor="w", bg="#e0e0e0",
@@ -955,7 +1024,7 @@ class App(tk.Tk):
         found = sorted(Path(folder).glob("*.docx"))
         if not found:
             messagebox.showinfo(
-                "No files found", f"No .docx files found in:\n{folder}"
+                t("dlg_no_docx"), t("dlg_no_docx_msg", folder=folder)
             )
             return
         added = 0
@@ -966,7 +1035,7 @@ class App(tk.Tk):
                 self._listbox.insert("end", p.name)
                 added += 1
         if added:
-            self._enqueue_log(f"Added {added} file(s) from: {folder}")
+            self._enqueue_log(t("dlg_added_folder", n=added, folder=folder))
 
     def _remove_selected(self) -> None:
         for idx in reversed(self._listbox.curselection()):
@@ -983,7 +1052,7 @@ class App(tk.Tk):
     def _estimate_cost(self) -> None:
         srcs = list(self._file_list)
         if not srcs:
-            messagebox.showinfo("No files", "Add at least one file first.")
+            messagebox.showinfo(t("est_no_files"), t("est_no_files_msg"))
             return
         from nms_translate import estimate_translation_cost
         lines = []
@@ -994,17 +1063,19 @@ class App(tk.Tk):
                 lines.append(f"{Path(src).name}:\n  Error — {est['error']}")
             else:
                 lines.append(
-                    f"{Path(src).name}:\n"
-                    f"  {est['para_count']} paragraphs, {est['total_chars']:,} chars\n"
-                    f"  ~{est['est_input_tokens']:,} input / "
-                    f"{est['est_output_tokens']:,} output tokens\n"
-                    f"  Est. USD ${est['est_cost_usd']:.4f} (with prompt caching)"
+                    t("est_body",
+                      name=Path(src).name,
+                      paras=est["para_count"],
+                      chars=est["total_chars"],
+                      inp=est["est_input_tokens"],
+                      out=est["est_output_tokens"],
+                      cost=est["est_cost_usd"])
                 )
                 total_cost += est["est_cost_usd"]
         if len(srcs) > 1:
-            lines.append(f"Total estimated cost: USD ${total_cost:.4f}")
-        lines.append("(Estimates assume Sonnet 4.6 pricing; actual costs vary.)")
-        messagebox.showinfo("API Cost Estimate", "\n\n".join(lines))
+            lines.append(t("est_total", cost=total_cost))
+        lines.append(t("est_note"))
+        messagebox.showinfo(t("est_title"), "\n\n".join(lines))
 
     # ── Translation ──────────────────────────────────────────────────────
     def _start_translation(self) -> None:
@@ -1014,26 +1085,26 @@ class App(tk.Tk):
         srcs = list(self._file_list)
 
         if not srcs:
-            messagebox.showerror(
-                "Missing file", "Please add at least one source DOCX file."
-            )
+            messagebox.showerror(t("dlg_no_file"), t("dlg_no_file_msg"))
             return
         for src in srcs:
             if not Path(src).exists():
-                messagebox.showerror("File not found", f"File not found:\n{src}")
+                messagebox.showerror(
+                    t("dlg_not_found"), f"File not found:\n{src}"
+                )
                 return
             if Path(src).suffix.lower() != ".docx":
                 messagebox.showerror(
-                    "Unsupported file type",
-                    f"Only DOCX files can be translated:\n{Path(src).name}",
+                    t("dlg_bad_type"),
+                    t("dlg_bad_type_msg", name=Path(src).name),
                 )
                 return
         if self._cfg is None:
-            messagebox.showerror("No config", "Configuration missing. Open Settings.")
+            messagebox.showerror(t("dlg_no_cfg"), t("dlg_no_cfg_msg"))
             return
         errors = self._cfg.validate()
         if errors:
-            messagebox.showerror("Config error", "\n".join(errors))
+            messagebox.showerror(t("dlg_cfg_err"), "\n".join(errors))
             return
 
         # Persist the chosen header mode to config so it survives restarts
@@ -1065,8 +1136,8 @@ class App(tk.Tk):
                 if total_files > 1:
                     self._enqueue_log(
                         f"\n{'─' * 50}\n"
-                        f"  File {i + 1} of {total_files}: {Path(src).name}\n"
-                        f"{'─' * 50}"
+                        + t("file_sep", i=i + 1, n=total_files, name=Path(src).name)
+                        + f"\n{'─' * 50}"
                     )
                 outputs = _run_pipeline(
                     src_docx=src,
@@ -1079,28 +1150,26 @@ class App(tk.Tk):
                         self._on_progress(done, total, fi, ft),
                 )
                 self._enqueue_log("")
-                self._enqueue_log("Output files:")
+                self._enqueue_log(t("output_files"))
                 for label, path in outputs.items():
                     self._enqueue_log(f"  {label}: {path}")
 
             self._enqueue_log("")
-            n = f"{total_files} file{'s' if total_files > 1 else ''}"
-            self._enqueue_log(f"✓ {n} translated successfully.")
-            self.after(0, lambda: self._status_var.set("Success!"))
+            self._enqueue_log(t("success_n", n=total_files))
+            self.after(0, lambda: self._status_var.set(t("status_success")))
             self.after(0, lambda: self._on_success(total_files))
         except Exception as exc:
             msg = str(exc)
             self._enqueue_log(f"\nERROR: {msg}")
-            self.after(0, lambda: messagebox.showerror("Translation failed", msg))
-            self.after(0, lambda: self._status_var.set("Error — see log."))
+            self.after(0, lambda: messagebox.showerror(t("dlg_xlation_failed"), msg))
+            self.after(0, lambda: self._status_var.set(t("status_error")))
         finally:
             self.after(0, lambda: self._set_running(False))
 
     def _on_success(self, count: int) -> None:
-        n = f"{count} file{'s' if count > 1 else ''}"
         again = messagebox.askyesno(
-            "Success!",
-            f"{n} translated successfully!\n\nTranslate more files?",
+            t("dlg_success_title"),
+            t("dlg_success_q", n=count),
             icon="info",
         )
         if again:
@@ -1109,19 +1178,19 @@ class App(tk.Tk):
             self._clear_log()
             self._progress.configure(mode="determinate", value=0)
             self._prog_lbl.set("")
-            self._status_var.set("Ready.")
+            self._status_var.set(t("status_ready"))
         else:
             messagebox.showinfo(
-                "Thank you",
-                f"Thank you for using {APP_TITLE}.\n\nThe application will now close.",
+                t("dlg_goodbye_title"),
+                t("dlg_goodbye_msg"),
             )
             self.destroy()
 
     def _on_progress(self, done: int, total: int, file_idx: int, total_files: int) -> None:
         if total_files > 1:
-            label = f"File {file_idx}/{total_files}: {done}/{total} paras"
+            label = t("file_progress", fi=file_idx, ft=total_files, done=done, total=total)
         else:
-            label = f"{done} / {total} paragraphs"
+            label = t("para_progress", done=done, total=total)
         pct = int(done / total * 100) if total else 0
 
         def _update() -> None:
@@ -1159,8 +1228,8 @@ class App(tk.Tk):
         if running:
             self._progress.configure(mode="indeterminate", value=0)
             self._progress.start(12)
-            self._prog_lbl.set("Working…")
-            self._status_var.set("Translating…")
+            self._prog_lbl.set(t("working"))
+            self._status_var.set(t("status_xlating"))
         else:
             self._progress.stop()
             if not self._prog_lbl.get().startswith("ERROR"):
