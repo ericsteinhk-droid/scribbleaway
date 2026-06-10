@@ -18,6 +18,19 @@ from dataclasses import dataclass, field
 import anthropic
 
 
+def _msg(e: Exception) -> str:
+    """Return a clean human-readable message from an Anthropic SDK exception."""
+    body = getattr(e, "body", None)
+    if isinstance(body, dict):
+        inner = body.get("error", {})
+        if isinstance(inner, dict) and "message" in inner:
+            return inner["message"]
+    sdk_msg = getattr(e, "message", None)
+    if sdk_msg and isinstance(sdk_msg, str):
+        return sdk_msg
+    return str(e)
+
+
 class ApiAuthError(Exception):
     pass
 
@@ -80,9 +93,9 @@ class ApiClient:
                     cache_read_tokens=cr,
                 )
             except anthropic.AuthenticationError as e:
-                raise ApiAuthError(str(e)) from e
+                raise ApiAuthError(_msg(e)) from e
             except anthropic.PermissionDeniedError as e:
-                raise ApiAuthError(str(e)) from e
+                raise ApiAuthError(_msg(e)) from e
             except anthropic.RateLimitError as e:
                 last_exc = e
                 wait = 2 ** attempt
@@ -92,7 +105,7 @@ class ApiClient:
                     last_exc = e
                     time.sleep(2 ** attempt)
                 else:
-                    raise ApiError(str(e)) from e
+                    raise ApiError(_msg(e)) from e
             except Exception as e:
                 raise ApiError(str(e)) from e
 
