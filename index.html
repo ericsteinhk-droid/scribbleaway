@@ -1115,10 +1115,6 @@ body { background:#E9E7E0; }
             <div class="ei-link-icon" style="color:#fff">🎭</div>
             <div class="ei-link-text"><div class="ei-fr">Talents &amp; Culture</div><div class="ei-en">Talents &amp; Culture</div></div>
           </a>
-          <a href="#" data-link="biblio-comites" class="ei-link-card" style="--lc-color: #4A6B7A">
-            <div class="ei-link-icon" style="color:#fff">🤝</div>
-            <div class="ei-link-text"><div class="ei-fr">Comités</div><div class="ei-en">Committees</div></div>
-          </a>
           <a href="#" data-link="biblio-direction" class="ei-link-card" style="--lc-color: #4A6B7A">
             <div class="ei-link-icon" style="color:#fff">🧭</div>
             <div class="ei-link-text"><div class="ei-fr">Direction</div><div class="ei-en">Management</div></div>
@@ -1128,6 +1124,45 @@ body { background:#E9E7E0; }
             <div class="ei-link-text"><div class="ei-fr">Architectes</div><div class="ei-en">Architects</div></div>
           </a>
         </div>
+
+        <!-- Comités — dépliable -->
+        <div class="ei-sub-section">
+          <div class="ei-sub-toggle ei-link-card" data-sub="comites" style="--lc-color:#4A6B7A">
+            <div class="ei-link-icon" style="color:#fff">🤝</div>
+            <div class="ei-link-text"><div class="ei-fr">Comités</div><div class="ei-en">Committees</div></div>
+            <div class="ei-sub-arrow"></div>
+          </div>
+          <div class="ei-sub-panel" id="sub-comites" style="--sub-color:#4A6B7A">
+
+            <!-- Sécurité des Contrats -->
+            <div class="ei-sub-section" style="margin-top:0.5rem">
+              <div class="ei-sub-toggle ei-link-card" data-sub="comite-secu" style="--lc-color:#D52B1E">
+                <div class="ei-link-icon" style="background:transparent; padding:0; width:24px; height:24px"><img src="maple_leaf_red.svg" style="width:100%;height:100%"></div>
+                <div class="ei-link-text"><div class="ei-fr">Sécurité des Contrats</div><div class="ei-en">Contract Security</div></div>
+                <div class="ei-sub-arrow"></div>
+              </div>
+              <div class="ei-sub-panel" id="sub-comite-secu" style="--sub-color:#D52B1E">
+                <div class="ei-links-grid" style="padding:0.5rem 0 0.25rem">
+                  <a href="#" data-link="comite-secu-briefing" class="ei-link-card" style="--lc-color:#D52B1E">
+                    <div class="ei-link-icon" style="color:#fff">📊</div>
+                    <div class="ei-link-text"><div class="ei-fr">Briefing — Sécurité industrielle 2025</div><div class="ei-en">Industrial Security Briefing 2025 · PDF</div></div>
+                  </a>
+                  <a href="#" data-link="comite-secu-srcl" class="ei-link-card" style="--lc-color:#D52B1E">
+                    <div class="ei-link-icon" style="color:#fff">📑</div>
+                    <div class="ei-link-text"><div class="ei-fr">LVERS / SRCL — Présentation</div><div class="ei-en">SRCL Presentation · PDF</div></div>
+                  </a>
+                  <a href="#" data-link="comite-secu-manuel" class="ei-link-card" style="--lc-color:#D52B1E">
+                    <div class="ei-link-icon" style="color:#fff">🇨🇦</div>
+                    <div class="ei-link-text"><div class="ei-fr">Manuel de la sécurité des contrats</div><div class="ei-en">Contract Security Manual · Gouvernement du Canada</div></div>
+                  </a>
+                </div>
+              </div>
+            </div>
+            <!-- Add further committees here following the same pattern -->
+
+          </div>
+        </div>
+
         <div class="ei-level-label" style="margin-top:2rem">Par domaine de pratique</div>
         <div class="ei-links-grid">
           <a href="#" data-link="biblio-patrimoine" class="ei-link-card" style="--lc-color: #9AA600">
@@ -1146,31 +1181,6 @@ body { background:#E9E7E0; }
             <div class="ei-link-icon" style="color:#fff">🏘️</div>
             <div class="ei-link-text"><div class="ei-fr">Habitation et communautaire</div><div class="ei-en">Housing &amp; Community</div></div>
           </a>
-        </div>
-
-        <div class="ei-level-label" style="margin-top:2rem">Comités / Committees</div>
-        <div class="ei-committee">
-          <div class="ei-committee-head">
-            <img class="ei-committee-leaf" src="maple_leaf_red.svg" alt="">
-            <div>
-              <div class="ei-committee-name">Sécurité des Contrats</div>
-              <div class="ei-committee-en">Contract Security</div>
-            </div>
-          </div>
-          <div class="ei-links-grid">
-            <a href="#" data-link="comite-secu-briefing" class="ei-link-card" style="--lc-color: #D52B1E">
-              <div class="ei-link-icon" style="color:#fff">📊</div>
-              <div class="ei-link-text"><div class="ei-fr">Briefing — Sécurité industrielle 2025</div><div class="ei-en">Industrial Security Briefing 2025 · PDF</div></div>
-            </a>
-            <a href="#" data-link="comite-secu-srcl" class="ei-link-card" style="--lc-color: #D52B1E">
-              <div class="ei-link-icon" style="color:#fff">📑</div>
-              <div class="ei-link-text"><div class="ei-fr">LVERS / SRCL — Présentation</div><div class="ei-en">SRCL Presentation · PDF</div></div>
-            </a>
-            <a href="#" data-link="comite-secu-manuel" class="ei-link-card" style="--lc-color: #D52B1E">
-              <div class="ei-link-icon" style="color:#fff">🇨🇦</div>
-              <div class="ei-link-text"><div class="ei-fr">Manuel de la sécurité des contrats</div><div class="ei-en">Contract Security Manual · Gouvernement du Canada</div></div>
-            </a>
-          </div>
         </div>
 
       </div>
