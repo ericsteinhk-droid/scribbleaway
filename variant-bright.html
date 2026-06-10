@@ -198,18 +198,18 @@
   }
   .ei-arrow {
     position: absolute;
-    top: 0.65rem;
-    right: 0.65rem;
-    width: 20px; height: 20px;
-    border-radius: 50%;
-    background: rgba(255,255,255,0.2);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 0.65rem;
-    transition: background 0.15s, transform 0.25s;
+    top: 0.85rem;
+    right: 0.75rem;
+    /* Stout triangle in the category color (down; flips up when open) */
+    width: 0; height: 0;
+    border-left: 9px solid transparent;
+    border-right: 9px solid transparent;
+    border-top: 8px solid var(--card-color);
+    font-size: 0; /* hide legacy arrow glyph */
+    transition: transform 0.25s;
   }
   .ei-section-card.active .ei-arrow {
     transform: rotate(180deg);
-    background: rgba(255,255,255,0.35);
   }
   .ei-section-preview {
     background: #fff;
@@ -486,8 +486,6 @@ body { background:#E9E7E0; }
 .ei-section-card:hover{ box-shadow:0 12px 30px rgba(60,55,40,0.16); }
 .ei-section-header{ background:#fff; color:var(--card-color); border-top:4px solid var(--card-color); }
 .ei-section-header .ei-en{ color:#A09E94; opacity:1; }
-.ei-arrow{ background:var(--card-color); color:#fff; }
-.ei-section-card.active .ei-arrow{ background:var(--card-color); }
 .ei-section-preview{ border:none; border-radius:0 0 10px 10px; }
 .ei-preview-tag{ background:#F3F2EC; color:#8B897E; border-radius:10px; }
 .ei-panel{ border-radius:12px; border-color:#ECEAE3; box-shadow:0 8px 26px rgba(60,55,40,0.08); }
@@ -545,7 +543,7 @@ body { background:#E9E7E0; }
       <!-- 1. EVOQ -->
       <div class="ei-section-card c-evoq" tabindex="0" role="button" aria-expanded="false" data-panel="evoq">
         <div class="ei-section-header">
-          <div class="ei-arrow">↓</div>
+          <div class="ei-arrow"></div>
           <h2><img class="ei-inline-logo" src="evoq_logo_v_10kb.svg" alt="EVOQ"></h2>
           <div class="ei-en">&nbsp;</div>
         </div>
@@ -562,7 +560,7 @@ body { background:#E9E7E0; }
       <!-- 2. Bibliothèque -->
       <div class="ei-section-card c-biblio" tabindex="0" role="button" aria-expanded="false" data-panel="biblio">
         <div class="ei-section-header">
-          <div class="ei-arrow">↓</div>
+          <div class="ei-arrow"></div>
           <h2>Bibliothèque <img class="ei-inline-logo" src="evoq_logo_v_10kb.svg" alt="EVOQ"></h2>
           <div class="ei-en"><img class="ei-inline-logo" src="evoq_logo_v_10kb.svg" alt="EVOQ"> Library</div>
         </div>
@@ -579,7 +577,7 @@ body { background:#E9E7E0; }
       <!-- 3. Applications -->
       <div class="ei-section-card c-apps" tabindex="0" role="button" aria-expanded="false" data-panel="apps">
         <div class="ei-section-header">
-          <div class="ei-arrow">↓</div>
+          <div class="ei-arrow"></div>
           <h2>Applications et services</h2>
           <div class="ei-en">Applications &amp; Services</div>
         </div>
@@ -596,7 +594,7 @@ body { background:#E9E7E0; }
       <!-- 4. Formations -->
       <div class="ei-section-card c-form" tabindex="0" role="button" aria-expanded="false" data-panel="form">
         <div class="ei-section-header">
-          <div class="ei-arrow">↓</div>
+          <div class="ei-arrow"></div>
           <h2>Formations</h2>
           <div class="ei-en">Training</div>
         </div>
@@ -613,7 +611,7 @@ body { background:#E9E7E0; }
       <!-- 5. Ressources externes -->
       <div class="ei-section-card c-ext" tabindex="0" role="button" aria-expanded="false" data-panel="ext">
         <div class="ei-section-header">
-          <div class="ei-arrow">↓</div>
+          <div class="ei-arrow"></div>
           <h2>Ressources externes</h2>
           <div class="ei-en">External Resources</div>
         </div>
@@ -630,7 +628,7 @@ body { background:#E9E7E0; }
       <!-- 6. Portail employés -->
       <div class="ei-section-card c-portal" tabindex="0" role="button" aria-expanded="false" data-panel="portal">
         <div class="ei-section-header">
-          <div class="ei-arrow">↓</div>
+          <div class="ei-arrow"></div>
           <h2>Portail employés</h2>
           <div class="ei-en">Employee Portal</div>
         </div>
