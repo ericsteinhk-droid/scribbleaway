@@ -1,1041 +1,1415 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fr">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Éric Stein — Architect</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Inter:wght@300;400;500&display=swap" rel="stylesheet" />
-  <style>
-    *, *::before, *::after {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
-
-    :root {
-      --color-bg: #F8F7F4;
-      --color-surface: #FFFFFF;
-      --color-text: #1C1C1A;
-      --color-text-secondary: #6B6860;
-      --color-text-tertiary: #9A9890;
-      --color-accent: #7A6A52;
-      --color-accent-light: #C4B49A;
-      --color-border: #E4E2DC;
-      --color-border-light: #EDECE8;
-      --font-serif: 'Cormorant Garamond', 'Georgia', serif;
-      --font-sans: 'Inter', 'Helvetica Neue', Arial, sans-serif;
-      --max-width: 1120px;
-      --gutter: 48px;
-    }
-
-    html {
-      scroll-behavior: smooth;
-    }
-
-    body {
-      background-color: var(--color-bg);
-      color: var(--color-text);
-      font-family: var(--font-sans);
-      font-weight: 300;
-      font-size: 15px;
-      line-height: 1.7;
-      -webkit-font-smoothing: antialiased;
-    }
-
-    /* ── Navigation ── */
-    nav {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      z-index: 100;
-      background: rgba(248, 247, 244, 0.92);
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
-      border-bottom: 1px solid var(--color-border);
-    }
-
-    .nav-inner {
-      max-width: var(--max-width);
-      margin: 0 auto;
-      padding: 0 var(--gutter);
-      height: 64px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-
-    .nav-logo {
-      font-family: var(--font-serif);
-      font-size: 18px;
-      font-weight: 400;
-      letter-spacing: 0.02em;
-      color: var(--color-text);
-      text-decoration: none;
-    }
-
-    .nav-logo span {
-      color: var(--color-accent);
-    }
-
-    .nav-links {
-      display: flex;
-      gap: 36px;
-      list-style: none;
-    }
-
-    .nav-links a {
-      font-size: 12px;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-      color: var(--color-text-secondary);
-      text-decoration: none;
-      transition: color 0.2s;
-    }
-
-    .nav-links a:hover {
-      color: var(--color-accent);
-    }
-
-    /* ── Hero ── */
-    .hero {
-      padding-top: 64px;
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .hero-bg {
-      position: absolute;
-      inset: 0;
-      background: linear-gradient(135deg, #F8F7F4 0%, #EDE9E0 40%, #E4DDD0 100%);
-      z-index: 0;
-    }
-
-    .hero-accent-line {
-      position: absolute;
-      top: 20%;
-      right: 0;
-      width: 45%;
-      height: 1px;
-      background: linear-gradient(to left, transparent, var(--color-accent-light));
-      z-index: 1;
-    }
-
-    .hero-accent-line-2 {
-      position: absolute;
-      bottom: 30%;
-      left: 0;
-      width: 30%;
-      height: 1px;
-      background: linear-gradient(to right, transparent, var(--color-border));
-      z-index: 1;
-    }
-
-    .hero-inner {
-      position: relative;
-      z-index: 2;
-      max-width: var(--max-width);
-      margin: 0 auto;
-      padding: 0 var(--gutter);
-      width: 100%;
-    }
-
-    .hero-label {
-      font-size: 11px;
-      letter-spacing: 0.2em;
-      text-transform: uppercase;
-      color: var(--color-accent);
-      margin-bottom: 32px;
-    }
-
-    .hero-name {
-      font-family: var(--font-serif);
-      font-size: clamp(60px, 8vw, 108px);
-      font-weight: 300;
-      line-height: 1.0;
-      letter-spacing: -0.01em;
-      color: var(--color-text);
-      margin-bottom: 8px;
-    }
-
-    .hero-name em {
-      font-style: italic;
-      color: var(--color-accent);
-    }
-
-    .hero-title {
-      font-family: var(--font-serif);
-      font-size: clamp(18px, 2.5vw, 26px);
-      font-weight: 300;
-      font-style: italic;
-      color: var(--color-text-secondary);
-      margin-bottom: 48px;
-    }
-
-    .hero-tagline {
-      max-width: 520px;
-      font-size: 15px;
-      color: var(--color-text-secondary);
-      line-height: 1.8;
-      margin-bottom: 56px;
-    }
-
-    .hero-cta {
-      display: inline-flex;
-      align-items: center;
-      gap: 12px;
-      font-size: 12px;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-      color: var(--color-text);
-      text-decoration: none;
-      border-bottom: 1px solid var(--color-accent);
-      padding-bottom: 4px;
-      transition: color 0.2s, border-color 0.2s;
-    }
-
-    .hero-cta:hover {
-      color: var(--color-accent);
-    }
-
-    .hero-cta svg {
-      transition: transform 0.2s;
-    }
-
-    .hero-cta:hover svg {
-      transform: translateX(4px);
-    }
-
-    .hero-stats {
-      position: absolute;
-      right: var(--gutter);
-      bottom: 80px;
-      z-index: 2;
-      display: flex;
-      flex-direction: column;
-      gap: 32px;
-      text-align: right;
-    }
-
-    .stat-number {
-      font-family: var(--font-serif);
-      font-size: 48px;
-      font-weight: 300;
-      color: var(--color-text);
-      line-height: 1;
-      display: block;
-    }
-
-    .stat-label {
-      font-size: 11px;
-      letter-spacing: 0.14em;
-      text-transform: uppercase;
-      color: var(--color-text-tertiary);
-      display: block;
-      margin-top: 4px;
-    }
-
-    /* ── Section Base ── */
-    section {
-      padding: 120px var(--gutter);
-      max-width: calc(var(--max-width) + var(--gutter) * 2);
-      margin: 0 auto;
-    }
-
-    .section-label {
-      font-size: 11px;
-      letter-spacing: 0.2em;
-      text-transform: uppercase;
-      color: var(--color-accent);
-      margin-bottom: 16px;
-    }
-
-    .section-title {
-      font-family: var(--font-serif);
-      font-size: clamp(36px, 4vw, 52px);
-      font-weight: 300;
-      line-height: 1.1;
-      color: var(--color-text);
-      margin-bottom: 64px;
-    }
-
-    .divider {
-      width: 48px;
-      height: 1px;
-      background: var(--color-accent);
-      margin-bottom: 64px;
-    }
-
-    /* ── About ── */
-    #about {
-      background: var(--color-surface);
-    }
-
-    .about-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 80px;
-      align-items: start;
-    }
-
-    .about-text p {
-      font-size: 15px;
-      color: var(--color-text-secondary);
-      line-height: 1.9;
-      margin-bottom: 24px;
-    }
-
-    .about-text p:last-child {
-      margin-bottom: 0;
-    }
-
-    .about-text p strong {
-      color: var(--color-text);
-      font-weight: 400;
-    }
-
-    .about-aside {
-      padding-top: 8px;
-    }
-
-    .credential-block {
-      border-top: 1px solid var(--color-border);
-      padding: 28px 0;
-    }
-
-    .credential-block:last-child {
-      border-bottom: 1px solid var(--color-border);
-    }
-
-    .credential-label {
-      font-size: 11px;
-      letter-spacing: 0.16em;
-      text-transform: uppercase;
-      color: var(--color-text-tertiary);
-      margin-bottom: 8px;
-    }
-
-    .credential-value {
-      font-size: 15px;
-      color: var(--color-text);
-      line-height: 1.6;
-    }
-
-    /* ── Expertise ── */
-    #expertise {
-      background: var(--color-bg);
-    }
-
-    .expertise-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 1px;
-      background: var(--color-border);
-      border: 1px solid var(--color-border);
-    }
-
-    .expertise-card {
-      background: var(--color-bg);
-      padding: 48px 40px;
-      transition: background 0.3s;
-    }
-
-    .expertise-card:hover {
-      background: var(--color-surface);
-    }
-
-    .expertise-icon {
-      width: 32px;
-      height: 2px;
-      background: var(--color-accent);
-      margin-bottom: 32px;
-    }
-
-    .expertise-card h3 {
-      font-family: var(--font-serif);
-      font-size: 22px;
-      font-weight: 400;
-      color: var(--color-text);
-      margin-bottom: 16px;
-      line-height: 1.2;
-    }
-
-    .expertise-card p {
-      font-size: 14px;
-      color: var(--color-text-secondary);
-      line-height: 1.8;
-    }
-
-    /* ── Projects ── */
-    #projects {
-      background: var(--color-text);
-    }
-
-    #projects .section-label {
-      color: var(--color-accent-light);
-    }
-
-    #projects .section-title {
-      color: #F8F7F4;
-    }
-
-    .projects-list {
-      display: flex;
-      flex-direction: column;
-    }
-
-    .project-item {
-      display: grid;
-      grid-template-columns: 80px 1fr auto;
-      gap: 40px;
-      align-items: start;
-      padding: 48px 0;
-      border-top: 1px solid rgba(255,255,255,0.08);
-      transition: opacity 0.2s;
-      cursor: default;
-    }
-
-    .project-item:last-child {
-      border-bottom: 1px solid rgba(255,255,255,0.08);
-    }
-
-    .project-item:hover {
-      opacity: 0.85;
-    }
-
-    .project-number {
-      font-family: var(--font-serif);
-      font-size: 13px;
-      font-weight: 300;
-      color: rgba(255,255,255,0.25);
-      padding-top: 6px;
-      letter-spacing: 0.05em;
-    }
-
-    .project-info h3 {
-      font-family: var(--font-serif);
-      font-size: 26px;
-      font-weight: 400;
-      color: #F8F7F4;
-      margin-bottom: 8px;
-      line-height: 1.2;
-    }
-
-    .project-info p {
-      font-size: 14px;
-      color: rgba(255,255,255,0.45);
-      line-height: 1.7;
-      max-width: 520px;
-    }
-
-    .project-meta {
-      text-align: right;
-      padding-top: 6px;
-    }
-
-    .project-type {
-      font-size: 11px;
-      letter-spacing: 0.14em;
-      text-transform: uppercase;
-      color: var(--color-accent-light);
-      display: block;
-      margin-bottom: 4px;
-    }
-
-    .project-location {
-      font-size: 12px;
-      color: rgba(255,255,255,0.3);
-    }
-
-    /* ── Recognition ── */
-    #recognition {
-      background: var(--color-surface);
-    }
-
-    .recognition-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 80px;
-    }
-
-    .recognition-item {
-      padding: 40px;
-      border-left: 2px solid var(--color-accent);
-      background: var(--color-bg);
-    }
-
-    .recognition-year {
-      font-size: 11px;
-      letter-spacing: 0.16em;
-      text-transform: uppercase;
-      color: var(--color-text-tertiary);
-      margin-bottom: 12px;
-    }
-
-    .recognition-item h3 {
-      font-family: var(--font-serif);
-      font-size: 20px;
-      font-weight: 400;
-      color: var(--color-text);
-      margin-bottom: 8px;
-      line-height: 1.3;
-    }
-
-    .recognition-item p {
-      font-size: 14px;
-      color: var(--color-text-secondary);
-      line-height: 1.7;
-    }
-
-    .memberships {
-      margin-top: 80px;
-    }
-
-    .memberships-title {
-      font-size: 11px;
-      letter-spacing: 0.2em;
-      text-transform: uppercase;
-      color: var(--color-text-tertiary);
-      margin-bottom: 32px;
-    }
-
-    .memberships-list {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 16px;
-    }
-
-    .membership-tag {
-      font-size: 13px;
-      letter-spacing: 0.08em;
-      color: var(--color-text-secondary);
-      padding: 10px 20px;
-      border: 1px solid var(--color-border);
-      background: var(--color-bg);
-    }
-
-    /* ── Contact ── */
-    #contact {
-      background: var(--color-bg);
-    }
-
-    .contact-layout {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 80px;
-      align-items: start;
-    }
-
-    .contact-intro {
-      font-family: var(--font-serif);
-      font-size: clamp(28px, 3vw, 40px);
-      font-weight: 300;
-      line-height: 1.3;
-      color: var(--color-text);
-      margin-bottom: 32px;
-    }
-
-    .contact-intro em {
-      font-style: italic;
-      color: var(--color-accent);
-    }
-
-    .contact-description {
-      font-size: 14px;
-      color: var(--color-text-secondary);
-      line-height: 1.8;
-    }
-
-    .contact-details {
-      padding-top: 8px;
-    }
-
-    .contact-row {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-      padding: 28px 0;
-      border-top: 1px solid var(--color-border);
-    }
-
-    .contact-row:last-child {
-      border-bottom: 1px solid var(--color-border);
-    }
-
-    .contact-row-label {
-      font-size: 11px;
-      letter-spacing: 0.16em;
-      text-transform: uppercase;
-      color: var(--color-text-tertiary);
-    }
-
-    .contact-row-value {
-      font-size: 15px;
-      color: var(--color-text);
-    }
-
-    .contact-row-value a {
-      color: var(--color-text);
-      text-decoration: none;
-      border-bottom: 1px solid var(--color-border);
-      transition: border-color 0.2s, color 0.2s;
-    }
-
-    .contact-row-value a:hover {
-      color: var(--color-accent);
-      border-color: var(--color-accent);
-    }
-
-    /* ── Footer ── */
-    footer {
-      border-top: 1px solid var(--color-border);
-      padding: 40px var(--gutter);
-      max-width: calc(var(--max-width) + var(--gutter) * 2);
-      margin: 0 auto;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-
-    .footer-name {
-      font-family: var(--font-serif);
-      font-size: 15px;
-      color: var(--color-text-secondary);
-    }
-
-    .footer-firm {
-      font-size: 12px;
-      color: var(--color-text-tertiary);
-    }
-
-    .footer-firm a {
-      color: var(--color-text-tertiary);
-      text-decoration: none;
-      border-bottom: 1px solid var(--color-border);
-      transition: color 0.2s;
-    }
-
-    .footer-firm a:hover {
-      color: var(--color-accent);
-    }
-
-    /* ── Responsive ── */
-    @media (max-width: 900px) {
-      :root {
-        --gutter: 28px;
-      }
-
-      .hero-stats {
-        display: none;
-      }
-
-      .about-grid,
-      .recognition-grid,
-      .contact-layout {
-        grid-template-columns: 1fr;
-        gap: 48px;
-      }
-
-      .expertise-grid {
-        grid-template-columns: 1fr;
-      }
-
-      .project-item {
-        grid-template-columns: 48px 1fr;
-        gap: 24px;
-      }
-
-      .project-meta {
-        grid-column: 2;
-        text-align: left;
-        padding-top: 0;
-      }
-
-      footer {
-        flex-direction: column;
-        gap: 8px;
-        text-align: center;
-      }
-    }
-
-    @media (max-width: 560px) {
-      section {
-        padding: 80px var(--gutter);
-      }
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Intranet EVOQ — Page SharePoint</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --teal:   #00B2A4;
+    --olive:  #9AA600;
+    --rose:   #E4003A;
+    --orange: #E87722;
+    --navy:   #1B5E7B;
+    --light:  #F5F5F2;
+    --mid:    #E8E8E3;
+    --dark:   #1A1A18;
+    --text:   #2D2D2B;
+    --muted:  #7A7A72;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  .evoq-intranet {
+    font-family: 'DM Sans', 'Segoe UI', Tahoma, sans-serif;
+    background: var(--light);
+    color: var(--text);
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0;
+  }
+  .ei-header {
+    background: var(--dark);
+    padding: 0 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 56px;
+    border-radius: 4px 4px 0 0;
+  }
+  .ei-logo {
+    font-family: 'Futura', 'Century Gothic', 'Trebuchet MS', sans-serif;
+    font-weight: 700;
+    font-size: 1.5rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: #fff;
+  }
+  .ei-header-meta {
+    font-size: 0.72rem;
+    color: #888;
+    font-weight: 300;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .ei-banner {
+    background: var(--navy);
+    color: #fff;
+    padding: 0 2rem;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    overflow: hidden;
+  }
+  .ei-banner-label {
+    font-family: 'Syne', 'Trebuchet MS', sans-serif;
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--teal);
+    white-space: nowrap;
+    flex-shrink: 0;
+    padding-right: 1rem;
+    border-right: 1px solid rgba(255,255,255,0.2);
+  }
+  .ei-ticker-wrap {
+    flex: 1;
+    overflow: hidden;
+    -webkit-mask-image: linear-gradient(90deg, transparent, black 3%, black 97%, transparent);
+    mask-image: linear-gradient(90deg, transparent, black 3%, black 97%, transparent);
+  }
+  .ei-ticker {
+    display: flex;
+    gap: 3rem;
+    animation: eiTicker 90s linear infinite;
+    white-space: nowrap;
+  }
+  .ei-ticker:hover { animation-play-state: paused; }
+  @keyframes eiTicker {
+    0%   { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+  }
+  .ei-ticker-item {
+    font-size: 0.78rem;
+    font-weight: 300;
+    opacity: 0.85;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+  }
+  .ei-dot {
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: var(--orange);
+    display: inline-block;
+    flex-shrink: 0;
+  }
+  .ei-main { padding: 2.5rem 2rem 3rem; }
+  .ei-section-label {
+    font-family: 'Syne', 'Trebuchet MS', sans-serif;
+    font-size: 0.6rem;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 1.25rem;
+  }
+  .ei-sections-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 0.85rem;
+    margin-bottom: 0.85rem;
+  }
+  @media (max-width: 1100px) { .ei-sections-grid { grid-template-columns: repeat(3, 1fr); } }
+  @media (max-width: 700px)  { .ei-sections-grid { grid-template-columns: repeat(2, 1fr); } }
+  .ei-section-card {
+    border-radius: 4px;
+    cursor: pointer;
+    transition: transform 0.18s ease, box-shadow 0.18s ease;
+    position: relative;
+    overflow: hidden;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  .ei-section-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 28px rgba(0,0,0,0.13);
+  }
+  .ei-section-card.active {
+    box-shadow: 0 0 0 3px var(--card-color), 0 12px 28px rgba(0,0,0,0.16);
+  }
+  .ei-section-header {
+    background: var(--card-color);
+    padding: 1.1rem 1rem 0.85rem;
+    color: #fff;
+    position: relative;
+  }
+  .ei-section-header h2 {
+    font-family: 'Syne', 'Trebuchet MS', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 700;
+    line-height: 1.2;
+    margin-bottom: 0.15rem;
+  }
+  .ei-section-header .ei-en {
+    font-size: 0.68rem;
+    font-weight: 300;
+    opacity: 0.72;
+    font-style: italic;
+  }
+  .ei-arrow {
+    position: absolute;
+    top: 0.85rem;
+    right: 0.85rem;
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.2);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.65rem;
+    transition: background 0.15s, transform 0.25s;
+  }
+  .ei-section-card.active .ei-arrow {
+    transform: rotate(180deg);
+    background: rgba(255,255,255,0.35);
+  }
+  .ei-section-preview {
+    background: #fff;
+    padding: 0.75rem 1rem;
+    min-height: 60px;
+    border: 1px solid var(--mid);
+    border-top: none;
+    border-radius: 0 0 4px 4px;
+  }
+  .ei-preview-tags { display: flex; flex-wrap: wrap; gap: 0.28rem; }
+  .ei-preview-tag {
+    font-size: 0.62rem;
+    padding: 0.18rem 0.45rem;
+    border-radius: 2px;
+    background: var(--mid);
+    color: var(--muted);
+    font-weight: 500;
+  }
+  .ei-panel {
+    display: none;
+    margin-top: 0.85rem;
+    background: #fff;
+    border-radius: 4px;
+    border: 1px solid var(--mid);
+    overflow: hidden;
+  }
+  .ei-panel.open {
+    display: block;
+    animation: eiSlideDown 0.2s ease;
+  }
+  @keyframes eiSlideDown {
+    from { opacity: 0; transform: translateY(-6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .ei-panel-header {
+    padding: 1.25rem 1.75rem;
+    border-bottom: 1px solid var(--mid);
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+  }
+  .ei-panel-accent {
+    width: 5px; height: 36px;
+    border-radius: 3px;
+    background: var(--panel-color);
+    flex-shrink: 0;
+  }
+  .ei-panel-header h3 {
+    font-family: 'Syne', 'Trebuchet MS', sans-serif;
+    font-size: 1.2rem;
+    font-weight: 700;
+  }
+  .ei-panel-desc { font-size: 0.76rem; color: var(--muted); margin-top: 0.1rem; }
+  .ei-panel-close {
+    margin-left: auto;
+    background: none;
+    border: 1px solid var(--mid);
+    border-radius: 3px;
+    cursor: pointer;
+    padding: 0.3rem 0.65rem;
+    font-size: 0.68rem;
+    color: var(--muted);
+    font-family: 'DM Sans', 'Segoe UI', sans-serif;
+    transition: all 0.15s;
+    flex-shrink: 0;
+  }
+  .ei-panel-close:hover { background: var(--mid); color: var(--text); }
+  .ei-panel-body { padding: 1.75rem; }
+  .ei-level-label {
+    font-size: 0.58rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-weight: 600;
+    margin-bottom: 0.85rem;
+    padding-bottom: 0.35rem;
+    border-bottom: 1px solid var(--mid);
+  }
+  .ei-links-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 0.55rem;
+  }
+  .ei-link-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.65rem;
+    padding: 0.75rem 0.9rem;
+    border-radius: 4px;
+    border: 1px solid var(--mid);
+    cursor: pointer;
+    text-decoration: none;
+    color: var(--text);
+    transition: all 0.14s ease;
+    background: var(--light);
+    position: relative;
+    overflow: hidden;
+  }
+  .ei-link-card:hover {
+    border-color: var(--lc-color, var(--teal));
+    background: #fff;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.07);
+    transform: translateY(-1px);
+  }
+  .ei-link-card::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    background: var(--lc-color, var(--teal));
+    opacity: 0;
+    transition: opacity 0.14s;
+  }
+  .ei-link-card:hover::before { opacity: 1; }
+  .ei-link-icon {
+    width: 30px; height: 30px;
+    border-radius: 5px;
+    background: var(--lc-color, var(--teal));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.85rem;
+    flex-shrink: 0;
+    line-height: 1;
+    text-align: center;
+    padding: 2px;
+  }
+  .ei-link-text .ei-fr { font-size: 0.8rem; font-weight: 500; line-height: 1.3; }
+  .ei-link-text .ei-en {
+    font-size: 0.65rem;
+    color: var(--muted);
+    font-style: italic;
+    font-weight: 300;
+    margin-top: 0.1rem;
+  }
+  .ei-team-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 0.85rem;
+    margin-top: 0.5rem;
+  }
+  .ei-person-card {
+    display: flex;
+    gap: 0.65rem;
+    align-items: flex-start;
+    padding: 0.75rem;
+    border-radius: 4px;
+    border: 1px solid var(--mid);
+    background: var(--light);
+  }
+  .ei-person-photo {
+    width: 44px; height: 44px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+    background: var(--mid);
+  }
+  .ei-person-photo-link { flex-shrink: 0; display: block; }
+  .ei-person-placeholder {
+    width: 44px; height: 44px;
+    border-radius: 50%;
+    background: var(--navy);
+    color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.72rem;
+    font-weight: 700;
+    font-family: 'Syne', sans-serif;
+    flex-shrink: 0;
+  }
+  .ei-person-name { font-size: 0.82rem; font-weight: 600; line-height: 1.25; }
+  .ei-person-role { font-size: 0.7rem; color: var(--muted); margin-top: 0.1rem; line-height: 1.3; }
+  .ei-person-creds { font-size: 0.62rem; color: var(--teal); margin-top: 0.2rem; font-weight: 500; letter-spacing: 0.03em; }
+  .ei-person-loc { font-size: 0.65rem; color: var(--muted); margin-top: 0.15rem; font-style: italic; }
+  .ei-person-loc a { color: var(--navy); text-decoration: none; }
+  .ei-person-loc a:hover { text-decoration: underline; }
+  .ei-role-badge {
+    display: inline-block;
+    background: var(--navy);
+    color: #fff;
+    font-size: 0.58rem;
+    padding: 0.1rem 0.4rem;
+    border-radius: 2px;
+    letter-spacing: 0.04em;
+    font-style: normal;
+    margin-left: 0.3rem;
+    vertical-align: middle;
+  }
+  .ei-mission-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 0.85rem;
+    margin-bottom: 0.5rem;
+  }
+  .ei-mission-item {
+    padding: 1rem 1.1rem;
+    border-radius: 4px;
+    background: #fff;
+    border: 1px solid var(--mid);
+    border-top: 3px solid var(--navy);
+  }
+  .ei-mission-label {
+    font-family: 'Syne', sans-serif;
+    font-size: 0.6rem;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--navy);
+    margin-bottom: 0.5rem;
+  }
+  .ei-mission-text { font-size: 0.82rem; line-height: 1.55; color: var(--text); }
+  .ei-mission-text-en {
+    font-size: 0.74rem;
+    color: var(--muted);
+    font-style: italic;
+    font-weight: 300;
+    margin-top: 0.4rem;
+    line-height: 1.45;
+  }
+  .ei-expertise-grid { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+  .ei-expertise-chip {
+    padding: 0.45rem 0.85rem;
+    border-radius: 20px;
+    background: var(--light);
+    border: 1px solid var(--mid);
+    font-size: 0.75rem;
+    color: var(--navy);
+    font-weight: 500;
+    text-decoration: none;
+    transition: all 0.15s;
+  }
+  .ei-expertise-chip:hover { background: var(--navy); color: #fff; border-color: var(--navy); }
+  .c-evoq   { --card-color: #1B5E7B; --panel-color: #1B5E7B; }
+  .c-biblio { --card-color: #4A6B7A; --panel-color: #4A6B7A; }
+  .c-apps   { --card-color: #E87722; --panel-color: #E87722; }
+  .c-form   { --card-color: #E4003A; --panel-color: #E4003A; }
+  .c-ext    { --card-color: #00B2A4; --panel-color: #00B2A4; }
+  .c-portal { --card-color: #9AA600; --panel-color: #9AA600; }
+  /* Liens SharePoint non assignés (href="#" dans EVOQ_LINKS) */
+  .ei-link-pending { opacity: 0.5; cursor: default; }
+  .ei-link-pending:hover {
+    border-color: var(--mid);
+    background: var(--light);
+    box-shadow: none;
+    transform: none;
+  }
+  .ei-link-pending:hover::before { opacity: 0; }
+  .ei-footer {
+    text-align: center;
+    padding: 1.5rem;
+    font-size: 0.68rem;
+    color: var(--muted);
+    letter-spacing: 0.05em;
+    border-top: 1px solid var(--mid);
+  }
+</style>
 </head>
 <body>
+<div class="evoq-intranet">
+  <!-- HEADER -->
+  <header class="ei-header">
+    <span class="ei-logo">EVOQ</span>
+    <div class="ei-header-meta">Intranet · EVOQ Architectes</div>
+  </header>
 
-  <!-- Navigation -->
-  <nav>
-    <div class="nav-inner">
-      <a class="nav-logo" href="#">Éric <span>Stein</span></a>
-      <ul class="nav-links">
-        <li><a href="#about">About</a></li>
-        <li><a href="#expertise">Expertise</a></li>
-        <li><a href="#projects">Projects</a></li>
-        <li><a href="#recognition">Recognition</a></li>
-        <li><a href="#contact">Contact</a></li>
-      </ul>
-    </div>
-  </nav>
-
-  <!-- Hero -->
-  <div class="hero">
-    <div class="hero-bg"></div>
-    <div class="hero-accent-line"></div>
-    <div class="hero-accent-line-2"></div>
-    <div class="hero-inner">
-      <p class="hero-label">Architect &nbsp;·&nbsp; Heritage Conservation &nbsp;·&nbsp; Montreal</p>
-      <h1 class="hero-name">Éric<br><em>Stein</em></h1>
-      <p class="hero-title">Associate Director, EVOQ Architecture</p>
-      <p class="hero-tagline">
-        Over three decades of practice at the intersection of heritage conservation,
-        contemporary design, and meticulous craftsmanship — restoring the built fabric
-        of Canada, one landmark at a time.
-      </p>
-      <a class="hero-cta" href="#projects">
-        Selected Work
-        <svg width="16" height="10" viewBox="0 0 16 10" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M1 5H15M15 5L11 1M15 5L11 9" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-      </a>
-    </div>
-    <div class="hero-stats">
-      <div>
-        <span class="stat-number">30+</span>
-        <span class="stat-label">Years of Practice</span>
-      </div>
-      <div>
-        <span class="stat-number">2001</span>
-        <span class="stat-label">Joined EVOQ</span>
+  <!-- BANNIÈRE ACTUALITÉS -->
+  <div class="ei-banner">
+    <div class="ei-banner-label">Actualités</div>
+    <div class="ei-ticker-wrap">
+      <div class="ei-ticker">
+        <span class="ei-ticker-item"><span class="ei-dot"></span><strong>Nouvelle ·</strong>&nbsp;Giovanni Diodati — Conseiller Stratégique EVOQ depuis le 1er février 2026</span>
+        <span class="ei-ticker-item"><span class="ei-dot"></span><strong>Prix 2025 ·</strong>&nbsp;Cathédrale Saint-Jean-Baptiste de Nicolet — Prix d'excellence en restauration, CPRQ</span>
+        <span class="ei-ticker-item"><span class="ei-dot"></span><strong>Prix 2025 ·</strong>&nbsp;Bibliothèque Maisonneuve — Prix d'excellence Conservation Architecture, ACECP</span>
+        <span class="ei-ticker-item"><span class="ei-dot"></span><strong>Prix 2025 ·</strong>&nbsp;Bibliothèque Maisonneuve — Prix National de Design Urbain, IRAC</span>
+        <span class="ei-ticker-item"><span class="ei-dot"></span><strong>Prix 2025 ·</strong>&nbsp;Gare Union Toronto — Prix patrimoine bâti, Heritage Toronto</span>
+        <span class="ei-ticker-item"><span class="ei-dot"></span><strong>Prix 2025 ·</strong>&nbsp;Aérogare Chibougamau-Chapais — Prix d'excellence bâtiment institutionnel, Cecobois</span>
+        <span class="ei-ticker-item"><span class="ei-dot"></span><strong>Conférence IRAC 2025 ·</strong>&nbsp;Marianne Leroux — Cité de Maisonneuve : Une traduction française du mouvement City Beautiful</span>
+        <span class="ei-ticker-item"><span class="ei-dot"></span><strong>Conférence IRAC 2025 ·</strong>&nbsp;Matteo Cendamo &amp; Lise Desjardins — Restauration au campus McGill</span>
+        <span class="ei-ticker-item"><span class="ei-dot"></span><strong>Midi-conférence 164 ·</strong>&nbsp;Giovanni Diodati — Matériaux et assemblages modernes</span>
+        <span class="ei-ticker-item"><span class="ei-dot"></span><strong>Nouvelle ·</strong>&nbsp;Giovanni Diodati — Conseiller Stratégique EVOQ depuis le 1er février 2026</span>
+        <span class="ei-ticker-item"><span class="ei-dot"></span><strong>Prix 2025 ·</strong>&nbsp;Cathédrale Saint-Jean-Baptiste de Nicolet — Prix d'excellence en restauration, CPRQ</span>
+        <span class="ei-ticker-item"><span class="ei-dot"></span><strong>Prix 2025 ·</strong>&nbsp;Bibliothèque Maisonneuve — Prix d'excellence Conservation Architecture, ACECP</span>
+        <span class="ei-ticker-item"><span class="ei-dot"></span><strong>Prix 2025 ·</strong>&nbsp;Bibliothèque Maisonneuve — Prix National de Design Urbain, IRAC</span>
+        <span class="ei-ticker-item"><span class="ei-dot"></span><strong>Prix 2025 ·</strong>&nbsp;Gare Union Toronto — Prix patrimoine bâti, Heritage Toronto</span>
+        <span class="ei-ticker-item"><span class="ei-dot"></span><strong>Prix 2025 ·</strong>&nbsp;Aérogare Chibougamau-Chapais — Prix d'excellence bâtiment institutionnel, Cecobois</span>
+        <span class="ei-ticker-item"><span class="ei-dot"></span><strong>Conférence IRAC 2025 ·</strong>&nbsp;Marianne Leroux — Cité de Maisonneuve : Une traduction française du mouvement City Beautiful</span>
+        <span class="ei-ticker-item"><span class="ei-dot"></span><strong>Conférence IRAC 2025 ·</strong>&nbsp;Matteo Cendamo &amp; Lise Desjardins — Restauration au campus McGill</span>
+        <span class="ei-ticker-item"><span class="ei-dot"></span><strong>Midi-conférence 164 ·</strong>&nbsp;Giovanni Diodati — Matériaux et assemblages modernes</span>
       </div>
     </div>
   </div>
 
-  <!-- About -->
-  <section id="about">
-    <p class="section-label">Profile</p>
-    <h2 class="section-title">A dedication to<br>the enduring</h2>
-    <div class="about-grid">
-      <div class="about-text">
-        <p>
-          Éric Stein is an Associate Director and Senior Heritage Conservation Architect
-          at <strong>EVOQ Architecture</strong>, one of Canada's foremost multidisciplinary
-          firms. A graduate of McGill University's School of Architecture (1991), he joined
-          EVOQ in 2001 and was named Associate in 2009 and Director in 2022.
-        </p>
-        <p>
-          With professional experience spanning over three decades, Éric brings wide-ranging
-          expertise in institutional, commercial, and residential projects of all scales. His
-          technical mastery and methodical project management approach allow him to lead
-          heritage restorations and new construction from pre-design through construction
-          contract administration — navigating the most complex challenges with confidence.
-        </p>
-        <p>
-          An in-depth knowledge of <strong>traditional building materials and techniques</strong>
-          underpins Éric's particular focus on the rehabilitation of 19th and 20th century
-          building envelopes, with a deep interest in religious architecture. His passion for
-          photography adds a documentary dimension to each project, capturing the essence
-          and transformation of heritage sites over time.
-        </p>
-      </div>
-      <div class="about-aside">
-        <div class="credential-block">
-          <p class="credential-label">Education</p>
-          <p class="credential-value">McGill University, School of Architecture<br>Bachelor of Architecture, 1991</p>
-        </div>
-        <div class="credential-block">
-          <p class="credential-label">Current Position</p>
-          <p class="credential-value">Associate Director &amp; Senior Heritage Conservation Architect<br>EVOQ Architecture, Montreal</p>
-        </div>
-        <div class="credential-block">
-          <p class="credential-label">Tenure at EVOQ</p>
-          <p class="credential-value">2001 — Present<br>Associate 2009 &nbsp;·&nbsp; Director 2022</p>
-        </div>
-        <div class="credential-block">
-          <p class="credential-label">Specialisation</p>
-          <p class="credential-value">Heritage Conservation &amp; Rehabilitation<br>Religious Architecture &nbsp;·&nbsp; Building Envelopes</p>
-        </div>
-      </div>
-    </div>
-  </section>
+  <!-- CORPS PRINCIPAL -->
+  <main class="ei-main">
+    <div class="ei-section-label">Navigation principale</div>
 
-  <!-- Expertise -->
-  <section id="expertise">
-    <p class="section-label">Expertise</p>
-    <h2 class="section-title">Domains of practice</h2>
-    <div class="expertise-grid">
-      <div class="expertise-card">
-        <div class="expertise-icon"></div>
-        <h3>Heritage Conservation</h3>
-        <p>
-          Comprehensive conservation and rehabilitation of 19th and 20th century structures.
-          Deep familiarity with traditional materials, historic masonry, traditional roofing
-          systems, and decorative metalwork — applied through rigorous research and testing.
-        </p>
-      </div>
-      <div class="expertise-card">
-        <div class="expertise-icon"></div>
-        <h3>Building Envelope Rehabilitation</h3>
-        <p>
-          Specialized expertise in the restoration and upgrading of historic building envelopes:
-          masonry, stone, copper roofing, glazing systems, and ornamental elements — balancing
-          authenticity with contemporary performance requirements.
-        </p>
-      </div>
-      <div class="expertise-card">
-        <div class="expertise-icon"></div>
-        <h3>Religious Architecture</h3>
-        <p>
-          A particular interest and sustained practice in religious heritage, including
-          sensitive interventions at cathedrals, churches, and grand seminaries. Active
-          member of the Modern Religious Heritage Committee, MCCQ.
-        </p>
-      </div>
-      <div class="expertise-card">
-        <div class="expertise-icon"></div>
-        <h3>Project Management</h3>
-        <p>
-          Full-cycle project leadership from pre-design through construction administration.
-          Proven capacity to coordinate complex, multi-stakeholder heritage mandates involving
-          government bodies, preservation authorities, and specialized consultants.
-        </p>
-      </div>
-      <div class="expertise-card">
-        <div class="expertise-icon"></div>
-        <h3>Institutional &amp; Civic Architecture</h3>
-        <p>
-          Extensive experience with federal, provincial, and municipal heritage landmarks —
-          parliamentary buildings, courthouses, city halls, and cultural institutions —
-          managing restoration to national heritage standards.
-        </p>
-      </div>
-      <div class="expertise-card">
-        <div class="expertise-icon"></div>
-        <h3>Heritage Documentation</h3>
-        <p>
-          A complementary practice of architectural photography and documentary work that
-          informs and enriches heritage analysis, providing a rigorous visual record of
-          existing conditions and the transformation of historic sites.
-        </p>
-      </div>
-    </div>
-  </section>
+    <!-- GRILLE DES SECTIONS -->
+    <div class="ei-sections-grid">
 
-  <!-- Projects -->
-  <section id="projects">
-    <p class="section-label">Selected Work</p>
-    <h2 class="section-title">Projects</h2>
-    <div class="projects-list">
-
-      <div class="project-item">
-        <span class="project-number">01</span>
-        <div class="project-info">
-          <h3>Wellington Building</h3>
-          <p>
-            Heritage Conservation Architect for the rehabilitation of this federal government
-            building within Ottawa's Parliamentary Precinct. Scope included copper roof replacement,
-            restoration of masonry envelope, all 428 exterior windows, ornamental glass entrance
-            canopy, and historic interior spaces — mosaic-vaulted vestibule, marble lobbies,
-            and heritage stairs. Recipient of a CAHP Award of Excellence.
-          </p>
+      <!-- 1. EVOQ -->
+      <div class="ei-section-card c-evoq" tabindex="0" role="button" aria-expanded="false" data-panel="evoq">
+        <div class="ei-section-header">
+          <div class="ei-arrow">↓</div>
+          <h2>EVOQ</h2>
+          <div class="ei-en">EVOQ</div>
         </div>
-        <div class="project-meta">
-          <span class="project-type">Heritage Rehabilitation</span>
-          <span class="project-location">Ottawa, Ontario</span>
+        <div class="ei-section-preview">
+          <div class="ei-preview-tags">
+            <span class="ei-preview-tag">Organigramme</span>
+            <span class="ei-preview-tag">Mission</span>
+            <span class="ei-preview-tag">Valeurs</span>
+            <span class="ei-preview-tag">Trombinoscope</span>
+          </div>
         </div>
       </div>
 
-      <div class="project-item">
-        <span class="project-number">02</span>
-        <div class="project-info">
-          <h3>Historic City Hall</h3>
-          <p>
-            Exterior and site rehabilitation of Calgary's iconic civic landmark, a national,
-            provincial, and municipal heritage property. In partnership with Lemay as architect
-            of record, the mandate revitalizes the building's envelope and civic presence,
-            designed to serve Calgary for another century.
-          </p>
+      <!-- 2. Bibliothèque -->
+      <div class="ei-section-card c-biblio" tabindex="0" role="button" aria-expanded="false" data-panel="biblio">
+        <div class="ei-section-header">
+          <div class="ei-arrow">↓</div>
+          <h2>Bibliothèque EVOQ</h2>
+          <div class="ei-en">EVOQ Library</div>
         </div>
-        <div class="project-meta">
-          <span class="project-type">Heritage Restoration</span>
-          <span class="project-location">Calgary, Alberta</span>
-        </div>
-      </div>
-
-      <div class="project-item">
-        <span class="project-number">03</span>
-        <div class="project-info">
-          <h3>Grand Séminaire de Montréal</h3>
-          <p>
-            Master plan for one of Montreal's most significant heritage ensembles —
-            a complex of buildings and landscapes spanning several centuries of construction.
-            The plan establishes a long-term conservation and development framework for
-            this exceptional religious and educational site.
-          </p>
-        </div>
-        <div class="project-meta">
-          <span class="project-type">Heritage Master Plan</span>
-          <span class="project-location">Montréal, Québec</span>
+        <div class="ei-section-preview">
+          <div class="ei-preview-tags">
+            <span class="ei-preview-tag">Voyageurs</span>
+            <span class="ei-preview-tag">Comptabilité</span>
+            <span class="ei-preview-tag">Direction</span>
+            <span class="ei-preview-tag">Architectes</span>
+          </div>
         </div>
       </div>
 
-      <div class="project-item">
-        <span class="project-number">04</span>
-        <div class="project-info">
-          <h3>Elgin County Courthouse</h3>
-          <p>
-            Project management for the restoration of traditional roofing systems and
-            exterior masonry at this significant Ontario heritage building. Rigorous
-            material analysis and specialist contractor coordination ensured the work
-            met heritage conservation standards.
-          </p>
+      <!-- 3. Applications -->
+      <div class="ei-section-card c-apps" tabindex="0" role="button" aria-expanded="false" data-panel="apps">
+        <div class="ei-section-header">
+          <div class="ei-arrow">↓</div>
+          <h2>Applications et services</h2>
+          <div class="ei-en">Applications &amp; Services</div>
         </div>
-        <div class="project-meta">
-          <span class="project-type">Heritage Restoration</span>
-          <span class="project-location">St. Thomas, Ontario</span>
-        </div>
-      </div>
-
-      <div class="project-item">
-        <span class="project-number">05</span>
-        <div class="project-info">
-          <h3>F.A.C.E. School Auditorium</h3>
-          <p>
-            Restoration and contemporary upgrading of the auditorium at this Montreal
-            institution, integrating modern performance and technical requirements
-            within a heritage context.
-          </p>
-        </div>
-        <div class="project-meta">
-          <span class="project-type">Heritage &amp; Contemporary</span>
-          <span class="project-location">Montréal, Québec</span>
+        <div class="ei-section-preview">
+          <div class="ei-preview-tags">
+            <span class="ei-preview-tag">Claude</span>
+            <span class="ei-preview-tag">ChatGPT</span>
+            <span class="ei-preview-tag">Deltek</span>
+            <span class="ei-preview-tag">Octopus</span>
+          </div>
         </div>
       </div>
 
-      <div class="project-item">
-        <span class="project-number">06</span>
-        <div class="project-info">
-          <h3>Nicolet Cathedral</h3>
-          <p>
-            Sensitive conservation interventions at this significant Québec religious
-            heritage landmark. The work exemplifies the careful, evidence-based approach
-            to sacred heritage that defines Éric Stein's practice.
-          </p>
+      <!-- 4. Formations -->
+      <div class="ei-section-card c-form" tabindex="0" role="button" aria-expanded="false" data-panel="form">
+        <div class="ei-section-header">
+          <div class="ei-arrow">↓</div>
+          <h2>Formations</h2>
+          <div class="ei-en">Training</div>
         </div>
-        <div class="project-meta">
-          <span class="project-type">Religious Heritage</span>
-          <span class="project-location">Nicolet, Québec</span>
+        <div class="ei-section-preview">
+          <div class="ei-preview-tags">
+            <span class="ei-preview-tag">T&amp;C</span>
+            <span class="ei-preview-tag">BIM</span>
+            <span class="ei-preview-tag">Cybersécurité</span>
+            <span class="ei-preview-tag">Pratique pro.</span>
+          </div>
         </div>
       </div>
 
-    </div>
-  </section>
-
-  <!-- Recognition -->
-  <section id="recognition">
-    <p class="section-label">Recognition</p>
-    <h2 class="section-title">Awards &amp; Affiliations</h2>
-    <div class="recognition-grid">
-      <div class="recognition-item">
-        <p class="recognition-year">CAHP Award of Excellence</p>
-        <h3>Conservation: Architecture</h3>
-        <p>
-          Wellington Building rehabilitation, Ottawa. Co-lead with Julia Gersovitz and
-          Neil McNulty. Awarded by the Canadian Association of Heritage Professionals
-          for outstanding heritage conservation practice.
-        </p>
-      </div>
-      <div class="recognition-item">
-        <p class="recognition-year">2022</p>
-        <h3>Appointed Director, EVOQ Architecture</h3>
-        <p>
-          Recognized for significant contributions to EVOQ's development and long-standing
-          involvement in firm management, appointed to ensure the continuity of the firm's
-          tradition of excellence.
-        </p>
-      </div>
-      <div class="recognition-item">
-        <p class="recognition-year">2018 – 2021</p>
-        <h3>CAHP Board of Directors</h3>
-        <p>
-          Member of the Board of Directors of the Canadian Association of Heritage
-          Professionals, contributing to national heritage conservation policy and
-          professional standards.
-        </p>
-      </div>
-      <div class="recognition-item">
-        <p class="recognition-year">2017 – Present</p>
-        <h3>Modern Religious Heritage Committee</h3>
-        <p>
-          Member of the Modern Religious Heritage Committee established by the Ministère
-          de la Culture et des Communications du Québec (MCCQ), contributing to the
-          evaluation and documentation of modernist churches across Québec.
-        </p>
-      </div>
-    </div>
-
-    <div class="memberships">
-      <p class="memberships-title">Professional Memberships</p>
-      <div class="memberships-list">
-        <span class="membership-tag">OAQ — Ordre des architectes du Québec</span>
-        <span class="membership-tag">CAHP — Canadian Association of Heritage Professionals</span>
-        <span class="membership-tag">APT — Association for Preservation Technology</span>
-        <span class="membership-tag">MCCQ Modern Religious Heritage Committee</span>
-      </div>
-    </div>
-  </section>
-
-  <!-- Contact -->
-  <section id="contact">
-    <p class="section-label">Contact</p>
-    <div class="contact-layout">
-      <div>
-        <h2 class="contact-intro">Let's discuss<br>your <em>project</em></h2>
-        <p class="contact-description">
-          Whether you are undertaking a heritage rehabilitation, seeking a conservation
-          assessment, or planning the long-term stewardship of a significant building,
-          Éric Stein brings the technical depth and project leadership to guide your
-          mandate from vision to completion.
-        </p>
-      </div>
-      <div class="contact-details">
-        <div class="contact-row">
-          <span class="contact-row-label">Firm</span>
-          <span class="contact-row-value">
-            <a href="https://evoqarchitecture.com" target="_blank" rel="noopener">EVOQ Architecture</a>
-          </span>
+      <!-- 5. Ressources externes -->
+      <div class="ei-section-card c-ext" tabindex="0" role="button" aria-expanded="false" data-panel="ext">
+        <div class="ei-section-header">
+          <div class="ei-arrow">↓</div>
+          <h2>Ressources externes</h2>
+          <div class="ei-en">External Resources</div>
         </div>
-        <div class="contact-row">
-          <span class="contact-row-label">Location</span>
-          <span class="contact-row-value">Montréal, Québec, Canada</span>
-        </div>
-        <div class="contact-row">
-          <span class="contact-row-label">Offices</span>
-          <span class="contact-row-value">Montréal &nbsp;·&nbsp; Ottawa &nbsp;·&nbsp; Toronto &nbsp;·&nbsp; Iqaluit</span>
-        </div>
-        <div class="contact-row">
-          <span class="contact-row-label">Website</span>
-          <span class="contact-row-value">
-            <a href="https://evoqarchitecture.com/en/firm/partners/eric-stein" target="_blank" rel="noopener">evoqarchitecture.com</a>
-          </span>
+        <div class="ei-section-preview">
+          <div class="ei-preview-tags">
+            <span class="ei-preview-tag">OAQ</span>
+            <span class="ei-preview-tag">CCDC</span>
+            <span class="ei-preview-tag">IRAC</span>
+            <span class="ei-preview-tag">Codes du bâtiment</span>
+          </div>
         </div>
       </div>
-    </div>
-  </section>
 
-  <!-- Footer -->
-  <footer>
-    <span class="footer-name">Éric Stein, Architect</span>
-    <span class="footer-firm">Associate Director — <a href="https://evoqarchitecture.com" target="_blank" rel="noopener">EVOQ Architecture</a></span>
-  </footer>
+      <!-- 6. Portail employés -->
+      <div class="ei-section-card c-portal" tabindex="0" role="button" aria-expanded="false" data-panel="portal">
+        <div class="ei-section-header">
+          <div class="ei-arrow">↓</div>
+          <h2>Portail employés</h2>
+          <div class="ei-en">Employee Portal</div>
+        </div>
+        <div class="ei-section-preview">
+          <div class="ei-preview-tags">
+            <span class="ei-preview-tag">Accueil</span>
+            <span class="ei-preview-tag">Manuel</span>
+            <span class="ei-preview-tag">Assurances</span>
+            <span class="ei-preview-tag">EmployeurD</span>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /sections-grid -->
+
+    <!-- PANNEAU : EVOQ -->
+    <div class="ei-panel c-evoq" id="panel-evoq" style="--panel-color: #1B5E7B">
+      <div class="ei-panel-header">
+        <div class="ei-panel-accent"></div>
+        <div>
+          <h3>EVOQ</h3>
+          <div class="ei-panel-desc">Identité et structure interne du cabinet · Source : evoqarchitecture.com</div>
+        </div>
+        <button class="ei-panel-close" data-close="evoq">Fermer ✕</button>
+      </div>
+      <div class="ei-panel-body">
+        <div class="ei-mission-grid">
+          <div class="ei-mission-item">
+            <div class="ei-mission-label">Mission</div>
+            <div class="ei-mission-text">Réunir les savoirs et les perspectives pour perpétuer les voix des cultures, des traditions et des milieux.</div>
+            <div class="ei-mission-text-en">Convene knowledges and perspectives to perpetuate the voices of cultures, traditions and settings.</div>
+          </div>
+          <div class="ei-mission-item">
+            <div class="ei-mission-label">Vision</div>
+            <div class="ei-mission-text">Des environnements qui expriment l'identité des communautés qu'ils accueillent.</div>
+            <div class="ei-mission-text-en">Environments expressing the identity of the communities they embrace.</div>
+          </div>
+          <div class="ei-mission-item">
+            <div class="ei-mission-label">À propos</div>
+            <div class="ei-mission-text">Firme multidisciplinaire reconnue pour son expertise en design contemporain, conservation du patrimoine et architecture autochtone et nordique. Plus de 40 ans d'expertise. Bureaux à Montréal, Québec, Ottawa et Toronto.</div>
+          </div>
+        </div>
+
+        <div class="ei-level-label" style="margin-top:2rem">Associé·es directeur·rices — <em>Architect, Principal, Director</em></div>
+        <div class="ei-team-grid">
+          <div class="ei-person-card">
+            <a href="https://evoqarchitecture.com/fr/firme/associes/georges-drolet" target="_blank" class="ei-person-photo-link">
+              <img src="https://evoqarchitecture.com/content/images/Equipe-Team/_partnerThumbnail/Georges-D_WEB-Large.jpg" alt="Georges Drolet" class="ei-person-photo" onerror="this.style.display='none'">
+            </a>
+            <div class="ei-person-info">
+              <div class="ei-person-name">Georges Drolet</div>
+              <div class="ei-person-role">Architecte, associé directeur général <span class="ei-role-badge">Managing Principal</span></div>
+              <div class="ei-person-creds">OAQ · OAA · AANB · AAA · FRAIC · SAH</div>
+              <div class="ei-person-loc">Montréal · <a href="tel:5143939490">514 393-9490</a> / 217</div>
+            </div>
+          </div>
+          <div class="ei-person-card">
+            <a href="https://evoqarchitecture.com/fr/firme/associes/alain-fournier" target="_blank" class="ei-person-photo-link">
+              <img src="https://evoqarchitecture.com/content/images/Equipe-Team/_partnerThumbnail/3648/AlainF_WEB.jpg" alt="Alain Fournier" class="ei-person-photo" onerror="this.style.display='none'">
+            </a>
+            <div class="ei-person-info">
+              <div class="ei-person-name">Alain Fournier</div>
+              <div class="ei-person-role">Architecte, associé directeur</div>
+              <div class="ei-person-creds">OAQ · OAA · AANB · ALBNL · NWTAA · AIBC · FRAIC</div>
+              <div class="ei-person-loc">Montréal · <a href="tel:5143939490">514 393-9490</a> / 205</div>
+            </div>
+          </div>
+          <div class="ei-person-card">
+            <a href="https://evoqarchitecture.com/fr/firme/associes/julia-gersovitz-o-c" target="_blank" class="ei-person-photo-link">
+              <img src="https://evoqarchitecture.com/content/images/Equipe-Team/_partnerThumbnail/JuliaG_WEB-Large.jpg" alt="Julia Gersovitz" class="ei-person-photo" onerror="this.style.display='none'">
+            </a>
+            <div class="ei-person-info">
+              <div class="ei-person-name">Julia Gersovitz O.C.</div>
+              <div class="ei-person-role">Architecte, associée directrice</div>
+              <div class="ei-person-creds">OAQ · OAA · AANB · CAHP · FAPT · FRAIC</div>
+              <div class="ei-person-loc">Montréal</div>
+            </div>
+          </div>
+          <div class="ei-person-card">
+            <a href="https://evoqarchitecture.com/fr/firme/associes/rosanne-moss" target="_blank" class="ei-person-photo-link">
+              <img src="https://evoqarchitecture.com/content/images/Equipe-Team/_partnerThumbnail/RosanneMoss_WEB-Large.jpg" alt="Rosanne Moss" class="ei-person-photo" onerror="this.style.display='none'">
+            </a>
+            <div class="ei-person-info">
+              <div class="ei-person-name">Rosanne Moss</div>
+              <div class="ei-person-role">Architecte, associée directrice</div>
+              <div class="ei-person-creds">OAQ · OAA · AANB · APT · CAHP · FRAIC</div>
+              <div class="ei-person-loc">Montréal</div>
+            </div>
+          </div>
+          <div class="ei-person-card">
+            <a href="https://evoqarchitecture.com/fr/firme/associes/eric-moutquin" target="_blank" class="ei-person-photo-link">
+              <img src="https://evoqarchitecture.com/content/images/Equipe-Team/_partnerThumbnail/EricMoutquin_mod-WEB_f.jpg" alt="Éric Moutquin" class="ei-person-photo" onerror="this.style.display='none'">
+            </a>
+            <div class="ei-person-info">
+              <div class="ei-person-name">Éric Moutquin</div>
+              <div class="ei-person-role">Architecte, associé directeur</div>
+              <div class="ei-person-creds">OAQ · AANB · AAA</div>
+              <div class="ei-person-loc">Montréal · <a href="tel:5143939490">514 393-9490</a> / 220</div>
+            </div>
+          </div>
+          <div class="ei-person-card">
+            <a href="https://evoqarchitecture.com/fr/firme/associes/sami-tannoury" target="_blank" class="ei-person-photo-link">
+              <img src="https://evoqarchitecture.com/content/images/Equipe-Team/_partnerThumbnail/6974/Sami-Tannoury_WEBf.jpg" alt="Sami Tannoury" class="ei-person-photo" onerror="this.style.display='none'">
+            </a>
+            <div class="ei-person-info">
+              <div class="ei-person-name">Sami Tannoury</div>
+              <div class="ei-person-role">Architecte, associé directeur</div>
+              <div class="ei-person-creds">OAQ · ALBNL · OAA · AANB · AAA · MRAIC</div>
+              <div class="ei-person-loc">Montréal · <a href="tel:5143939490">514 393-9490</a> / 269</div>
+            </div>
+          </div>
+          <div class="ei-person-card">
+            <a href="https://evoqarchitecture.com/fr/firme/associes/dima-cook" target="_blank" class="ei-person-photo-link">
+              <img src="https://evoqarchitecture.com/content/images/Equipe-Team/_partnerThumbnail/12062/Cook_Dima_WEB_Cropped.jpg" alt="Dima Cook" class="ei-person-photo" onerror="this.style.display='none'">
+            </a>
+            <div class="ei-person-info">
+              <div class="ei-person-name">Dima Cook</div>
+              <div class="ei-person-role">Architecte, associée directrice</div>
+              <div class="ei-person-creds">OAA · OAQ · AANB · AAA · AIBC · CAHP · MRAIC · LEED® AP · APT</div>
+              <div class="ei-person-loc">Toronto · <a href="tel:6477232030">647 723-2030</a> / 604</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="ei-level-label" style="margin-top:2rem">Associé·es avec rôle de direction — <em>Architect, Associate, Director</em></div>
+        <div class="ei-team-grid">
+          <div class="ei-person-card">
+            <a href="https://evoqarchitecture.com/fr/firme/associes/roxanne-gauthier" target="_blank" class="ei-person-photo-link">
+              <img src="https://evoqarchitecture.com/content/images/Equipe-Team/_partnerThumbnail/167/RoxanneGauthier-WEB.jpg" alt="Roxanne Gauthier" class="ei-person-photo" onerror="this.style.display='none'">
+            </a>
+            <div class="ei-person-info">
+              <div class="ei-person-name">Roxanne Gauthier</div>
+              <div class="ei-person-role">Architecte, associée, directrice générale <span class="ei-role-badge">Executive Director</span></div>
+              <div class="ei-person-creds">OAQ · LEED® AP BD+C</div>
+              <div class="ei-person-loc">Montréal · <a href="tel:5143939490">514 393-9490</a> / 209</div>
+            </div>
+          </div>
+          <div class="ei-person-card">
+            <a href="https://evoqarchitecture.com/fr/firme/associes/lena-buchinger" target="_blank" class="ei-person-photo-link">
+              <img src="https://evoqarchitecture.com/content/images/Equipe-Team/_partnerThumbnail/LenaBuchinger_WEB-Large.jpg" alt="Lena Buchinger" class="ei-person-photo" onerror="this.style.display='none'">
+            </a>
+            <div class="ei-person-info">
+              <div class="ei-person-name">Lena Buchinger</div>
+              <div class="ei-person-role">Architecte, associée directrice</div>
+              <div class="ei-person-creds">OAQ · CAHP · APT</div>
+              <div class="ei-person-loc">Montréal</div>
+            </div>
+          </div>
+          <div class="ei-person-card">
+            <a href="https://evoqarchitecture.com/fr/firme/associes/eric-stein" target="_blank" class="ei-person-photo-link">
+              <img src="https://evoqarchitecture.com/content/images/Equipe-Team/_partnerThumbnail/EricStein_WEB-Large.jpg" alt="Éric Stein" class="ei-person-photo" onerror="this.style.display='none'">
+            </a>
+            <div class="ei-person-info">
+              <div class="ei-person-name">Éric Stein</div>
+              <div class="ei-person-role">Architecte, associé directeur</div>
+              <div class="ei-person-creds">OAQ · APT · CAHP · PMP</div>
+              <div class="ei-person-loc">Montréal</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="ei-level-label" style="margin-top:2rem">Associé·es — <em>Architect, Associate</em></div>
+        <div class="ei-team-grid">
+          <div class="ei-person-card">
+            <a href="https://evoqarchitecture.com/fr/firme/associes/louis-babin-st-jean" target="_blank" class="ei-person-photo-link">
+              <img src="https://evoqarchitecture.com/content/images/Equipe-Team/_partnerThumbnail/LouisBabin-StJean_WEB.jpg" alt="Louis Babin-St-Jean" class="ei-person-photo" onerror="this.outerHTML='<div class=\'ei-person-placeholder\'>LB</div>'">
+            </a>
+            <div class="ei-person-info">
+              <div class="ei-person-name">Louis Babin-St-Jean</div>
+              <div class="ei-person-role">Architecte, associé</div>
+              <div class="ei-person-creds">OAQ · LEED® Green Associate</div>
+              <div class="ei-person-loc">Montréal</div>
+            </div>
+          </div>
+          <div class="ei-person-card">
+            <a href="https://evoqarchitecture.com/fr/firme/associes/matteo-cendamo" target="_blank" class="ei-person-photo-link">
+              <img src="https://evoqarchitecture.com/content/images/Equipe-Team/_partnerThumbnail/MatteoCendamo_WEB.jpg" alt="Matteo Cendamo" class="ei-person-photo" onerror="this.outerHTML='<div class=\'ei-person-placeholder\'>MC</div>'">
+            </a>
+            <div class="ei-person-info">
+              <div class="ei-person-name">Matteo Cendamo</div>
+              <div class="ei-person-role">Architecte, associé</div>
+              <div class="ei-person-creds">OAQ · APT · CAHP</div>
+              <div class="ei-person-loc">Montréal</div>
+            </div>
+          </div>
+          <div class="ei-person-card">
+            <a href="https://evoqarchitecture.com/fr/firme/associes/lise-desjardins" target="_blank" class="ei-person-photo-link">
+              <img src="https://evoqarchitecture.com/content/images/Equipe-Team/_partnerThumbnail/LiseDesjardins_WEB.jpg" alt="Lise Desjardins" class="ei-person-photo" onerror="this.outerHTML='<div class=\'ei-person-placeholder\'>LD</div>'">
+            </a>
+            <div class="ei-person-info">
+              <div class="ei-person-name">Lise Desjardins</div>
+              <div class="ei-person-role">Architecte, associée</div>
+              <div class="ei-person-creds">OAQ · APT</div>
+              <div class="ei-person-loc">Montréal</div>
+            </div>
+          </div>
+          <div class="ei-person-card">
+            <a href="https://evoqarchitecture.com/fr/firme/associes/g-catherine-fanous" target="_blank" class="ei-person-photo-link">
+              <img src="https://evoqarchitecture.com/content/images/Equipe-Team/_partnerThumbnail/CatherineFanous_WEB.jpg" alt="G. Catherine Fanous" class="ei-person-photo" onerror="this.outerHTML='<div class=\'ei-person-placeholder\'>CF</div>'">
+            </a>
+            <div class="ei-person-info">
+              <div class="ei-person-name">G. Catherine Fanous</div>
+              <div class="ei-person-role">Architecte, associée</div>
+              <div class="ei-person-creds">OAA · OAQ · CAHP</div>
+              <div class="ei-person-loc">Montréal</div>
+            </div>
+          </div>
+          <div class="ei-person-card">
+            <a href="https://evoqarchitecture.com/fr/firme/associes/nathan-godlovitch" target="_blank" class="ei-person-photo-link">
+              <img src="https://evoqarchitecture.com/content/images/Equipe-Team/_partnerThumbnail/3791/NathanWEB.jpg" alt="Nathan Godlovitch" class="ei-person-photo" onerror="this.style.display='none'">
+            </a>
+            <div class="ei-person-info">
+              <div class="ei-person-name">Nathan Godlovitch</div>
+              <div class="ei-person-role">Architecte, associé</div>
+              <div class="ei-person-creds">OAQ</div>
+              <div class="ei-person-loc">Montréal · <a href="tel:5143939490">514 393-9490</a> / 477</div>
+            </div>
+          </div>
+          <div class="ei-person-card">
+            <a href="https://evoqarchitecture.com/fr/firme/associes/alexandre-jean-bergeron" target="_blank" class="ei-person-photo-link">
+              <img src="https://evoqarchitecture.com/content/images/Equipe-Team/_partnerThumbnail/AlexandreJean-Bergeron_WEB.jpg" alt="Alexandre Jean-Bergeron" class="ei-person-photo" onerror="this.outerHTML='<div class=\'ei-person-placeholder\'>AJ</div>'">
+            </a>
+            <div class="ei-person-info">
+              <div class="ei-person-name">Alexandre Jean-Bergeron</div>
+              <div class="ei-person-role">Architecte, associé</div>
+              <div class="ei-person-creds">OAQ · LEED® Green Associate</div>
+              <div class="ei-person-loc">Montréal</div>
+            </div>
+          </div>
+          <div class="ei-person-card">
+            <a href="https://evoqarchitecture.com/fr/firme/associes/sayeh-jolan" target="_blank" class="ei-person-photo-link">
+              <img src="https://evoqarchitecture.com/content/images/Equipe-Team/_partnerThumbnail/SayehJolan_WEB.jpg" alt="Sayeh Jolan" class="ei-person-photo" onerror="this.outerHTML='<div class=\'ei-person-placeholder\'>SJ</div>'">
+            </a>
+            <div class="ei-person-info">
+              <div class="ei-person-name">Sayeh Jolan</div>
+              <div class="ei-person-role">Architecte, associée</div>
+              <div class="ei-person-creds">OAQ</div>
+              <div class="ei-person-loc">Montréal</div>
+            </div>
+          </div>
+          <div class="ei-person-card">
+            <a href="https://evoqarchitecture.com/fr/firme/associes/emmanuelle-lauzier" target="_blank" class="ei-person-photo-link">
+              <img src="https://evoqarchitecture.com/content/images/Equipe-Team/_partnerThumbnail/EmanuelleLauzier_WEB.jpg" alt="Emmanuelle Lauzier" class="ei-person-photo" onerror="this.outerHTML='<div class=\'ei-person-placeholder\'>EL</div>'">
+            </a>
+            <div class="ei-person-info">
+              <div class="ei-person-name">Emmanuelle Lauzier</div>
+              <div class="ei-person-role">Architecte, associée</div>
+              <div class="ei-person-creds">OAQ · LEED® Green Associate</div>
+              <div class="ei-person-loc">Montréal</div>
+            </div>
+          </div>
+          <div class="ei-person-card">
+            <a href="https://evoqarchitecture.com/fr/firme/associes/marianne-leroux" target="_blank" class="ei-person-photo-link">
+              <img src="https://evoqarchitecture.com/content/images/Equipe-Team/_partnerThumbnail/MarianneLeroux_WEB.jpg" alt="Marianne Leroux" class="ei-person-photo" onerror="this.outerHTML='<div class=\'ei-person-placeholder\'>ML</div>'">
+            </a>
+            <div class="ei-person-info">
+              <div class="ei-person-name">Marianne Leroux</div>
+              <div class="ei-person-role">Architecte, associée</div>
+              <div class="ei-person-creds">OAQ · MRAIC · APT</div>
+              <div class="ei-person-loc">Montréal</div>
+            </div>
+          </div>
+          <div class="ei-person-card">
+            <a href="https://evoqarchitecture.com/fr/firme/associes/sybil-mckenna" target="_blank" class="ei-person-photo-link">
+              <img src="https://evoqarchitecture.com/content/images/Equipe-Team/_partnerThumbnail/SybilMcKenna_WEB.jpg" alt="Sybil McKenna" class="ei-person-photo" onerror="this.outerHTML='<div class=\'ei-person-placeholder\'>SM</div>'">
+            </a>
+            <div class="ei-person-info">
+              <div class="ei-person-name">Sybil McKenna</div>
+              <div class="ei-person-role">Architecte, associée</div>
+              <div class="ei-person-creds">OAQ · MRAIC · NCARB</div>
+              <div class="ei-person-loc">Montréal</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="ei-level-label" style="margin-top:2rem">Champs d'expertise / Areas of expertise</div>
+        <div class="ei-expertise-grid">
+          <a href="https://evoqarchitecture.com/fr/expertises" target="_blank" class="ei-expertise-chip">🏛️ Conservation du patrimoine</a>
+          <a href="https://evoqarchitecture.com/fr/expertises" target="_blank" class="ei-expertise-chip">🌿 Architecture autochtone &amp; nordique</a>
+          <a href="https://evoqarchitecture.com/fr/expertises" target="_blank" class="ei-expertise-chip">🏙️ Design contemporain</a>
+          <a href="https://evoqarchitecture.com/fr/expertises" target="_blank" class="ei-expertise-chip">🌱 Développement durable</a>
+          <a href="https://evoqarchitecture.com/fr/expertises" target="_blank" class="ei-expertise-chip">🚆 Infrastructures de transport</a>
+          <a href="https://evoqarchitecture.com/fr/expertises" target="_blank" class="ei-expertise-chip">🎓 Institutions éducatives</a>
+          <a href="https://evoqarchitecture.com/fr/expertises" target="_blank" class="ei-expertise-chip">🏥 Santé et réhabilitation</a>
+          <a href="https://evoqarchitecture.com/fr/expertises" target="_blank" class="ei-expertise-chip">🏘️ Habitation communautaire</a>
+        </div>
+
+        <div class="ei-level-label" style="margin-top:2rem">Liens rapides — site public</div>
+        <div class="ei-links-grid">
+          <a href="https://evoqarchitecture.com/fr/firme" target="_blank" class="ei-link-card" style="--lc-color: #1B5E7B">
+            <div class="ei-link-icon" style="color:#fff">🏢</div>
+            <div class="ei-link-text"><div class="ei-fr">La firme</div><div class="ei-en">evoqarchitecture.com</div></div>
+          </a>
+          <a href="https://evoqarchitecture.com/fr/firme/equipe" target="_blank" class="ei-link-card" style="--lc-color: #1B5E7B">
+            <div class="ei-link-icon" style="color:#fff">👥</div>
+            <div class="ei-link-text"><div class="ei-fr">Équipe complète</div><div class="ei-en">Full Team</div></div>
+          </a>
+          <a href="https://evoqarchitecture.com/fr/firme/services" target="_blank" class="ei-link-card" style="--lc-color: #1B5E7B">
+            <div class="ei-link-icon" style="color:#fff">🛠️</div>
+            <div class="ei-link-text"><div class="ei-fr">Services</div><div class="ei-en">evoqarchitecture.com</div></div>
+          </a>
+          <a href="https://evoqarchitecture.com/fr/firme/developpement-durable" target="_blank" class="ei-link-card" style="--lc-color: #1B5E7B">
+            <div class="ei-link-icon" style="color:#fff">🌱</div>
+            <div class="ei-link-text"><div class="ei-fr">Développement durable</div><div class="ei-en">Sustainability</div></div>
+          </a>
+          <a href="https://evoqarchitecture.com/fr/prix-distinctions" target="_blank" class="ei-link-card" style="--lc-color: #1B5E7B">
+            <div class="ei-link-icon" style="color:#fff">🏆</div>
+            <div class="ei-link-text"><div class="ei-fr">Prix et distinctions</div><div class="ei-en">Awards</div></div>
+          </a>
+          <a href="https://evoqarchitecture.com/fr/projets" target="_blank" class="ei-link-card" style="--lc-color: #1B5E7B">
+            <div class="ei-link-icon" style="color:#fff">📐</div>
+            <div class="ei-link-text"><div class="ei-fr">Projets</div><div class="ei-en">Projects</div></div>
+          </a>
+        </div>
+
+      </div>
+    </div><!-- /panel-evoq -->
+
+    <!-- PANNEAU : Bibliothèque EVOQ -->
+    <div class="ei-panel c-biblio" id="panel-biblio" style="--panel-color: #4A6B7A">
+      <div class="ei-panel-header">
+        <div class="ei-panel-accent"></div>
+        <div>
+          <h3>Bibliothèque EVOQ</h3>
+          <div class="ei-panel-desc">Documents et ressources par équipe — 3 niveaux</div>
+        </div>
+        <button class="ei-panel-close" data-close="biblio">Fermer ✕</button>
+      </div>
+      <div class="ei-panel-body">
+        <div class="ei-level-label">Par groupe</div>
+        <div class="ei-links-grid">
+          <a href="#" data-link="biblio-voyageurs" class="ei-link-card" style="--lc-color: #4A6B7A">
+            <div class="ei-link-icon" style="color:#fff">✈️</div>
+            <div class="ei-link-text"><div class="ei-fr">Voyageurs</div><div class="ei-en">Travellers</div></div>
+          </a>
+          <a href="#" data-link="biblio-comptabilite" class="ei-link-card" style="--lc-color: #4A6B7A">
+            <div class="ei-link-icon" style="color:#fff">📊</div>
+            <div class="ei-link-text"><div class="ei-fr">Comptabilité</div><div class="ei-en">Accounting</div></div>
+          </a>
+          <a href="#" data-link="biblio-promo" class="ei-link-card" style="--lc-color: #4A6B7A">
+            <div class="ei-link-icon" style="color:#fff">📣</div>
+            <div class="ei-link-text"><div class="ei-fr">Promo</div><div class="ei-en">Promo</div></div>
+          </a>
+          <a href="#" data-link="biblio-talents-culture" class="ei-link-card" style="--lc-color: #4A6B7A">
+            <div class="ei-link-icon" style="color:#fff">🎭</div>
+            <div class="ei-link-text"><div class="ei-fr">Talents &amp; Culture</div><div class="ei-en">Talents &amp; Culture</div></div>
+          </a>
+          <a href="#" data-link="biblio-comites" class="ei-link-card" style="--lc-color: #4A6B7A">
+            <div class="ei-link-icon" style="color:#fff">🤝</div>
+            <div class="ei-link-text"><div class="ei-fr">Comités</div><div class="ei-en">Committees</div></div>
+          </a>
+          <a href="#" data-link="biblio-direction" class="ei-link-card" style="--lc-color: #4A6B7A">
+            <div class="ei-link-icon" style="color:#fff">🧭</div>
+            <div class="ei-link-text"><div class="ei-fr">Direction</div><div class="ei-en">Management</div></div>
+          </a>
+          <a href="#" data-link="biblio-architectes" class="ei-link-card" style="--lc-color: #4A6B7A">
+            <div class="ei-link-icon" style="color:#fff">📐</div>
+            <div class="ei-link-text"><div class="ei-fr">Architectes</div><div class="ei-en">Architects</div></div>
+          </a>
+        </div>
+        <div class="ei-level-label" style="margin-top:2rem">Par domaine de pratique</div>
+        <div class="ei-links-grid">
+          <a href="#" data-link="biblio-patrimoine" class="ei-link-card" style="--lc-color: #9AA600">
+            <div class="ei-link-icon" style="color:#fff">🏛️</div>
+            <div class="ei-link-text"><div class="ei-fr">Patrimoine</div><div class="ei-en">Heritage</div></div>
+          </a>
+          <a href="#" data-link="biblio-autochtone" class="ei-link-card" style="--lc-color: #9AA600">
+            <div class="ei-link-icon" style="color:#fff">🌿</div>
+            <div class="ei-link-text"><div class="ei-fr">Inuit / Premières Nations</div><div class="ei-en">Indigenous</div></div>
+          </a>
+          <a href="#" data-link="biblio-transports" class="ei-link-card" style="--lc-color: #9AA600">
+            <div class="ei-link-icon" style="color:#fff">🚆</div>
+            <div class="ei-link-text"><div class="ei-fr">Transports</div><div class="ei-en">Transportation</div></div>
+          </a>
+          <a href="#" data-link="biblio-habitation" class="ei-link-card" style="--lc-color: #9AA600">
+            <div class="ei-link-icon" style="color:#fff">🏘️</div>
+            <div class="ei-link-text"><div class="ei-fr">Habitation et communautaire</div><div class="ei-en">Housing &amp; Community</div></div>
+          </a>
+        </div>
+      </div>
+    </div><!-- /panel-biblio -->
+
+    <!-- PANNEAU : Applications et services -->
+    <div class="ei-panel c-apps" id="panel-apps" style="--panel-color: #E87722">
+      <div class="ei-panel-header">
+        <div class="ei-panel-accent"></div>
+        <div>
+          <h3>Applications et services</h3>
+          <div class="ei-panel-desc">Outils numériques du cabinet</div>
+        </div>
+        <button class="ei-panel-close" data-close="apps">Fermer ✕</button>
+      </div>
+      <div class="ei-panel-body">
+        <div class="ei-level-label">Intelligence artificielle</div>
+        <div class="ei-links-grid">
+          <a href="https://claude.ai" target="_blank" class="ei-link-card" style="--lc-color: #CC785C">
+            <div class="ei-link-icon" style="color:#fff; font-size:0.75rem; font-weight:700;">Claude</div>
+            <div class="ei-link-text">
+              <div class="ei-fr">Claude — Anthropic</div>
+              <div class="ei-en">claude.ai · Rédaction, analyse, code, recherche</div>
+            </div>
+          </a>
+          <a href="https://chatgpt.com" target="_blank" class="ei-link-card" style="--lc-color: #10A37F">
+            <div class="ei-link-icon" style="color:#fff; font-size:0.65rem; font-weight:700; text-align:center; line-height:1.2">Chat<br>GPT</div>
+            <div class="ei-link-text">
+              <div class="ei-fr">ChatGPT — OpenAI</div>
+              <div class="ei-en">chatgpt.com · Assistant généraliste, GPT-4o</div>
+            </div>
+          </a>
+          <a href="https://gemini.google.com" target="_blank" class="ei-link-card" style="--lc-color: #4285F4">
+            <div class="ei-link-icon" style="color:#fff; font-size:0.7rem; font-weight:700;">Gemini</div>
+            <div class="ei-link-text">
+              <div class="ei-fr">Gemini — Google</div>
+              <div class="ei-en">gemini.google.com · Intégration Google Workspace</div>
+            </div>
+          </a>
+          <a href="https://www.perplexity.ai" target="_blank" class="ei-link-card" style="--lc-color: #20808D">
+            <div class="ei-link-icon" style="color:#fff; font-size:0.6rem; font-weight:700;">Perpl.</div>
+            <div class="ei-link-text">
+              <div class="ei-fr">Perplexity AI</div>
+              <div class="ei-en">perplexity.ai · Recherche web avec sources citées</div>
+            </div>
+          </a>
+        </div>
+
+        <div class="ei-level-label" style="margin-top:1.5rem">Outils de gestion</div>
+        <div class="ei-links-grid">
+          <a href="https://login.gordian.com/GordianLogin" target="_blank" class="ei-link-card" style="--lc-color: #E87722">
+            <div class="ei-link-icon" style="color:#fff">💲</div>
+            <div class="ei-link-text"><div class="ei-fr">RS Means Online</div><div class="ei-en">rsmeansonline.com · Estimation des coûts</div></div>
+          </a>
+          <a href="https://evoqarchitecture.deltekfirst.com/EvoqArchitecture/App/" target="_blank" class="ei-link-card" style="--lc-color: #E87722">
+            <div class="ei-link-icon" style="color:#fff">📋</div>
+            <div class="ei-link-text"><div class="ei-fr">Deltek First</div><div class="ei-en">deltekfirst.com · Gestion de projets et comptabilité</div></div>
+          </a>
+          <a href="https://evoqarchitecture.octopus-itsm.com/Login.aspx" target="_blank" class="ei-link-card" style="--lc-color: #E87722">
+            <div class="ei-link-icon" style="color:#fff">🐙</div>
+            <div class="ei-link-text"><div class="ei-fr">Octopus ITSM</div><div class="ei-en">octopus-itsm.com · Services TI et requêtes</div></div>
+          </a>
+          <a href="https://mailarchiva.evoqarchitecture.com/index.do" target="_blank" class="ei-link-card" style="--lc-color: #E87722">
+            <div class="ei-link-icon" style="color:#fff">📧</div>
+            <div class="ei-link-text"><div class="ei-fr">MailArchiva</div><div class="ei-en">mailarchiva.evoqarchitecture.com · Archivage courriels</div></div>
+          </a>
+        </div>
+      </div>
+    </div><!-- /panel-apps -->
+
+    <!-- PANNEAU : Formations -->
+    <div class="ei-panel c-form" id="panel-form" style="--panel-color: #E4003A">
+      <div class="ei-panel-header">
+        <div class="ei-panel-accent"></div>
+        <div>
+          <h3>Formations</h3>
+          <div class="ei-panel-desc">Capsules de formation par thématique</div>
+        </div>
+        <button class="ei-panel-close" data-close="form">Fermer ✕</button>
+      </div>
+      <div class="ei-panel-body">
+        <div class="ei-level-label">Capsules EVOQ</div>
+        <div class="ei-links-grid">
+          <a href="#" data-link="form-capsules-tc" class="ei-link-card" style="--lc-color: #E4003A">
+            <div class="ei-link-icon" style="color:#fff">🎨</div>
+            <div class="ei-link-text"><div class="ei-fr">Capsules T&amp;C</div><div class="ei-en">T&amp;C Capsules</div></div>
+          </a>
+          <a href="#" data-link="form-trucs-astuces" class="ei-link-card" style="--lc-color: #E4003A">
+            <div class="ei-link-icon" style="color:#fff">💡</div>
+            <div class="ei-link-text"><div class="ei-fr">Trucs et astuces</div><div class="ei-en">Tips &amp; Tricks</div></div>
+          </a>
+          <a href="#" data-link="form-capsules-bim" class="ei-link-card" style="--lc-color: #E4003A">
+            <div class="ei-link-icon" style="color:#fff">🏗️</div>
+            <div class="ei-link-text"><div class="ei-fr">Capsules BIM</div><div class="ei-en">BIM Capsules</div></div>
+          </a>
+          <a href="#" data-link="form-capsules-cyber" class="ei-link-card" style="--lc-color: #E4003A">
+            <div class="ei-link-icon" style="color:#fff">🔐</div>
+            <div class="ei-link-text"><div class="ei-fr">Capsules Cybersécurité</div><div class="ei-en">Cybersecurity Capsules</div></div>
+          </a>
+          <a href="#" data-link="form-bon-usage-ti" class="ei-link-card" style="--lc-color: #E4003A">
+            <div class="ei-link-icon" style="color:#fff">💻</div>
+            <div class="ei-link-text"><div class="ei-fr">Bon Usage TI</div><div class="ei-en">Good IT Practices</div></div>
+          </a>
+          <a href="#" data-link="form-pratique-pro" class="ei-link-card" style="--lc-color: #E4003A">
+            <div class="ei-link-icon" style="color:#fff">📐</div>
+            <div class="ei-link-text"><div class="ei-fr">Pratique professionnelle</div><div class="ei-en">Professional Practice</div></div>
+          </a>
+        </div>
+
+        <div class="ei-level-label" style="margin-top:1.5rem">Cybersécurité — Formations Sophos</div>
+        <div class="ei-links-grid">
+          <a href="https://www.sophos.com/en-us/training" target="_blank" class="ei-link-card" style="--lc-color: #1F6BFF">
+            <div class="ei-link-icon" style="color:#fff; font-size:0.65rem; font-weight:700; text-align:center; line-height:1.2">Sophos<br>Academy</div>
+            <div class="ei-link-text">
+              <div class="ei-fr">Sophos Academy — portail de formation</div>
+              <div class="ei-en">sophos.com · Cours, webinaires, certifications</div>
+            </div>
+          </a>
+          <a href="https://www.sophos.com/en-us/training/courses" target="_blank" class="ei-link-card" style="--lc-color: #1F6BFF">
+            <div class="ei-link-icon" style="color:#fff; font-size:0.65rem; font-weight:700; text-align:center; line-height:1.2">Sophos<br>cours</div>
+            <div class="ei-link-text">
+              <div class="ei-fr">Catalogue de cours Sophos à la demande</div>
+              <div class="ei-en">sophos.com · Filtrable par niveau et audience</div>
+            </div>
+          </a>
+          <a href="https://techvids.sophos.com" target="_blank" class="ei-link-card" style="--lc-color: #1F6BFF">
+            <div class="ei-link-icon" style="color:#fff; font-size:0.65rem; font-weight:700; text-align:center; line-height:1.2">Tech<br>Vids</div>
+            <div class="ei-link-text">
+              <div class="ei-fr">Sophos Techvids — tutoriels vidéo</div>
+              <div class="ei-en">techvids.sophos.com · Bibliothèque vidéos techniques</div>
+            </div>
+          </a>
+          <a href="https://www.sophos.com/en-us/products/phish-threat" target="_blank" class="ei-link-card" style="--lc-color: #1F6BFF">
+            <div class="ei-link-icon" style="color:#fff; font-size:0.65rem; font-weight:700; text-align:center; line-height:1.2">Phish<br>Threat</div>
+            <div class="ei-link-text">
+              <div class="ei-fr">Sophos Phish Threat — simulation d'hameçonnage</div>
+              <div class="ei-en">sophos.com · Campagnes anti-phishing (abonnement requis)</div>
+            </div>
+          </a>
+        </div>
+      </div>
+    </div><!-- /panel-form -->
+
+    <!-- PANNEAU : Ressources externes -->
+    <div class="ei-panel c-ext" id="panel-ext" style="--panel-color: #00B2A4">
+      <div class="ei-panel-header">
+        <div class="ei-panel-accent"></div>
+        <div>
+          <h3>Ressources externes</h3>
+          <div class="ei-panel-desc">Organismes professionnels, réglementaires et gouvernementaux</div>
+        </div>
+        <button class="ei-panel-close" data-close="ext">Fermer ✕</button>
+      </div>
+      <div class="ei-panel-body">
+
+        <div class="ei-level-label">Ordres professionnels — Québec</div>
+        <div class="ei-links-grid">
+          <a href="https://www.oaq.com" target="_blank" class="ei-link-card" style="--lc-color: #00B2A4">
+            <div class="ei-link-icon" style="color:#fff; font-size:0.7rem; font-weight:700;">OAQ</div>
+            <div class="ei-link-text">
+              <div class="ei-fr">Ordre des architectes du Québec</div>
+              <div class="ei-en">oaq.com · Permis, répertoire, prix d'excellence</div>
+            </div>
+          </a>
+          <a href="https://www.aappq.qc.ca" target="_blank" class="ei-link-card" style="--lc-color: #00B2A4">
+            <div class="ei-link-icon" style="color:#fff; font-size:0.65rem; font-weight:700;">AAPPQ</div>
+            <div class="ei-link-text">
+              <div class="ei-fr">Association des architectes en pratique privée du Québec</div>
+              <div class="ei-en">aappq.qc.ca · Représentation des firmes</div>
+            </div>
+          </a>
+        </div>
+
+        <div class="ei-level-label" style="margin-top:1.5rem">Ordres professionnels — Canada</div>
+        <div class="ei-links-grid">
+          <a href="https://raic.org/fr" target="_blank" class="ei-link-card" style="--lc-color: #1B5E7B">
+            <div class="ei-link-icon" style="color:#fff; font-size:0.7rem; font-weight:700;">IRAC</div>
+            <div class="ei-link-text">
+              <div class="ei-fr">Institut royal d'architecture du Canada</div>
+              <div class="ei-en">raic.org · Formation continue, publications, advocacy</div>
+            </div>
+          </a>
+          <a href="https://oaa.on.ca" target="_blank" class="ei-link-card" style="--lc-color: #1B5E7B">
+            <div class="ei-link-icon" style="color:#fff; font-size:0.7rem; font-weight:700;">OAA</div>
+            <div class="ei-link-text">
+              <div class="ei-fr">Ordre des architectes de l'Ontario</div>
+              <div class="ei-en">oaa.on.ca · Réglementation Ontario</div>
+            </div>
+          </a>
+          <a href="https://roac.ca/fr" target="_blank" class="ei-link-card" style="--lc-color: #1B5E7B">
+            <div class="ei-link-icon" style="color:#fff; font-size:0.65rem; font-weight:700;">ROAC</div>
+            <div class="ei-link-text">
+              <div class="ei-fr">Regroupement des ordres d'architectes du Canada</div>
+              <div class="ei-en">roac.ca · Mobilité interprovinciale, ExAC</div>
+            </div>
+          </a>
+        </div>
+
+        <div class="ei-level-label" style="margin-top:1.5rem">Documents contractuels</div>
+        <div class="ei-links-grid">
+          <a href="https://www.ccdc.org/fr" target="_blank" class="ei-link-card" style="--lc-color: #E87722">
+            <div class="ei-link-icon" style="color:#fff; font-size:0.65rem; font-weight:700;">CCDC</div>
+            <div class="ei-link-text">
+              <div class="ei-fr">Comité canadien des documents de construction</div>
+              <div class="ei-en">ccdc.org · CCDC 2, contrats types, guides — Lise Desjardins au comité</div>
+            </div>
+          </a>
+          <a href="https://www.ccdc.org/fr/documents/" target="_blank" class="ei-link-card" style="--lc-color: #E87722">
+            <div class="ei-link-icon" style="color:#fff; font-size:0.65rem; font-weight:700; text-align:center; line-height:1.2">CCDC<br>docs</div>
+            <div class="ei-link-text">
+              <div class="ei-fr">Bibliothèque des documents CCDC</div>
+              <div class="ei-en">Contrats, formulaires, guides — accès direct</div>
+            </div>
+          </a>
+          <a href="https://raic.org/ccdc-documents/" target="_blank" class="ei-link-card" style="--lc-color: #E87722">
+            <div class="ei-link-icon" style="color:#fff; font-size:0.65rem; font-weight:700; text-align:center; line-height:1.2">IRAC<br>docs</div>
+            <div class="ei-link-text">
+              <div class="ei-fr">Documents CCDC via l'IRAC</div>
+              <div class="ei-en">raic.org · Contrats et sceaux pour membres</div>
+            </div>
+          </a>
+        </div>
+
+        <div class="ei-level-label" style="margin-top:1.5rem">Réglementation — honoraires et contrats types</div>
+        <div class="ei-links-grid">
+          <a href="https://raic.org/fr/irac-contrats-numeriques" target="_blank" class="ei-link-card" style="--lc-color: #1B5E7B">
+            <div class="ei-link-icon" style="color:#fff; font-size:0.65rem; font-weight:700; text-align:center; line-height:1.2">IRAC<br>6&amp;9</div>
+            <div class="ei-link-text">
+              <div class="ei-fr">Contrats types IRAC — Documents 6 et 9 (plateforme numérique)</div>
+              <div class="ei-en">raic.org · Formule normalisée client-architecte (Doc. 6) et architecte-expert-conseil (Doc. 9)</div>
+            </div>
+          </a>
+          <a href="https://raic.org/fr/raic/documents-contractuels" target="_blank" class="ei-link-card" style="--lc-color: #1B5E7B">
+            <div class="ei-link-icon" style="color:#fff; font-size:0.6rem; font-weight:700; text-align:center; line-height:1.2">IRAC<br>docs</div>
+            <div class="ei-link-text">
+              <div class="ei-fr">Documents contractuels IRAC — bibliothèque</div>
+              <div class="ei-en">raic.org · Historique, guides et sceaux</div>
+            </div>
+          </a>
+          <a href="https://www.legisquebec.gouv.qc.ca/fr/ShowDoc/cr/C-65.1,%20r.%209" target="_blank" class="ei-link-card" style="--lc-color: #E4003A">
+            <div class="ei-link-icon" style="color:#fff; font-size:0.6rem; font-weight:700; text-align:center; line-height:1.2">SCT<br>QC</div>
+            <div class="ei-link-text">
+              <div class="ei-fr">Tarif d'honoraires — architectes (Gouvernement du Québec)</div>
+              <div class="ei-en">legisquebec.gouv.qc.ca · Règlement C-65.1, r.9</div>
+            </div>
+          </a>
+          <a href="https://www.tresor.gouv.qc.ca/faire-affaire-avec-letat/cadre-normatif-de-la-gestion-contractuelle/autres-reglements/" target="_blank" class="ei-link-card" style="--lc-color: #E4003A">
+            <div class="ei-link-icon" style="color:#fff; font-size:0.6rem; font-weight:700; text-align:center; line-height:1.2">SCT<br>tarifs</div>
+            <div class="ei-link-text">
+              <div class="ei-fr">Secrétariat du Conseil du trésor — Tarifs professionnels</div>
+              <div class="ei-en">tresor.gouv.qc.ca · Tarifs architectes, ingénieurs, arpenteurs</div>
+            </div>
+          </a>
+          <a href="https://www.tresor.gouv.qc.ca/fileadmin/PDF/faire_affaire_avec_etat/cadre_normatif/guide_services_architecture.pdf" target="_blank" class="ei-link-card" style="--lc-color: #E4003A">
+            <div class="ei-link-icon" style="color:#fff; font-size:0.6rem; font-weight:700; text-align:center; line-height:1.2">Guide<br>SCT</div>
+            <div class="ei-link-text">
+              <div class="ei-fr">Guide des services d'architecture — SCT (2025)</div>
+              <div class="ei-en">tresor.gouv.qc.ca · Rémunération, fourchettes, appels d'offres</div>
+            </div>
+          </a>
+          <a href="https://oaa.on.ca/publications/contracts" target="_blank" class="ei-link-card" style="--lc-color: #4A6B7A">
+            <div class="ei-link-icon" style="color:#fff; font-size:0.65rem; font-weight:700; text-align:center; line-height:1.2">OAA<br>ON</div>
+            <div class="ei-link-text">
+              <div class="ei-fr">Contrats OAA et guide d'honoraires — Ontario</div>
+              <div class="ei-en">oaa.on.ca · Formulaires OAA 600/800 (2021)</div>
+            </div>
+          </a>
+        </div>
+
+        <div class="ei-level-label" style="margin-top:1.5rem">Codes du bâtiment</div>
+        <div class="ei-links-grid">
+          <a href="https://nrc.canada.ca/fr/certifications-evaluations-normes/codes-canada" target="_blank" class="ei-link-card" style="--lc-color: #9AA600">
+            <div class="ei-link-icon" style="color:#fff; font-size:0.65rem; font-weight:700; text-align:center; line-height:1.2">CNRC<br>codes</div>
+            <div class="ei-link-text">
+              <div class="ei-fr">Codes Canada — CNRC</div>
+              <div class="ei-en">CNB, CNPI, CNÉB — accès électronique gratuit</div>
+            </div>
+          </a>
+          <a href="https://nrc.canada.ca/fr/certifications-evaluations-normes/codes-canada/publications-codes-canada/code-national-batiment-canada-2025" target="_blank" class="ei-link-card" style="--lc-color: #9AA600">
+            <div class="ei-link-icon" style="color:#fff; font-size:0.6rem; font-weight:700; text-align:center; line-height:1.2">CNB<br>2025</div>
+            <div class="ei-link-text">
+              <div class="ei-fr">Code national du bâtiment – Canada 2025</div>
+              <div class="ei-en">Dernière édition — téléchargement gratuit</div>
+            </div>
+          </a>
+          <a href="https://nrc.canada.ca/fr/certifications-evaluations-normes/codes-canada/publications-codes-canada/code-construction-quebec-chapitre-i-batiment-code-national-batiment-canada-2020-modifie" target="_blank" class="ei-link-card" style="--lc-color: #9AA600">
+            <div class="ei-link-icon" style="color:#fff; font-size:0.6rem; font-weight:700; text-align:center; line-height:1.2">CCQ<br>QC</div>
+            <div class="ei-link-text">
+              <div class="ei-fr">Code de construction du Québec — Chapitre I, Bâtiment</div>
+              <div class="ei-en">Version québécoise du CNB 2020 (modifié)</div>
+            </div>
+          </a>
+        </div>
+
+        <div class="ei-level-label" style="margin-top:1.5rem">Gouvernements</div>
+        <div class="ei-links-grid">
+          <a href="https://www.rbq.gouv.qc.ca" target="_blank" class="ei-link-card" style="--lc-color: #4A6B7A">
+            <div class="ei-link-icon" style="color:#fff; font-size:0.65rem; font-weight:700;">RBQ</div>
+            <div class="ei-link-text">
+              <div class="ei-fr">Régie du bâtiment du Québec</div>
+              <div class="ei-en">rbq.gouv.qc.ca · Licences, conformité, inspection</div>
+            </div>
+          </a>
+          <a href="https://www.canada.ca/fr/services/entreprises/permis/secteursconstructions.html" target="_blank" class="ei-link-card" style="--lc-color: #4A6B7A">
+            <div class="ei-link-icon" style="color:#fff; font-size:0.65rem; font-weight:700; text-align:center; line-height:1.2">GOV<br>CA</div>
+            <div class="ei-link-text">
+              <div class="ei-fr">Gouvernement du Canada — Construction</div>
+              <div class="ei-en">canada.ca · Permis et réglementation fédérale</div>
+            </div>
+          </a>
+          <a href="https://www.infrastructure.gc.ca/index-fra.html" target="_blank" class="ei-link-card" style="--lc-color: #4A6B7A">
+            <div class="ei-link-icon" style="color:#fff; font-size:0.6rem; font-weight:700;">INFC</div>
+            <div class="ei-link-text">
+              <div class="ei-fr">Infrastructure Canada</div>
+              <div class="ei-en">Programmes de financement fédéraux</div>
+            </div>
+          </a>
+        </div>
+
+      </div>
+    </div><!-- /panel-ext -->
+
+    <!-- PANNEAU : Portail employés -->
+    <div class="ei-panel c-portal" id="panel-portal" style="--panel-color: #9AA600">
+      <div class="ei-panel-header">
+        <div class="ei-panel-accent"></div>
+        <div>
+          <h3>Portail employés</h3>
+          <div class="ei-panel-desc">Ressources RH et accueil</div>
+        </div>
+        <button class="ei-panel-close" data-close="portal">Fermer ✕</button>
+      </div>
+      <div class="ei-panel-body">
+        <div class="ei-level-label">Documents et outils RH</div>
+        <div class="ei-links-grid">
+          <a href="#" data-link="portal-accueil" class="ei-link-card" style="--lc-color: #9AA600">
+            <div class="ei-link-icon" style="color:#fff">👋</div>
+            <div class="ei-link-text"><div class="ei-fr">Accueil Nouveaux employés</div><div class="ei-en">New Employee Welcome</div></div>
+          </a>
+          <a href="#" data-link="portal-manuel" class="ei-link-card" style="--lc-color: #9AA600">
+            <div class="ei-link-icon" style="color:#fff">📗</div>
+            <div class="ei-link-text"><div class="ei-fr">Manuel de l'employé</div><div class="ei-en">Employee Handbook</div></div>
+          </a>
+          <a href="#" data-link="portal-assurances" class="ei-link-card" style="--lc-color: #9AA600">
+            <div class="ei-link-icon" style="color:#fff">🏥</div>
+            <div class="ei-link-text"><div class="ei-fr">Assurances, PAE</div><div class="ei-en">Insurance, EAP</div></div>
+          </a>
+          <a href="#" data-link="portal-employeurd" class="ei-link-card" style="--lc-color: #9AA600">
+            <div class="ei-link-icon" style="color:#fff">🗂️</div>
+            <div class="ei-link-text"><div class="ei-fr">EmployeurD</div><div class="ei-en">EmployeurD</div></div>
+          </a>
+        </div>
+      </div>
+    </div><!-- /panel-portal -->
+
+  </main>
+
+  <footer class="ei-footer">EVOQ Architectes · Intranet · Usage interne exclusivement</footer>
+
+</div><!-- /evoq-intranet -->
+
+<script>
+/* ════════════════════════════════════════════════════════════════
+   LIENS SHAREPOINT INTERNES — À COMPLÉTER
+   Remplacer "#" par l'URL SharePoint correspondante, p. ex. :
+   "biblio-voyageurs": "https://evoq.sharepoint.com/sites/Bibliotheque/Voyageurs"
+   Les liens laissés à "#" apparaissent grisés sur la page.
+   ════════════════════════════════════════════════════════════════ */
+var EVOQ_LINKS = {
+  /* Bibliothèque EVOQ — par groupe */
+  "biblio-voyageurs":      "#",
+  "biblio-comptabilite":   "#",
+  "biblio-promo":          "#",
+  "biblio-talents-culture":"#",
+  "biblio-comites":        "#",
+  "biblio-direction":      "#",
+  "biblio-architectes":    "#",
+
+  /* Bibliothèque EVOQ — par domaine de pratique */
+  "biblio-patrimoine":     "#",
+  "biblio-autochtone":     "#",
+  "biblio-transports":     "#",
+  "biblio-habitation":     "#",
+
+  /* Formations — capsules EVOQ */
+  "form-capsules-tc":      "#",
+  "form-trucs-astuces":    "#",
+  "form-capsules-bim":     "#",
+  "form-capsules-cyber":   "#",
+  "form-bon-usage-ti":     "#",
+  "form-pratique-pro":     "#",
+
+  /* Portail employés */
+  "portal-accueil":        "#",
+  "portal-manuel":         "#",
+  "portal-assurances":     "#",
+  "portal-employeurd":     "#"
+};
+</script>
+
+<script>
+(function() {
+  'use strict';
+
+  var activePanel = null;
+  var activeCard  = null;
+
+  function openPanel(id) {
+    var panel = document.getElementById('panel-' + id);
+    var card  = document.querySelector('[data-panel="' + id + '"]');
+    if (!panel || !card) return;
+
+    if (activePanel && activePanel !== panel) {
+      activePanel.classList.remove('open');
+      if (activeCard) {
+        activeCard.classList.remove('active');
+        activeCard.setAttribute('aria-expanded', 'false');
+      }
+    }
+
+    var isOpen = panel.classList.contains('open');
+    if (isOpen) {
+      panel.classList.remove('open');
+      card.classList.remove('active');
+      card.setAttribute('aria-expanded', 'false');
+      activePanel = null;
+      activeCard  = null;
+    } else {
+      panel.classList.add('open');
+      card.classList.add('active');
+      card.setAttribute('aria-expanded', 'true');
+      activePanel = panel;
+      activeCard  = card;
+      setTimeout(function() {
+        panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }, 50);
+    }
+  }
+
+  document.querySelectorAll('.ei-section-card').forEach(function(card) {
+    var id = card.getAttribute('data-panel');
+    card.addEventListener('click', function(e) {
+      if (e.target.closest('a')) return;
+      openPanel(id);
+    });
+    card.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        openPanel(id);
+      }
+    });
+  });
+
+  document.querySelectorAll('.ei-panel-close').forEach(function(btn) {
+    var id = btn.getAttribute('data-close');
+    btn.addEventListener('click', function() {
+      openPanel(id);
+    });
+  });
+
+  // Câblage des liens SharePoint depuis EVOQ_LINKS
+  document.querySelectorAll('[data-link]').forEach(function(a) {
+    var key = a.getAttribute('data-link');
+    var url = (typeof EVOQ_LINKS !== 'undefined' && EVOQ_LINKS[key]) || '#';
+    if (url && url !== '#') {
+      a.href = url;
+      a.target = '_blank';
+    } else {
+      a.classList.add('ei-link-pending');
+      a.setAttribute('title', 'Lien SharePoint à venir');
+      a.addEventListener('click', function(e) { e.preventDefault(); });
+    }
+  });
+
+})();
+</script>
 
 </body>
 </html>
