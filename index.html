@@ -20,22 +20,35 @@
     --muted:  #7A7A72;
   }
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    min-height: 100vh;
+    display: flex;
+    background: #D8D8D2;
+    padding: 1rem;
+  }
   .evoq-intranet {
     font-family: 'DM Sans', 'Segoe UI', Tahoma, sans-serif;
     background-color: var(--light);
     background-image:
       linear-gradient(to bottom,
-        rgba(245,245,242,0.72) 0%,
-        rgba(245,245,242,0.88) 40%,
-        rgba(245,245,242,0.96) 100%),
+        rgba(245,245,242,0.62) 0%,
+        rgba(245,245,242,0.78) 40%,
+        rgba(245,245,242,0.86) 100%),
       url('evoq_bg.jpg');
     background-size: cover;
     background-position: center top;
     background-repeat: no-repeat;
     color: var(--text);
+    width: 100%;
     max-width: 1400px;
-    margin: 0 auto;
+    margin: auto; /* centers in the viewport; resolves to 0 if it overflows */
     padding: 0;
+    /* Fixed 16:9 landscape frame; content scrolls inside it */
+    aspect-ratio: 16 / 9;
+    overflow-y: auto;
+    overflow-x: hidden;
+    border-radius: 4px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.12);
   }
   .ei-header {
     background: var(--dark);
