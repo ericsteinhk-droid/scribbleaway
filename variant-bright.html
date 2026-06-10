@@ -473,25 +473,29 @@ body { background:#E9E7E0; }
   background-image:
     linear-gradient(to bottom, rgba(252,252,250,0.48) 0%, rgba(252,252,250,0.86) 45%, rgba(252,252,250,0.97) 100%),
     url('evoq_bg.jpg');
-  border-radius:14px;
+  border-radius:0;
   box-shadow:0 14px 44px rgba(60,55,40,0.16);
 }
-.ei-header{ background:#FFFFFF; border-bottom:1px solid #ECEAE3; border-radius:14px 14px 0 0; }
+.ei-header{ background:#FFFFFF; border-bottom:1px solid #ECEAE3; border-radius:0; }
 .ei-header-meta{ color:#9C9A90; }
 .ei-banner{ background:rgba(255,255,255,0.85); color:#55534C; border-bottom:1px solid #ECEAE3; }
 .ei-banner-label{ color:#E87722; border-right-color:rgba(0,0,0,0.1); }
 .ei-section-label{ color:#8B897E; }
 .ei-sections-grid{ gap:4px; }
-.ei-section-card{ border-radius:10px; background:#fff; box-shadow:0 3px 14px rgba(60,55,40,0.08); }
-.ei-section-card:hover{ box-shadow:0 12px 30px rgba(60,55,40,0.16); }
-.ei-section-header{ background:#fff; color:var(--card-color); border-top:4px solid var(--card-color); }
-.ei-section-header .ei-en{ color:#A09E94; opacity:1; }
-.ei-section-preview{ border:none; border-radius:0 0 10px 10px; }
-.ei-preview-tag{ background:#F3F2EC; color:#8B897E; border-radius:10px; }
-.ei-panel{ border-radius:12px; border-color:#ECEAE3; box-shadow:0 8px 26px rgba(60,55,40,0.08); }
-.ei-link-card,.ei-person-card,.ei-mission-item{ background:#fff; border-radius:10px; border-color:#ECEAE3; }
-.ei-link-card{ border-radius:10px; }
-.ei-expertise-chip{ background:#fff; border-color:#ECEAE3; }
+.ei-section-card{ border-radius:0; background:#fff; box-shadow:none; border:1px solid #D8D6CE; }
+.ei-section-card:hover{ box-shadow:none; border-color:var(--card-color); transform:none; }
+.ei-section-card.active{ box-shadow:none; outline:2px solid var(--card-color); outline-offset:-1px; }
+.ei-section-header{ background:#fff; color:var(--card-color); border-top:none; position:relative; overflow:hidden; }
+/* Asymmetric indicator: short left-edge rule, header height only, category colour */
+.ei-section-header::before{ content:''; position:absolute; left:0; top:0; bottom:0; width:3px; background:var(--card-color); }
+.ei-section-header h2{ padding-left:0.35rem; }
+.ei-section-header .ei-en{ color:#A09E94; opacity:1; padding-left:0.35rem; }
+.ei-section-preview{ border:none; border-top:1px solid #ECEAE3; border-radius:0; }
+.ei-preview-tag{ background:#F3F2EC; color:#8B897E; border-radius:2px; }
+.ei-panel{ border-radius:0; border-color:#D8D6CE; box-shadow:none; }
+.ei-link-card,.ei-person-card,.ei-mission-item{ background:#fff; border-radius:0; border-color:#ECEAE3; }
+.ei-link-card{ border-radius:0; }
+.ei-expertise-chip{ background:#fff; border-color:#D8D6CE; border-radius:0; }
 .ei-footer{ border-top-color:#ECEAE3; background:rgba(255,255,255,0.7); }
 </style>
 </head>
