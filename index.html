@@ -54,6 +54,10 @@
   .ei-logo-svg { height: 22px; width: auto; display: block; }
   .ei-panel-logo { height: 17px; width: auto; display: block; color: var(--navy); margin-bottom: 2px; }
   .ei-footer-logo { height: 14px; width: auto; display: block; color: var(--muted); margin: 0 auto 0.6rem; }
+  /* Inline logo sized to match the cap height of surrounding title text.
+     The SVG viewBox has padding (glyphs span y 26-134 of 163), hence the
+     oversize height and negative vertical-align to land on the baseline. */
+  .ei-inline-logo { height: 1.06em; width: auto; vertical-align: -0.19em; }
   .ei-header-meta {
     font-size: 0.72rem;
     color: #888;
@@ -485,8 +489,8 @@
       <div class="ei-section-card c-evoq" tabindex="0" role="button" aria-expanded="false" data-panel="evoq">
         <div class="ei-section-header">
           <div class="ei-arrow">↓</div>
-          <h2>EVOQ</h2>
-          <div class="ei-en">EVOQ</div>
+          <h2><img class="ei-inline-logo" src="evoq_logo_white.svg" alt="EVOQ"></h2>
+          <div class="ei-en">&nbsp;</div>
         </div>
         <div class="ei-section-preview">
           <div class="ei-preview-tags">
@@ -502,8 +506,8 @@
       <div class="ei-section-card c-biblio" tabindex="0" role="button" aria-expanded="false" data-panel="biblio">
         <div class="ei-section-header">
           <div class="ei-arrow">↓</div>
-          <h2>Bibliothèque EVOQ</h2>
-          <div class="ei-en">EVOQ Library</div>
+          <h2>Bibliothèque <img class="ei-inline-logo" src="evoq_logo_white.svg" alt="EVOQ"></h2>
+          <div class="ei-en"><img class="ei-inline-logo" src="evoq_logo_white.svg" alt="EVOQ"> Library</div>
         </div>
         <div class="ei-section-preview">
           <div class="ei-preview-tags">
@@ -893,7 +897,7 @@
       <div class="ei-panel-header">
         <div class="ei-panel-accent"></div>
         <div>
-          <h3>Bibliothèque EVOQ</h3>
+          <h3>Bibliothèque <img class="ei-inline-logo" src="evoq_logo_v_10kb.svg" alt="EVOQ"></h3>
           <div class="ei-panel-desc">Documents et ressources par équipe — 3 niveaux</div>
         </div>
         <button class="ei-panel-close" data-close="biblio">Fermer ✕</button>
