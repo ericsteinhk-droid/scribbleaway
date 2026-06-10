@@ -504,6 +504,37 @@ body { background:#E9E7E0; }
 .ei-committee-leaf { width:24px; height:24px; flex-shrink:0; display:block; }
 .ei-committee-name { font-size:0.85rem; font-weight:600; line-height:1.2; color:var(--text); }
 .ei-committee-en { font-size:0.65rem; color:var(--muted); font-style:italic; margin-top:0.05rem; }
+
+/* Formations — sous-sections dépliables (BIM, Cyber, …) */
+.ei-sub-section { margin-top: 0.5rem; }
+.ei-sub-toggle {
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  padding-right: 2.5rem !important; /* room for the arrow */
+}
+.ei-sub-arrow {
+  position: absolute;
+  right: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 0; height: 0;
+  border-left: 7px solid transparent;
+  border-right: 7px solid transparent;
+  border-top: 6px solid var(--lc-color, #E4003A);
+  transition: transform 0.25s;
+  flex-shrink: 0;
+}
+.ei-sub-toggle.open .ei-sub-arrow { transform: translateY(-50%) rotate(180deg); }
+.ei-sub-panel {
+  display: none;
+  padding: 0.45rem 0 0 1rem;
+  border-left: 3px solid var(--sub-color, #E4003A);
+  margin-top: 2px;
+  max-height: 260px;
+  overflow-y: auto;
+}
+.ei-sub-panel.open { display: block; }
 </style>
 
 <style>
@@ -1231,18 +1262,6 @@ body { background:#E9E7E0; }
             <div class="ei-link-icon" style="color:#fff">💡</div>
             <div class="ei-link-text"><div class="ei-fr">Trucs et astuces</div><div class="ei-en">Tips &amp; Tricks</div></div>
           </a>
-          <a href="#" data-link="form-bim-clarity" class="ei-link-card" style="--lc-color: #E4003A">
-            <div class="ei-link-icon" style="color:#fff">▶️</div>
-            <div class="ei-link-text"><div class="ei-fr">Clarity — Formation usager</div><div class="ei-en">Clarity User Training · vidéo 2022</div></div>
-          </a>
-          <a href="#" data-link="form-bim-standards" class="ei-link-card" style="--lc-color: #E4003A">
-            <div class="ei-link-icon" style="color:#fff">▶️</div>
-            <div class="ei-link-text"><div class="ei-fr">Standards BIM EVOQ — Formation</div><div class="ei-en">EVOQ BIM Standards Training · vidéo 2022</div></div>
-          </a>
-          <a href="#" data-link="form-capsules-cyber" class="ei-link-card" style="--lc-color: #E4003A">
-            <div class="ei-link-icon" style="color:#fff">🔐</div>
-            <div class="ei-link-text"><div class="ei-fr">Capsules Cybersécurité</div><div class="ei-en">Cybersecurity Capsules</div></div>
-          </a>
           <a href="#" data-link="form-bon-usage-ti" class="ei-link-card" style="--lc-color: #E4003A">
             <div class="ei-link-icon" style="color:#fff">💻</div>
             <div class="ei-link-text"><div class="ei-fr">Bon Usage TI</div><div class="ei-en">Good IT Practices</div></div>
@@ -1253,37 +1272,56 @@ body { background:#E9E7E0; }
           </a>
         </div>
 
-        <div class="ei-level-label" style="margin-top:1.5rem">Cybersécurité — Formations Sophos</div>
-        <div class="ei-links-grid">
-          <a href="https://www.sophos.com/en-us/training" target="_blank" class="ei-link-card" style="--lc-color: #1F6BFF">
-            <div class="ei-link-icon" style="color:#fff; font-size:0.65rem; font-weight:700; text-align:center; line-height:1.2">Sophos<br>Academy</div>
-            <div class="ei-link-text">
-              <div class="ei-fr">Sophos Academy — portail de formation</div>
-              <div class="ei-en">sophos.com · Cours, webinaires, certifications</div>
+        <!-- BIM — dépliable -->
+        <div class="ei-sub-section">
+          <div class="ei-sub-toggle ei-link-card" data-sub="bim" style="--lc-color:#E4003A">
+            <div class="ei-link-icon" style="color:#fff">🏗️</div>
+            <div class="ei-link-text"><div class="ei-fr">Capsules BIM</div><div class="ei-en">BIM Capsules</div></div>
+            <div class="ei-sub-arrow"></div>
+          </div>
+          <div class="ei-sub-panel" id="sub-bim" style="--sub-color:#E4003A">
+            <div class="ei-links-grid" style="padding:0.5rem 0 0.25rem">
+              <a href="#" data-link="form-bim-clarity" class="ei-link-card" style="--lc-color:#E4003A">
+                <div class="ei-link-icon" style="color:#fff">▶️</div>
+                <div class="ei-link-text"><div class="ei-fr">Clarity — Formation usager</div><div class="ei-en">Clarity User Training · vidéo 2022</div></div>
+              </a>
+              <a href="#" data-link="form-bim-standards" class="ei-link-card" style="--lc-color:#E4003A">
+                <div class="ei-link-icon" style="color:#fff">▶️</div>
+                <div class="ei-link-text"><div class="ei-fr">Standards BIM EVOQ — Formation</div><div class="ei-en">EVOQ BIM Standards Training · vidéo 2022</div></div>
+              </a>
             </div>
-          </a>
-          <a href="https://www.sophos.com/en-us/training/courses" target="_blank" class="ei-link-card" style="--lc-color: #1F6BFF">
-            <div class="ei-link-icon" style="color:#fff; font-size:0.65rem; font-weight:700; text-align:center; line-height:1.2">Sophos<br>cours</div>
-            <div class="ei-link-text">
-              <div class="ei-fr">Catalogue de cours Sophos à la demande</div>
-              <div class="ei-en">sophos.com · Filtrable par niveau et audience</div>
-            </div>
-          </a>
-          <a href="https://techvids.sophos.com" target="_blank" class="ei-link-card" style="--lc-color: #1F6BFF">
-            <div class="ei-link-icon" style="color:#fff; font-size:0.65rem; font-weight:700; text-align:center; line-height:1.2">Tech<br>Vids</div>
-            <div class="ei-link-text">
-              <div class="ei-fr">Sophos Techvids — tutoriels vidéo</div>
-              <div class="ei-en">techvids.sophos.com · Bibliothèque vidéos techniques</div>
-            </div>
-          </a>
-          <a href="https://www.sophos.com/en-us/products/phish-threat" target="_blank" class="ei-link-card" style="--lc-color: #1F6BFF">
-            <div class="ei-link-icon" style="color:#fff; font-size:0.65rem; font-weight:700; text-align:center; line-height:1.2">Phish<br>Threat</div>
-            <div class="ei-link-text">
-              <div class="ei-fr">Sophos Phish Threat — simulation d'hameçonnage</div>
-              <div class="ei-en">sophos.com · Campagnes anti-phishing (abonnement requis)</div>
-            </div>
-          </a>
+          </div>
         </div>
+
+        <!-- Cybersécurité — dépliable -->
+        <div class="ei-sub-section">
+          <div class="ei-sub-toggle ei-link-card" data-sub="cyber" style="--lc-color:#E4003A">
+            <div class="ei-link-icon" style="color:#fff">🔐</div>
+            <div class="ei-link-text"><div class="ei-fr">Capsules Cybersécurité</div><div class="ei-en">Cybersecurity Capsules</div></div>
+            <div class="ei-sub-arrow"></div>
+          </div>
+          <div class="ei-sub-panel" id="sub-cyber" style="--sub-color:#E4003A">
+            <div class="ei-links-grid" style="padding:0.5rem 0 0.25rem">
+              <a href="https://www.sophos.com/en-us/training" target="_blank" class="ei-link-card" style="--lc-color:#1F6BFF">
+                <div class="ei-link-icon" style="color:#fff; font-size:0.65rem; font-weight:700; text-align:center; line-height:1.2">Sophos<br>Academy</div>
+                <div class="ei-link-text"><div class="ei-fr">Sophos Academy — portail de formation</div><div class="ei-en">sophos.com · Cours, webinaires, certifications</div></div>
+              </a>
+              <a href="https://www.sophos.com/en-us/training/courses" target="_blank" class="ei-link-card" style="--lc-color:#1F6BFF">
+                <div class="ei-link-icon" style="color:#fff; font-size:0.65rem; font-weight:700; text-align:center; line-height:1.2">Sophos<br>cours</div>
+                <div class="ei-link-text"><div class="ei-fr">Catalogue de cours Sophos à la demande</div><div class="ei-en">sophos.com · Filtrable par niveau et audience</div></div>
+              </a>
+              <a href="https://techvids.sophos.com" target="_blank" class="ei-link-card" style="--lc-color:#1F6BFF">
+                <div class="ei-link-icon" style="color:#fff; font-size:0.65rem; font-weight:700; text-align:center; line-height:1.2">Tech<br>Vids</div>
+                <div class="ei-link-text"><div class="ei-fr">Sophos Techvids — tutoriels vidéo</div><div class="ei-en">techvids.sophos.com · Bibliothèque vidéos techniques</div></div>
+              </a>
+              <a href="https://www.sophos.com/en-us/products/phish-threat" target="_blank" class="ei-link-card" style="--lc-color:#1F6BFF">
+                <div class="ei-link-icon" style="color:#fff; font-size:0.65rem; font-weight:700; text-align:center; line-height:1.2">Phish<br>Threat</div>
+                <div class="ei-link-text"><div class="ei-fr">Sophos Phish Threat — simulation d'hameçonnage</div><div class="ei-en">sophos.com · Campagnes anti-phishing (abonnement requis)</div></div>
+              </a>
+            </div>
+          </div>
+        </div>
+
       </div>
     </div><!-- /panel-form -->
 
@@ -1632,6 +1670,25 @@ var EVOQ_LINKS = {
     var id = btn.getAttribute('data-close');
     btn.addEventListener('click', function() {
       openPanel(id);
+    });
+  });
+
+  // Sous-sections dépliables (BIM, Cybersécurité, …)
+  document.querySelectorAll('.ei-sub-toggle').forEach(function(toggle) {
+    var subId = 'sub-' + toggle.getAttribute('data-sub');
+    var subPanel = document.getElementById(subId);
+    if (!subPanel) return;
+    function doToggle() {
+      var isOpen = toggle.classList.contains('open');
+      toggle.classList.toggle('open', !isOpen);
+      subPanel.classList.toggle('open', !isOpen);
+      toggle.setAttribute('aria-expanded', String(!isOpen));
+    }
+    toggle.addEventListener('click', function(e) {
+      if (!e.target.closest('a')) doToggle();
+    });
+    toggle.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); doToggle(); }
     });
   });
 
