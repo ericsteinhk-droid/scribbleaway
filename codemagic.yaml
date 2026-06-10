@@ -1,0 +1,82 @@
+workflows:
+  ios-rapports-de-visite:
+    name: Rapports de visite — iOS
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+
+    environment:
+      ios_signing:
+        distribution_type: app_store   # change to 'ad_hoc' for direct device installs
+        bundle_identifier: com.evoq.rapportsdevisite
+      vars:
+        XCODE_WORKSPACE: "App.xcworkspace"
+        XCODE_SCHEME: "App"
+      node: 20.x
+      # Firebase env vars — set these in Codemagic Dashboard > Environment variables:
+      # VITE_FIREBASE_API_KEY, VITE_FIREBASE_AUTH_DOMAIN, VITE_FIREBASE_PROJECT_ID,
+      # VITE_FIREBASE_STORAGE_BUCKET, VITE_FIREBASE_MESSAGING_SENDER_ID, VITE_FIREBASE_APP_ID
+
+    scripts:
+      - name: Install npm dependencies
+        script: cd rapports-de-visite && npm ci
+
+      - name: Write .env with Firebase config
+        script: |
+          cat > rapports-de-visite/.env << EOF
+          VITE_FIREBASE_API_KEY=$VITE_FIREBASE_API_KEY
+          VITE_FIREBASE_AUTH_DOMAIN=$VITE_FIREBASE_AUTH_DOMAIN
+          VITE_FIREBASE_PROJECT_ID=$VITE_FIREBASE_PROJECT_ID
+          VITE_FIREBASE_STORAGE_BUCKET=$VITE_FIREBASE_STORAGE_BUCKET
+          VITE_FIREBASE_MESSAGING_SENDER_ID=$VITE_FIREBASE_MESSAGING_SENDER_ID
+          VITE_FIREBASE_APP_ID=$VITE_FIREBASE_APP_ID
+          EOF
+
+      - name: Build web assets
+        script: cd rapports-de-visite && npm run build
+
+      - name: Add Capacitor iOS platform
+        script: cd rapports-de-visite && npx cap add ios
+
+      - name: Patch Info.plist — camera and photo library permissions
+        script: |
+          PLIST="rapports-de-visite/ios/App/App/Info.plist"
+          /usr/libexec/PlistBuddy -c \
+            "Add :NSCameraUsageDescription string 'L'\''appareil photo est utilisé pour prendre des photos lors des visites de chantier.'" \
+            "$PLIST"
+          /usr/libexec/PlistBuddy -c \
+            "Add :NSPhotoLibraryUsageDescription string 'L'\''accès à la galerie permet d'\''importer des photos dans les rapports de visite.'" \
+            "$PLIST"
+          /usr/libexec/PlistBuddy -c \
+            "Add :NSPhotoLibraryAddUsageDescription string 'Permet d'\''enregistrer des photos annotées dans votre galerie.'" \
+            "$PLIST"
+
+      - name: Sync Capacitor web assets to iOS
+        script: cd rapports-de-visite && npx cap sync ios
+
+      - name: Set build number from CM_BUILD_ID
+        script: |
+          cd rapports-de-visite/ios/App
+          agvtool new-version -all $BUILD_NUMBER
+
+      - name: Build iOS IPA
+        script: |
+          cd rapports-de-visite/ios/App
+          xcode-project build-ipa \
+            --workspace "$XCODE_WORKSPACE" \
+            --scheme "$XCODE_SCHEME"
+
+    artifacts:
+      - rapports-de-visite/ios/App/build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+
+    publishing:
+      app_store_connect:
+        auth: integration   # App Store Connect API key configured in Codemagic dashboard
+        submit_to_testflight: true
+        submit_to_app_store: false   # flip to true when ready for public App Store release
+      email:
+        recipients:
+          - ericsteinhk@gmail.com
+        notify:
+          success: true
+          failure: true
