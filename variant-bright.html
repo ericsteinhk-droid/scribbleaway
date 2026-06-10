@@ -497,6 +497,110 @@ body { background:#E9E7E0; }
 .ei-link-card{ border-radius:0; }
 .ei-expertise-chip{ background:#fff; border-color:#D8D6CE; border-radius:0; }
 .ei-footer{ border-top-color:#ECEAE3; background:rgba(255,255,255,0.7); }
+
+/* Comités — en-tête de comité */
+.ei-committee { margin-top: 0.5rem; }
+.ei-committee-head { display:flex; align-items:center; gap:0.6rem; margin-bottom:0.75rem; }
+.ei-committee-leaf { width:24px; height:24px; flex-shrink:0; display:block; }
+.ei-committee-name { font-size:0.85rem; font-weight:600; line-height:1.2; color:var(--text); }
+.ei-committee-en { font-size:0.65rem; color:var(--muted); font-style:italic; margin-top:0.05rem; }
+</style>
+
+<style>
+/* ===== VARIANTE « BANDEAU » — single-row tab navigation ===== */
+
+/* Tighten the main padding so the panel gets more vertical room */
+.ei-main { padding: 1.25rem 2rem 2rem; }
+.ei-section-label { margin-bottom: 0.65rem; }
+
+/* Tab strip replaces the card grid */
+.ei-sections-grid {
+  display: flex !important;
+  flex-direction: row;
+  gap: 0 !important;
+  margin-bottom: 1rem;
+  border: 1px solid #D8D6CE;
+  border-radius: 0;
+  overflow: visible;
+}
+
+.ei-section-card {
+  flex: 1;
+  border: none !important;
+  border-right: 1px solid #D8D6CE !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  outline: none !important;
+  position: relative;
+  transform: none !important;
+  background: #FDFDFB !important;
+}
+.ei-section-card:last-child { border-right: none !important; }
+
+/* Hover: very light category tint */
+.ei-section-card:hover {
+  background: color-mix(in srgb, var(--card-color) 6%, #fff) !important;
+  border-color: #D8D6CE !important;
+}
+
+/* Active tab: category-coloured bottom bar + white background */
+.ei-section-card.active {
+  background: #fff !important;
+  box-shadow: inset 0 -3px 0 var(--card-color) !important;
+}
+
+/* Header becomes the whole tab face */
+.ei-section-header {
+  height: auto !important;
+  min-height: 64px !important;
+  padding: 0.75rem 0.85rem 0.75rem 0.85rem !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: center !important;
+  background: transparent !important;
+  border-top: none !important;
+  position: relative !important;
+  overflow: visible !important;
+}
+
+/* Left-edge rule: spans the full tab height */
+.ei-section-header::before {
+  content: '' !important;
+  position: absolute !important;
+  left: 0; top: 0; bottom: 0;
+  width: 3px !important;
+  background: var(--card-color) !important;
+  display: block !important;
+}
+
+.ei-section-header h2 {
+  font-size: 0.8rem !important;
+  font-weight: 600 !important;
+  line-height: 1.25 !important;
+  margin-bottom: 0.1rem !important;
+  padding-left: 0.5rem !important;
+  /* Let titles wrap naturally — no truncation */
+  white-space: normal !important;
+  overflow: visible !important;
+  text-overflow: unset !important;
+}
+.ei-section-header .ei-en {
+  padding-left: 0.5rem !important;
+  font-size: 0.6rem !important;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Hide preview tags and the triangle indicator */
+.ei-section-preview { display: none !important; }
+.ei-arrow { display: none !important; }
+
+/* Panels open flush below the strip, no top margin */
+.ei-panel {
+  margin-top: 0 !important;
+  border-top: none !important;
+}
 </style>
 </head>
 <body>
@@ -1012,6 +1116,32 @@ body { background:#E9E7E0; }
             <div class="ei-link-text"><div class="ei-fr">Habitation et communautaire</div><div class="ei-en">Housing &amp; Community</div></div>
           </a>
         </div>
+
+        <div class="ei-level-label" style="margin-top:2rem">Comités / Committees</div>
+        <div class="ei-committee">
+          <div class="ei-committee-head">
+            <img class="ei-committee-leaf" src="maple_leaf_red.svg" alt="">
+            <div>
+              <div class="ei-committee-name">Sécurité des Contrats</div>
+              <div class="ei-committee-en">Contract Security</div>
+            </div>
+          </div>
+          <div class="ei-links-grid">
+            <a href="#" data-link="comite-secu-briefing" class="ei-link-card" style="--lc-color: #D52B1E">
+              <div class="ei-link-icon" style="color:#fff">📊</div>
+              <div class="ei-link-text"><div class="ei-fr">Briefing — Sécurité industrielle 2025</div><div class="ei-en">Industrial Security Briefing 2025 · PowerPoint</div></div>
+            </a>
+            <a href="#" data-link="comite-secu-srcl" class="ei-link-card" style="--lc-color: #D52B1E">
+              <div class="ei-link-icon" style="color:#fff">📑</div>
+              <div class="ei-link-text"><div class="ei-fr">LVERS / SRCL — Présentation</div><div class="ei-en">SRCL Presentation · PowerPoint</div></div>
+            </a>
+            <a href="#" data-link="comite-secu-manuel" class="ei-link-card" style="--lc-color: #D52B1E">
+              <div class="ei-link-icon" style="color:#fff">🇨🇦</div>
+              <div class="ei-link-text"><div class="ei-fr">Manuel de la sécurité des contrats</div><div class="ei-en">Contract Security Manual · Gouvernement du Canada</div></div>
+            </a>
+          </div>
+        </div>
+
       </div>
     </div><!-- /panel-biblio -->
 
@@ -1343,6 +1473,19 @@ body { background:#E9E7E0; }
         <button class="ei-panel-close" data-close="portal">Fermer ✕</button>
       </div>
       <div class="ei-panel-body">
+
+        <div class="ei-level-label">Santé &amp; Sécurité / Health &amp; Safety</div>
+        <div class="ei-links-grid" style="margin-bottom:1.25rem">
+          <a href="#" data-link="portal-sante-securite" class="ei-link-card" style="--lc-color: #9AA600">
+            <div class="ei-link-icon" style="color:#fff">🦺</div>
+            <div class="ei-link-text"><div class="ei-fr">Procédure — Salle d'équipement</div><div class="ei-en">Procedure — Equipment Room</div></div>
+          </a>
+          <a href="#" data-link="portal-ss-formations" class="ei-link-card" style="--lc-color: #9AA600">
+            <div class="ei-link-icon" style="color:#fff">📊</div>
+            <div class="ei-link-text"><div class="ei-fr">Organigrammes de formation (ON &amp; QC)</div><div class="ei-en">Training Flowcharts — Ontario &amp; Québec</div></div>
+          </a>
+        </div>
+
         <div class="ei-level-label">Documents et outils RH</div>
         <div class="ei-links-grid">
           <a href="#" data-link="portal-accueil" class="ei-link-card" style="--lc-color: #9AA600">
@@ -1351,7 +1494,7 @@ body { background:#E9E7E0; }
           </a>
           <a href="#" data-link="portal-manuel" class="ei-link-card" style="--lc-color: #9AA600">
             <div class="ei-link-icon" style="color:#fff">📗</div>
-            <div class="ei-link-text"><div class="ei-fr">Manuel de l'employé</div><div class="ei-en">Employee Handbook</div></div>
+            <div class="ei-link-text"><div class="ei-fr">Guide de l'employé</div><div class="ei-en">Employee Guide · octobre 2024</div></div>
           </a>
           <a href="#" data-link="portal-assurances" class="ei-link-card" style="--lc-color: #9AA600">
             <div class="ei-link-icon" style="color:#fff">🏥</div>
@@ -1362,6 +1505,7 @@ body { background:#E9E7E0; }
             <div class="ei-link-text"><div class="ei-fr">EmployeurD</div><div class="ei-en">EmployeurD</div></div>
           </a>
         </div>
+
       </div>
     </div><!-- /panel-portal -->
 
@@ -1397,6 +1541,11 @@ var EVOQ_LINKS = {
   "biblio-transports":     "#",
   "biblio-habitation":     "#",
 
+  /* Comité — Sécurité des Contrats */
+  "comite-secu-briefing":  "https://evoqarchitecture.sharepoint.com/:p:/r/sites/EVOQ-Security/Shared%20Documents/1-PSPC-SPAC/4-Reference/Formation_Training/Powerpoints/Briefing_S%C3%A9cut%C3%A9%20Industrielle_2025.pptx?d=wb17b6e3b58374072b17090a542d4cb93&csf=1&web=1&e=7X7MZ3",
+  "comite-secu-srcl":      "https://evoqarchitecture.sharepoint.com/:p:/r/sites/EVOQ-Security/Shared%20Documents/1-PSPC-SPAC/4-Reference/Formation_Training/Powerpoints/SRCL_Presentation_FR.pptx?d=w89cf8bea8a1646e3b516255692cc48ae&csf=1&web=1&e=TKKIxl",
+  "comite-secu-manuel":    "https://www.canada.ca/fr/services-publics-approvisionnement/services/securite-industrielle/exigences-securite-contrats/manuel-securite-contrats-gouvernement-canada.html",
+
   /* Formations — capsules EVOQ */
   "form-capsules-tc":      "#",
   "form-trucs-astuces":    "#",
@@ -1405,9 +1554,12 @@ var EVOQ_LINKS = {
   "form-bon-usage-ti":     "#",
   "form-pratique-pro":     "#",
 
-  /* Portail employés */
-  "portal-accueil":        "#",
-  "portal-manuel":         "#",
+  /* Portail employés — Santé & Sécurité */
+  "portal-sante-securite": "https://evoqarchitecture.sharepoint.com/:b:/r/sites/EVOQBureau-EVOQOffice/Shared%20Documents/Sant%C3%A9%20S%C3%A9curit%C3%A9%20-%20Health%20Safety/Info%20g%C3%A9n%C3%A9rale%20-%20General%20Info/231219_Procedure_Salle%C3%89quipement_EquipmentRoom.pdf?csf=1&web=1",
+  "portal-ss-formations":  "https://evoqarchitecture.sharepoint.com/:f:/r/sites/EVOQBureau-EVOQOffice/Shared%20Documents/Sant%C3%A9%20S%C3%A9curit%C3%A9%20-%20Health%20Safety?csf=1&web=1",
+  /* Portail employés — RH */
+  "portal-accueil":               "#",
+  "portal-manuel":         "https://evoqarchitecture.sharepoint.com/:b:/r/sites/EVOQBureau-EVOQOffice/Shared%20Documents/General/Talents%20et%20Culture/EVOQ_Guide%20de%20l%27employ%C3%A9%20-%20octobre%202024.pdf?csf=1&web=1&e=f4YSgy",
   "portal-assurances":     "#",
   "portal-employeurd":     "#"
 };

@@ -497,6 +497,13 @@ body { background:#E9E7E0; }
 .ei-link-card{ border-radius:0; }
 .ei-expertise-chip{ background:#fff; border-color:#D8D6CE; border-radius:0; }
 .ei-footer{ border-top-color:#ECEAE3; background:rgba(255,255,255,0.7); }
+
+/* Comités — en-tête de comité */
+.ei-committee { margin-top: 0.5rem; }
+.ei-committee-head { display:flex; align-items:center; gap:0.6rem; margin-bottom:0.75rem; }
+.ei-committee-leaf { width:24px; height:24px; flex-shrink:0; display:block; }
+.ei-committee-name { font-size:0.85rem; font-weight:600; line-height:1.2; color:var(--text); }
+.ei-committee-en { font-size:0.65rem; color:var(--muted); font-style:italic; margin-top:0.05rem; }
 </style>
 
 <style>
@@ -1109,6 +1116,32 @@ body { background:#E9E7E0; }
             <div class="ei-link-text"><div class="ei-fr">Habitation et communautaire</div><div class="ei-en">Housing &amp; Community</div></div>
           </a>
         </div>
+
+        <div class="ei-level-label" style="margin-top:2rem">Comités / Committees</div>
+        <div class="ei-committee">
+          <div class="ei-committee-head">
+            <img class="ei-committee-leaf" src="maple_leaf_red.svg" alt="">
+            <div>
+              <div class="ei-committee-name">Sécurité des Contrats</div>
+              <div class="ei-committee-en">Contract Security</div>
+            </div>
+          </div>
+          <div class="ei-links-grid">
+            <a href="#" data-link="comite-secu-briefing" class="ei-link-card" style="--lc-color: #D52B1E">
+              <div class="ei-link-icon" style="color:#fff">📊</div>
+              <div class="ei-link-text"><div class="ei-fr">Briefing — Sécurité industrielle 2025</div><div class="ei-en">Industrial Security Briefing 2025 · PowerPoint</div></div>
+            </a>
+            <a href="#" data-link="comite-secu-srcl" class="ei-link-card" style="--lc-color: #D52B1E">
+              <div class="ei-link-icon" style="color:#fff">📑</div>
+              <div class="ei-link-text"><div class="ei-fr">LVERS / SRCL — Présentation</div><div class="ei-en">SRCL Presentation · PowerPoint</div></div>
+            </a>
+            <a href="#" data-link="comite-secu-manuel" class="ei-link-card" style="--lc-color: #D52B1E">
+              <div class="ei-link-icon" style="color:#fff">🇨🇦</div>
+              <div class="ei-link-text"><div class="ei-fr">Manuel de la sécurité des contrats</div><div class="ei-en">Contract Security Manual · Gouvernement du Canada</div></div>
+            </a>
+          </div>
+        </div>
+
       </div>
     </div><!-- /panel-biblio -->
 
@@ -1461,7 +1494,7 @@ body { background:#E9E7E0; }
           </a>
           <a href="#" data-link="portal-manuel" class="ei-link-card" style="--lc-color: #9AA600">
             <div class="ei-link-icon" style="color:#fff">📗</div>
-            <div class="ei-link-text"><div class="ei-fr">Manuel de l'employé</div><div class="ei-en">Employee Handbook</div></div>
+            <div class="ei-link-text"><div class="ei-fr">Guide de l'employé</div><div class="ei-en">Employee Guide · octobre 2024</div></div>
           </a>
           <a href="#" data-link="portal-assurances" class="ei-link-card" style="--lc-color: #9AA600">
             <div class="ei-link-icon" style="color:#fff">🏥</div>
@@ -1508,6 +1541,11 @@ var EVOQ_LINKS = {
   "biblio-transports":     "#",
   "biblio-habitation":     "#",
 
+  /* Comité — Sécurité des Contrats */
+  "comite-secu-briefing":  "https://evoqarchitecture.sharepoint.com/:p:/r/sites/EVOQ-Security/Shared%20Documents/1-PSPC-SPAC/4-Reference/Formation_Training/Powerpoints/Briefing_S%C3%A9cut%C3%A9%20Industrielle_2025.pptx?d=wb17b6e3b58374072b17090a542d4cb93&csf=1&web=1&e=7X7MZ3",
+  "comite-secu-srcl":      "https://evoqarchitecture.sharepoint.com/:p:/r/sites/EVOQ-Security/Shared%20Documents/1-PSPC-SPAC/4-Reference/Formation_Training/Powerpoints/SRCL_Presentation_FR.pptx?d=w89cf8bea8a1646e3b516255692cc48ae&csf=1&web=1&e=TKKIxl",
+  "comite-secu-manuel":    "https://www.canada.ca/fr/services-publics-approvisionnement/services/securite-industrielle/exigences-securite-contrats/manuel-securite-contrats-gouvernement-canada.html",
+
   /* Formations — capsules EVOQ */
   "form-capsules-tc":      "#",
   "form-trucs-astuces":    "#",
@@ -1521,7 +1559,7 @@ var EVOQ_LINKS = {
   "portal-ss-formations":  "https://evoqarchitecture.sharepoint.com/:f:/r/sites/EVOQBureau-EVOQOffice/Shared%20Documents/Sant%C3%A9%20S%C3%A9curit%C3%A9%20-%20Health%20Safety?csf=1&web=1",
   /* Portail employés — RH */
   "portal-accueil":               "#",
-  "portal-manuel":         "#",
+  "portal-manuel":         "https://evoqarchitecture.sharepoint.com/:b:/r/sites/EVOQBureau-EVOQOffice/Shared%20Documents/General/Talents%20et%20Culture/EVOQ_Guide%20de%20l%27employ%C3%A9%20-%20octobre%202024.pdf?csf=1&web=1&e=f4YSgy",
   "portal-assurances":     "#",
   "portal-employeurd":     "#"
 };
