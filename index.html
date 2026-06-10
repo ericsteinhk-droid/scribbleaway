@@ -463,6 +463,39 @@
     border-top: 1px solid var(--mid);
   }
 </style>
+
+<style>
+/* ===== VARIANTE « LUMINEUSE » — bright & clean ===== */
+body { background:#E9E7E0; }
+.evoq-intranet{
+  --light:#FDFDFB; --mid:#E8E6DE;
+  background-color:#FCFCFA;
+  background-image:
+    linear-gradient(to bottom, rgba(252,252,250,0.48) 0%, rgba(252,252,250,0.86) 45%, rgba(252,252,250,0.97) 100%),
+    url('evoq_bg.jpg');
+  border-radius:14px;
+  box-shadow:0 14px 44px rgba(60,55,40,0.16);
+}
+.ei-header{ background:#FFFFFF; border-bottom:1px solid #ECEAE3; border-radius:14px 14px 0 0; }
+.ei-header-meta{ color:#9C9A90; }
+.ei-banner{ background:rgba(255,255,255,0.85); color:#55534C; border-bottom:1px solid #ECEAE3; }
+.ei-banner-label{ color:#E87722; border-right-color:rgba(0,0,0,0.1); }
+.ei-section-label{ color:#8B897E; }
+.ei-sections-grid{ gap:4px; }
+.ei-section-card{ border-radius:10px; background:#fff; box-shadow:0 3px 14px rgba(60,55,40,0.08); }
+.ei-section-card:hover{ box-shadow:0 12px 30px rgba(60,55,40,0.16); }
+.ei-section-header{ background:#fff; color:var(--card-color); border-top:4px solid var(--card-color); }
+.ei-section-header .ei-en{ color:#A09E94; opacity:1; }
+.ei-arrow{ background:var(--card-color); color:#fff; }
+.ei-section-card.active .ei-arrow{ background:var(--card-color); }
+.ei-section-preview{ border:none; border-radius:0 0 10px 10px; }
+.ei-preview-tag{ background:#F3F2EC; color:#8B897E; border-radius:10px; }
+.ei-panel{ border-radius:12px; border-color:#ECEAE3; box-shadow:0 8px 26px rgba(60,55,40,0.08); }
+.ei-link-card,.ei-person-card,.ei-mission-item{ background:#fff; border-radius:10px; border-color:#ECEAE3; }
+.ei-link-card{ border-radius:10px; }
+.ei-expertise-chip{ background:#fff; border-color:#ECEAE3; }
+.ei-footer{ border-top-color:#ECEAE3; background:rgba(255,255,255,0.7); }
+</style>
 </head>
 <body>
 <div class="evoq-intranet">
@@ -470,7 +503,7 @@
   <!-- HEADER -->
   <header class="ei-header">
     <span class="ei-logo">
-      <img class="ei-logo-svg" src="evoq_logo_white.svg" alt="EVOQ">
+      <img class="ei-logo-svg" src="evoq_logo_v_10kb.svg" alt="EVOQ">
     </span>
     <div class="ei-header-meta">Intranet · EVOQ Architecture</div>
   </header>
@@ -513,7 +546,7 @@
       <div class="ei-section-card c-evoq" tabindex="0" role="button" aria-expanded="false" data-panel="evoq">
         <div class="ei-section-header">
           <div class="ei-arrow">↓</div>
-          <h2><img class="ei-inline-logo" src="evoq_logo_white.svg" alt="EVOQ"></h2>
+          <h2><img class="ei-inline-logo" src="evoq_logo_v_10kb.svg" alt="EVOQ"></h2>
           <div class="ei-en">&nbsp;</div>
         </div>
         <div class="ei-section-preview">
@@ -530,8 +563,8 @@
       <div class="ei-section-card c-biblio" tabindex="0" role="button" aria-expanded="false" data-panel="biblio">
         <div class="ei-section-header">
           <div class="ei-arrow">↓</div>
-          <h2>Bibliothèque <img class="ei-inline-logo" src="evoq_logo_white.svg" alt="EVOQ"></h2>
-          <div class="ei-en"><img class="ei-inline-logo" src="evoq_logo_white.svg" alt="EVOQ"> Library</div>
+          <h2>Bibliothèque <img class="ei-inline-logo" src="evoq_logo_v_10kb.svg" alt="EVOQ"></h2>
+          <div class="ei-en"><img class="ei-inline-logo" src="evoq_logo_v_10kb.svg" alt="EVOQ"> Library</div>
         </div>
         <div class="ei-section-preview">
           <div class="ei-preview-tags">
