@@ -407,6 +407,15 @@
   .c-form   { --card-color: #E4003A; --panel-color: #E4003A; }
   .c-ext    { --card-color: #00B2A4; --panel-color: #00B2A4; }
   .c-portal { --card-color: #9AA600; --panel-color: #9AA600; }
+  /* Liens SharePoint non assignés (href="#" dans EVOQ_LINKS) */
+  .ei-link-pending { opacity: 0.5; cursor: default; }
+  .ei-link-pending:hover {
+    border-color: var(--mid);
+    background: var(--light);
+    box-shadow: none;
+    transform: none;
+  }
+  .ei-link-pending:hover::before { opacity: 0; }
   .ei-footer {
     text-align: center;
     padding: 1.5rem;
@@ -879,50 +888,50 @@
       <div class="ei-panel-body">
         <div class="ei-level-label">Par groupe</div>
         <div class="ei-links-grid">
-          <a href="#" class="ei-link-card" style="--lc-color: #4A6B7A">
+          <a href="#" data-link="biblio-voyageurs" class="ei-link-card" style="--lc-color: #4A6B7A">
             <div class="ei-link-icon" style="color:#fff">✈️</div>
             <div class="ei-link-text"><div class="ei-fr">Voyageurs</div><div class="ei-en">Travellers</div></div>
           </a>
-          <a href="#" class="ei-link-card" style="--lc-color: #4A6B7A">
+          <a href="#" data-link="biblio-comptabilite" class="ei-link-card" style="--lc-color: #4A6B7A">
             <div class="ei-link-icon" style="color:#fff">📊</div>
             <div class="ei-link-text"><div class="ei-fr">Comptabilité</div><div class="ei-en">Accounting</div></div>
           </a>
-          <a href="#" class="ei-link-card" style="--lc-color: #4A6B7A">
+          <a href="#" data-link="biblio-promo" class="ei-link-card" style="--lc-color: #4A6B7A">
             <div class="ei-link-icon" style="color:#fff">📣</div>
             <div class="ei-link-text"><div class="ei-fr">Promo</div><div class="ei-en">Promo</div></div>
           </a>
-          <a href="#" class="ei-link-card" style="--lc-color: #4A6B7A">
+          <a href="#" data-link="biblio-talents-culture" class="ei-link-card" style="--lc-color: #4A6B7A">
             <div class="ei-link-icon" style="color:#fff">🎭</div>
             <div class="ei-link-text"><div class="ei-fr">Talents &amp; Culture</div><div class="ei-en">Talents &amp; Culture</div></div>
           </a>
-          <a href="#" class="ei-link-card" style="--lc-color: #4A6B7A">
+          <a href="#" data-link="biblio-comites" class="ei-link-card" style="--lc-color: #4A6B7A">
             <div class="ei-link-icon" style="color:#fff">🤝</div>
             <div class="ei-link-text"><div class="ei-fr">Comités</div><div class="ei-en">Committees</div></div>
           </a>
-          <a href="#" class="ei-link-card" style="--lc-color: #4A6B7A">
+          <a href="#" data-link="biblio-direction" class="ei-link-card" style="--lc-color: #4A6B7A">
             <div class="ei-link-icon" style="color:#fff">🧭</div>
             <div class="ei-link-text"><div class="ei-fr">Direction</div><div class="ei-en">Management</div></div>
           </a>
-          <a href="#" class="ei-link-card" style="--lc-color: #4A6B7A">
+          <a href="#" data-link="biblio-architectes" class="ei-link-card" style="--lc-color: #4A6B7A">
             <div class="ei-link-icon" style="color:#fff">📐</div>
             <div class="ei-link-text"><div class="ei-fr">Architectes</div><div class="ei-en">Architects</div></div>
           </a>
         </div>
         <div class="ei-level-label" style="margin-top:2rem">Par domaine de pratique</div>
         <div class="ei-links-grid">
-          <a href="#" class="ei-link-card" style="--lc-color: #9AA600">
+          <a href="#" data-link="biblio-patrimoine" class="ei-link-card" style="--lc-color: #9AA600">
             <div class="ei-link-icon" style="color:#fff">🏛️</div>
             <div class="ei-link-text"><div class="ei-fr">Patrimoine</div><div class="ei-en">Heritage</div></div>
           </a>
-          <a href="#" class="ei-link-card" style="--lc-color: #9AA600">
+          <a href="#" data-link="biblio-autochtone" class="ei-link-card" style="--lc-color: #9AA600">
             <div class="ei-link-icon" style="color:#fff">🌿</div>
             <div class="ei-link-text"><div class="ei-fr">Inuit / Premières Nations</div><div class="ei-en">Indigenous</div></div>
           </a>
-          <a href="#" class="ei-link-card" style="--lc-color: #9AA600">
+          <a href="#" data-link="biblio-transports" class="ei-link-card" style="--lc-color: #9AA600">
             <div class="ei-link-icon" style="color:#fff">🚆</div>
             <div class="ei-link-text"><div class="ei-fr">Transports</div><div class="ei-en">Transportation</div></div>
           </a>
-          <a href="#" class="ei-link-card" style="--lc-color: #9AA600">
+          <a href="#" data-link="biblio-habitation" class="ei-link-card" style="--lc-color: #9AA600">
             <div class="ei-link-icon" style="color:#fff">🏘️</div>
             <div class="ei-link-text"><div class="ei-fr">Habitation et communautaire</div><div class="ei-en">Housing &amp; Community</div></div>
           </a>
@@ -1008,27 +1017,27 @@
       <div class="ei-panel-body">
         <div class="ei-level-label">Capsules EVOQ</div>
         <div class="ei-links-grid">
-          <a href="#" class="ei-link-card" style="--lc-color: #E4003A">
+          <a href="#" data-link="form-capsules-tc" class="ei-link-card" style="--lc-color: #E4003A">
             <div class="ei-link-icon" style="color:#fff">🎨</div>
             <div class="ei-link-text"><div class="ei-fr">Capsules T&amp;C</div><div class="ei-en">T&amp;C Capsules</div></div>
           </a>
-          <a href="#" class="ei-link-card" style="--lc-color: #E4003A">
+          <a href="#" data-link="form-trucs-astuces" class="ei-link-card" style="--lc-color: #E4003A">
             <div class="ei-link-icon" style="color:#fff">💡</div>
             <div class="ei-link-text"><div class="ei-fr">Trucs et astuces</div><div class="ei-en">Tips &amp; Tricks</div></div>
           </a>
-          <a href="#" class="ei-link-card" style="--lc-color: #E4003A">
+          <a href="#" data-link="form-capsules-bim" class="ei-link-card" style="--lc-color: #E4003A">
             <div class="ei-link-icon" style="color:#fff">🏗️</div>
             <div class="ei-link-text"><div class="ei-fr">Capsules BIM</div><div class="ei-en">BIM Capsules</div></div>
           </a>
-          <a href="#" class="ei-link-card" style="--lc-color: #E4003A">
+          <a href="#" data-link="form-capsules-cyber" class="ei-link-card" style="--lc-color: #E4003A">
             <div class="ei-link-icon" style="color:#fff">🔐</div>
             <div class="ei-link-text"><div class="ei-fr">Capsules Cybersécurité</div><div class="ei-en">Cybersecurity Capsules</div></div>
           </a>
-          <a href="#" class="ei-link-card" style="--lc-color: #E4003A">
+          <a href="#" data-link="form-bon-usage-ti" class="ei-link-card" style="--lc-color: #E4003A">
             <div class="ei-link-icon" style="color:#fff">💻</div>
             <div class="ei-link-text"><div class="ei-fr">Bon Usage TI</div><div class="ei-en">Good IT Practices</div></div>
           </a>
-          <a href="#" class="ei-link-card" style="--lc-color: #E4003A">
+          <a href="#" data-link="form-pratique-pro" class="ei-link-card" style="--lc-color: #E4003A">
             <div class="ei-link-icon" style="color:#fff">📐</div>
             <div class="ei-link-text"><div class="ei-fr">Pratique professionnelle</div><div class="ei-en">Professional Practice</div></div>
           </a>
@@ -1260,19 +1269,19 @@
       <div class="ei-panel-body">
         <div class="ei-level-label">Documents et outils RH</div>
         <div class="ei-links-grid">
-          <a href="#" class="ei-link-card" style="--lc-color: #9AA600">
+          <a href="#" data-link="portal-accueil" class="ei-link-card" style="--lc-color: #9AA600">
             <div class="ei-link-icon" style="color:#fff">👋</div>
             <div class="ei-link-text"><div class="ei-fr">Accueil Nouveaux employés</div><div class="ei-en">New Employee Welcome</div></div>
           </a>
-          <a href="#" class="ei-link-card" style="--lc-color: #9AA600">
+          <a href="#" data-link="portal-manuel" class="ei-link-card" style="--lc-color: #9AA600">
             <div class="ei-link-icon" style="color:#fff">📗</div>
             <div class="ei-link-text"><div class="ei-fr">Manuel de l'employé</div><div class="ei-en">Employee Handbook</div></div>
           </a>
-          <a href="#" class="ei-link-card" style="--lc-color: #9AA600">
+          <a href="#" data-link="portal-assurances" class="ei-link-card" style="--lc-color: #9AA600">
             <div class="ei-link-icon" style="color:#fff">🏥</div>
             <div class="ei-link-text"><div class="ei-fr">Assurances, PAE</div><div class="ei-en">Insurance, EAP</div></div>
           </a>
-          <a href="#" class="ei-link-card" style="--lc-color: #9AA600">
+          <a href="#" data-link="portal-employeurd" class="ei-link-card" style="--lc-color: #9AA600">
             <div class="ei-link-icon" style="color:#fff">🗂️</div>
             <div class="ei-link-text"><div class="ei-fr">EmployeurD</div><div class="ei-en">EmployeurD</div></div>
           </a>
@@ -1285,6 +1294,45 @@
   <footer class="ei-footer">EVOQ Architectes · Intranet · Usage interne exclusivement</footer>
 
 </div><!-- /evoq-intranet -->
+
+<script>
+/* ════════════════════════════════════════════════════════════════
+   LIENS SHAREPOINT INTERNES — À COMPLÉTER
+   Remplacer "#" par l'URL SharePoint correspondante, p. ex. :
+   "biblio-voyageurs": "https://evoq.sharepoint.com/sites/Bibliotheque/Voyageurs"
+   Les liens laissés à "#" apparaissent grisés sur la page.
+   ════════════════════════════════════════════════════════════════ */
+var EVOQ_LINKS = {
+  /* Bibliothèque EVOQ — par groupe */
+  "biblio-voyageurs":      "#",
+  "biblio-comptabilite":   "#",
+  "biblio-promo":          "#",
+  "biblio-talents-culture":"#",
+  "biblio-comites":        "#",
+  "biblio-direction":      "#",
+  "biblio-architectes":    "#",
+
+  /* Bibliothèque EVOQ — par domaine de pratique */
+  "biblio-patrimoine":     "#",
+  "biblio-autochtone":     "#",
+  "biblio-transports":     "#",
+  "biblio-habitation":     "#",
+
+  /* Formations — capsules EVOQ */
+  "form-capsules-tc":      "#",
+  "form-trucs-astuces":    "#",
+  "form-capsules-bim":     "#",
+  "form-capsules-cyber":   "#",
+  "form-bon-usage-ti":     "#",
+  "form-pratique-pro":     "#",
+
+  /* Portail employés */
+  "portal-accueil":        "#",
+  "portal-manuel":         "#",
+  "portal-assurances":     "#",
+  "portal-employeurd":     "#"
+};
+</script>
 
 <script>
 (function() {
@@ -1344,6 +1392,20 @@
     btn.addEventListener('click', function() {
       openPanel(id);
     });
+  });
+
+  // Câblage des liens SharePoint depuis EVOQ_LINKS
+  document.querySelectorAll('[data-link]').forEach(function(a) {
+    var key = a.getAttribute('data-link');
+    var url = (typeof EVOQ_LINKS !== 'undefined' && EVOQ_LINKS[key]) || '#';
+    if (url && url !== '#') {
+      a.href = url;
+      a.target = '_blank';
+    } else {
+      a.classList.add('ei-link-pending');
+      a.setAttribute('title', 'Lien SharePoint à venir');
+      a.addEventListener('click', function(e) { e.preventDefault(); });
+    }
   });
 
 })();
