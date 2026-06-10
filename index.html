@@ -22,7 +22,16 @@
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   .evoq-intranet {
     font-family: 'DM Sans', 'Segoe UI', Tahoma, sans-serif;
-    background: var(--light);
+    background-color: var(--light);
+    background-image:
+      linear-gradient(to bottom,
+        rgba(245,245,242,0.72) 0%,
+        rgba(245,245,242,0.88) 40%,
+        rgba(245,245,242,0.96) 100%),
+      url('evoq_bg.jpg');
+    background-size: cover;
+    background-position: center top;
+    background-repeat: no-repeat;
     color: var(--text);
     max-width: 1400px;
     margin: 0 auto;
@@ -433,9 +442,9 @@
   <!-- HEADER -->
   <header class="ei-header">
     <span class="ei-logo">
-      <img class="ei-logo-svg" src="evoq_logo_v_10kb.svg" alt="EVOQ">
+      <img class="ei-logo-svg" src="evoq_logo_white.svg" alt="EVOQ">
     </span>
-    <div class="ei-header-meta">Intranet · EVOQ Architectes</div>
+    <div class="ei-header-meta">Intranet · EVOQ Architecture</div>
   </header>
 
   <!-- BANNIÈRE ACTUALITÉS -->
@@ -1297,7 +1306,7 @@
 
   <footer class="ei-footer">
     <img class="ei-footer-logo" src="evoq_logo_v_10kb.svg" alt="EVOQ">
-    EVOQ Architectes · Intranet · Usage interne exclusivement
+    EVOQ Architecture · Intranet · Usage interne exclusivement
   </footer>
 
 </div><!-- /evoq-intranet -->
