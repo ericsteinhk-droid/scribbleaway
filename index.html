@@ -430,49 +430,10 @@
 <body>
 <div class="evoq-intranet">
 
-  <!-- LOGO EVOQ — wordmark vectoriel officiel (lettres ajourées, dégradés de marque) -->
-  <svg xmlns="http://www.w3.org/2000/svg" width="0" height="0" style="position:absolute;overflow:hidden" aria-hidden="true" focusable="false">
-    <defs>
-        <linearGradient id="evoq-grad-e" gradientUnits="userSpaceOnUse" x1="0" y1="47" x2="44" y2="0">
-          <stop offset="0" stop-color="#E4003A"/><stop offset="1" stop-color="#532C51"/>
-        </linearGradient>
-        <linearGradient id="evoq-grad-v" gradientUnits="userSpaceOnUse" x1="54" y1="47" x2="100" y2="0">
-          <stop offset="0" stop-color="#1B5E7B"/><stop offset="1" stop-color="#9AA600"/>
-        </linearGradient>
-        <linearGradient id="evoq-grad-o" gradientUnits="userSpaceOnUse" x1="124" y1="0" x2="144" y2="47">
-          <stop offset="0" stop-color="#9AA600"/><stop offset="1" stop-color="#00B2A4"/>
-        </linearGradient>
-        <linearGradient id="evoq-grad-q" gradientUnits="userSpaceOnUse" x1="167" y1="0" x2="209" y2="47">
-          <stop offset="0" stop-color="#E4003A"/><stop offset="1" stop-color="#E87722"/>
-        </linearGradient>
-      </defs>
-    <symbol id="evoq-wordmark" viewBox="0 0 222 47">
-      <!-- E : fût + trois barres détachées -->
-      <g fill="url(#evoq-grad-e)">
-        <rect x="0" y="0" width="13" height="47"/>
-        <rect x="18" y="0" width="26" height="13"/>
-        <rect x="18" y="17" width="26" height="13"/>
-        <rect x="18" y="34" width="26" height="13"/>
-      </g>
-      <!-- V -->
-      <path fill="url(#evoq-grad-v)" d="M54 0 H67 L77 31 L87 0 H100 L83 47 H71 Z"/>
-      <!-- O : anneau entaillé en diagonale -->
-      <g fill="none" stroke="url(#evoq-grad-o)" stroke-width="11.5">
-        <path d="M148.34 13.46 A17.5 17.5 0 0 1 123.96 37.84"/>
-        <path d="M119.66 33.54 A17.5 17.5 0 0 1 144.04 9.16"/>
-      </g>
-      <!-- Q : anneau entaillé à l'horizontale + queue -->
-      <g fill="none" stroke="url(#evoq-grad-q)" stroke-width="11.5">
-        <path d="M167.72 20.76 A17.5 17.5 0 0 1 202.28 20.76"/>
-        <path d="M202.28 26.24 A17.5 17.5 0 0 1 167.72 26.24"/>
-      </g>
-      <rect fill="url(#evoq-grad-q)" x="194" y="27.5" width="28" height="11.5"/>
-    </symbol>
-  </svg>
   <!-- HEADER -->
   <header class="ei-header">
-    <span class="ei-logo" role="img" aria-label="EVOQ">
-      <svg class="ei-logo-svg" viewBox="0 0 222 47"><use href="#evoq-wordmark"/></svg>
+    <span class="ei-logo">
+      <img class="ei-logo-svg" src="evoq_logo_v_10kb.svg" alt="EVOQ">
     </span>
     <div class="ei-header-meta">Intranet · EVOQ Architectes</div>
   </header>
@@ -620,7 +581,7 @@
       <div class="ei-panel-header">
         <div class="ei-panel-accent"></div>
         <div>
-          <h3 role="img" aria-label="EVOQ"><svg class="ei-panel-logo" viewBox="0 0 222 47"><use href="#evoq-wordmark"/></svg></h3>
+          <h3><img class="ei-panel-logo" src="evoq_logo_v_10kb.svg" alt="EVOQ"></h3>
           <div class="ei-panel-desc">Identité et structure interne du cabinet · Source : evoqarchitecture.com</div>
         </div>
         <button class="ei-panel-close" data-close="evoq">Fermer ✕</button>
@@ -1335,7 +1296,7 @@
   </main>
 
   <footer class="ei-footer">
-    <svg class="ei-footer-logo" viewBox="0 0 214 47" role="img" aria-label="EVOQ"><use href="#evoq-wordmark"/></svg>
+    <img class="ei-footer-logo" src="evoq_logo_v_10kb.svg" alt="EVOQ">
     EVOQ Architectes · Intranet · Usage interne exclusivement
   </footer>
 
