@@ -544,8 +544,9 @@ body { background:#E9E7E0; }
 
 /* Header becomes the whole tab face */
 .ei-section-header {
-  height: 56px !important;
-  padding: 0 2rem 0 0.85rem !important;
+  height: auto !important;
+  min-height: 64px !important;
+  padding: 0.75rem 0.85rem 0.75rem 0.85rem !important;
   display: flex !important;
   flex-direction: column !important;
   justify-content: center !important;
@@ -555,28 +556,33 @@ body { background:#E9E7E0; }
   overflow: visible !important;
 }
 
-/* Left-edge rule stays, color-matched */
+/* Left-edge rule: spans the full tab height */
 .ei-section-header::before {
   content: '' !important;
   position: absolute !important;
-  left: 0; top: 18%; bottom: 18%;
+  left: 0; top: 0; bottom: 0;
   width: 3px !important;
   background: var(--card-color) !important;
   display: block !important;
 }
 
 .ei-section-header h2 {
-  font-size: 0.82rem !important;
-  margin-bottom: 0.05rem !important;
-  padding-left: 0.35rem !important;
+  font-size: 0.8rem !important;
+  font-weight: 600 !important;
+  line-height: 1.25 !important;
+  margin-bottom: 0.1rem !important;
+  padding-left: 0.5rem !important;
+  /* Let titles wrap naturally — no truncation */
+  white-space: normal !important;
+  overflow: visible !important;
+  text-overflow: unset !important;
+}
+.ei-section-header .ei-en {
+  padding-left: 0.5rem !important;
+  font-size: 0.6rem !important;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-.ei-section-header .ei-en {
-  padding-left: 0.35rem !important;
-  font-size: 0.6rem !important;
-  white-space: nowrap;
 }
 
 /* Hide preview tags and the triangle indicator */
