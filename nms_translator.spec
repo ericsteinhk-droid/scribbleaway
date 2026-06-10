@@ -1,13 +1,18 @@
 # -*- mode: python ; coding: utf-8 -*-
 # PyInstaller spec for NMS/DDN Translator
-# One-file Windows executable.  No LibreOffice dependency.
-# Build: python -m PyInstaller nms_translator.spec
+# One-FOLDER Windows build (faster startup, friendlier to AV than one-file).
+# Pair with installer.iss to produce a proper Windows installer.
+# Build: python -m PyInstaller nms_translator.spec --clean
 
 a = Analysis(
     ['gui.py'],
     pathex=[],
     binaries=[],
-    datas=[('evoq_logo.png', '.'), ('NMS-DDN_Bilingual_Lexicon.txt', '.')],
+    datas=[
+        ('evoq_logo.png', '.'),
+        ('evoq_icon.ico', '.'),
+        ('NMS-DDN_Bilingual_Lexicon.txt', '.'),
+    ],
     hiddenimports=[
         # lxml C extensions
         'lxml.etree',
@@ -27,6 +32,8 @@ a = Analysis(
         # our modules
         'config',
         'api_client',
+        'ui_strings',
+        'nms_cache',
         'nms_preprocess',
         'nms_segment',
         'nms_translate',
@@ -38,7 +45,6 @@ a = Analysis(
     hooksconfig={},
     runtime_hooks=[],
     excludes=[
-        # keep the bundle small
         'matplotlib', 'numpy', 'pandas', 'scipy',
         'docx', 'openpyxl', 'xlrd',
         'tkinter.test',
@@ -62,8 +68,6 @@ splash = Splash(
 exe = EXE(
     pyz,
     a.scripts,
-    a.binaries,
-    a.datas,
     splash,
     splash.binaries,
     [],
@@ -71,14 +75,22 @@ exe = EXE(
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
-    upx=True,
-    upx_exclude=[],
-    runtime_tmpdir=None,
+    upx=False,          # UPX disabled — avoids AV false positives
     console=False,
     disable_windowed_traceback=False,
     argv_emulation=False,
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=None,               # add icon=r'icon.ico' if you have one
+    icon='evoq_icon.ico',
+)
+
+coll = COLLECT(
+    exe,
+    a.binaries,
+    a.datas,
+    splash.binaries,
+    strip=False,
+    upx=False,
+    name='NMSTranslator',
 )
