@@ -12,11 +12,11 @@ interface DraftData {
 }
 
 function getAnthropicKey(): string {
-  return localStorage.getItem('rdv-anthropic-key') || '';
+  return (localStorage.getItem('rdv-anthropic-key') || '').trim();
 }
 
 function getOpenAIKey(): string {
-  return localStorage.getItem('rdv-openai-key') || '';
+  return (localStorage.getItem('rdv-openai-key') || '').trim();
 }
 
 interface Props {
@@ -161,7 +161,10 @@ export default function EntryForm({ initial, storagePath, onSubmit, onCancel, on
           dataType: 'formData',
           readTimeout: 30000,
         });
-        if (resp.status !== 200) throw new Error(`HTTP ${resp.status}`);
+        if (resp.status !== 200) {
+          const errBody = typeof resp.data === 'string' ? resp.data : JSON.stringify(resp.data);
+          throw new Error(`HTTP ${resp.status}: ${errBody.slice(0, 300)}`);
+        }
         text = (resp.data as { text: string }).text;
       } else {
         const resp = await fetch('https://api.openai.com/v1/audio/transcriptions', {
