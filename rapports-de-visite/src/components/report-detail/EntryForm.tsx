@@ -190,12 +190,12 @@ export default function EntryForm({ initial, storagePath, onSubmit, onCancel, on
           'anthropic-dangerous-direct-browser-access': 'true',
         },
         body: JSON.stringify({
-          model: 'claude-opus-4-7',
-          max_tokens: 1024,
+          model: 'claude-haiku-4-5-20251001',
+          max_tokens: 512,
           messages: [
             {
               role: 'user',
-              content: `Tu es un assistant pour architectes. Reformate le texte suivant pour un rapport de visite de chantier professionnel. Type d'entrée : ${ENTRY_TYPE_LABELS[type]}. Corrige la grammaire, applique un français architectural professionnel, et préserve tous les faits techniques. Réponds uniquement avec le texte reformaté, sans explication.\n\nTexte:\n${content}`,
+              content: `Tu es un correcteur de texte strict pour rapports de visite de chantier.\n\nTA SEULE TÂCHE : corriger la grammaire, l'orthographe et la ponctuation.\n\nRÈGLES ABSOLUES :\n- N'ajoute AUCUNE information absente du texte original\n- Ne complète pas, n'extrapole pas, n'interprète pas\n- Conserve exactement les mêmes faits, chiffres, noms et observations\n- Si une phrase est incomplète ou ambiguë, laisse-la telle quelle\n- Type d'entrée : ${ENTRY_TYPE_LABELS[type]}\n\nRéponds uniquement avec le texte corrigé, sans explication ni commentaire.\n\nTexte :\n${content}`,
             },
           ],
         }),
