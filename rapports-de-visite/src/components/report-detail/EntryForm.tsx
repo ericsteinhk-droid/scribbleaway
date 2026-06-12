@@ -141,23 +141,28 @@ export default function EntryForm({ initial, storagePath, onSubmit, onCancel, on
               : mimeType.includes('ogg') ? 'ogg'
               : 'webm';
     const blob = new Blob(chunks, { type: mimeType });
-    const formData = new FormData();
-    formData.append('file', blob, `recording.${ext}`);
-    formData.append('model', 'whisper-1');
-    formData.append('language', 'fr');
 
     try {
       let text: string;
 
       if (Capacitor.isNativePlatform()) {
-        // On Android/iOS, fetch() and XHR both fail for binary FormData uploads
-        // due to WebView CORS restrictions. CapacitorHttp routes through OkHttp,
-        // which bypasses the WebView sandbox entirely — same approach used for photos.
+        // CapacitorHttp's formData mode requires a plain object, not a FormData instance.
+        // File parts must be { name, type, data } with base64-encoded data.
+        const base64Audio = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve((reader.result as string).split(',')[1]);
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        });
         const { CapacitorHttp } = await import('@capacitor/core');
         const resp = await CapacitorHttp.post({
           url: 'https://api.openai.com/v1/audio/transcriptions',
           headers: { Authorization: `Bearer ${apiKey}` },
-          data: formData,
+          data: {
+            file: { name: `recording.${ext}`, type: mimeType, data: base64Audio },
+            model: 'whisper-1',
+            language: 'fr',
+          },
           dataType: 'formData',
           readTimeout: 30000,
         });
@@ -167,10 +172,14 @@ export default function EntryForm({ initial, storagePath, onSubmit, onCancel, on
         }
         text = (resp.data as { text: string }).text;
       } else {
+        const webForm = new FormData();
+        webForm.append('file', blob, `recording.${ext}`);
+        webForm.append('model', 'whisper-1');
+        webForm.append('language', 'fr');
         const resp = await fetch('https://api.openai.com/v1/audio/transcriptions', {
           method: 'POST',
           headers: { Authorization: `Bearer ${apiKey}` },
-          body: formData,
+          body: webForm,
         });
         if (!resp.ok) throw new Error(`HTTP ${resp.status}: ${await resp.text()}`);
         text = ((await resp.json()) as { text: string }).text;
