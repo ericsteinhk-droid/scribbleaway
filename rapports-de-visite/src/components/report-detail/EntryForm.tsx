@@ -158,8 +158,6 @@ export default function EntryForm({ initial, storagePath, onSubmit, onCancel, on
           url: 'https://api.openai.com/v1/audio/transcriptions',
           headers: { Authorization: `Bearer ${apiKey}` },
           data: formData,
-          // @ts-expect-error — dataType 'formData' tells the native layer to
-          // use OkHttp's MultipartBody builder for binary file uploads
           dataType: 'formData',
           readTimeout: 30000,
         });
