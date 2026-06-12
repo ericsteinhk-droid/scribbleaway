@@ -111,20 +111,14 @@ export default function EntryForm({ initial, storagePath, onSubmit, onCancel, on
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       chunksRef.current = [];
-      // Pick the best format supported by this platform's MediaRecorder.
-      // Android WebView often only supports audio/mp4; browsers prefer webm.
-      const preferredTypes = [
-        'audio/webm;codecs=opus',
-        'audio/webm',
-        'audio/mp4',
-        'audio/ogg;codecs=opus',
-      ];
-      const mimeType = preferredTypes.find((t) => MediaRecorder.isTypeSupported(t)) ?? '';
-      mimeTypeRef.current = mimeType || 'audio/mp4';
-      const mr = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+      // Don't force a MIME type — let the platform pick what it supports.
+      // We'll read mr.mimeType after recording to know the actual format.
+      const mr = new MediaRecorder(stream);
       mr.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
       mr.onstop = () => {
         stream.getTracks().forEach((t) => t.stop());
+        // mr.mimeType is the format actually used (e.g. "audio/mp4" on Android)
+        mimeTypeRef.current = mr.mimeType || 'audio/mp4';
         transcribeAudio(chunksRef.current, key, mimeTypeRef.current);
       };
       mr.start(1000);
@@ -160,8 +154,9 @@ export default function EntryForm({ initial, storagePath, onSubmit, onCancel, on
       if (!resp.ok) throw new Error(await resp.text());
       const data = await resp.json() as { text: string };
       setPendingTranscript(data.text);
-    } catch {
-      setError('Erreur de transcription vocale.');
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setError(`Erreur de transcription : ${msg}`);
     } finally {
       setTranscribing(false);
     }
