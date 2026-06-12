@@ -39,6 +39,7 @@ export default function EntryForm({ initial, storagePath, onSubmit, onCancel, on
   const [pendingTranscript, setPendingTranscript] = useState<string | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
+  const mimeTypeRef = useRef<string>('audio/webm');
 
   // AI reformat state
   const [reformatting, setReformatting] = useState(false);
@@ -110,11 +111,21 @@ export default function EntryForm({ initial, storagePath, onSubmit, onCancel, on
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       chunksRef.current = [];
-      const mr = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+      // Pick the best format supported by this platform's MediaRecorder.
+      // Android WebView often only supports audio/mp4; browsers prefer webm.
+      const preferredTypes = [
+        'audio/webm;codecs=opus',
+        'audio/webm',
+        'audio/mp4',
+        'audio/ogg;codecs=opus',
+      ];
+      const mimeType = preferredTypes.find((t) => MediaRecorder.isTypeSupported(t)) ?? '';
+      mimeTypeRef.current = mimeType || 'audio/mp4';
+      const mr = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
       mr.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
       mr.onstop = () => {
         stream.getTracks().forEach((t) => t.stop());
-        transcribeAudio(chunksRef.current, key);
+        transcribeAudio(chunksRef.current, key, mimeTypeRef.current);
       };
       mr.start(1000);
       mediaRecorderRef.current = mr;
@@ -130,10 +141,13 @@ export default function EntryForm({ initial, storagePath, onSubmit, onCancel, on
     setTranscribing(true);
   }
 
-  async function transcribeAudio(chunks: Blob[], apiKey: string) {
-    const blob = new Blob(chunks, { type: 'audio/webm' });
+  async function transcribeAudio(chunks: Blob[], apiKey: string, mimeType: string) {
+    const ext = mimeType.includes('mp4') ? 'm4a'
+              : mimeType.includes('ogg') ? 'ogg'
+              : 'webm';
+    const blob = new Blob(chunks, { type: mimeType });
     const formData = new FormData();
-    formData.append('file', blob, 'recording.webm');
+    formData.append('file', blob, `recording.${ext}`);
     formData.append('model', 'whisper-1');
     formData.append('language', 'fr');
 
