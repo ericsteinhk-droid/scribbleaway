@@ -1,0 +1,24 @@
+{
+  "name": "evoq-assistant-backend",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.26.0",
+    "openai": "^4.52.0",
+    "@google/generative-ai": "^0.15.0",
+    "better-sqlite3": "^11.1.0",
+    "express": "^4.19.0",
+    "cors": "^2.8.5",
+    "helmet": "^7.1.0",
+    "multer": "^1.4.5-lts.1",
+    "pdf-parse": "^1.1.1",
+    "dotenv": "^16.4.0",
+    "bcryptjs": "^2.4.3",
+    "archiver": "^7.0.0",
+    "express-rate-limit": "^7.3.0"
+  }
+}
