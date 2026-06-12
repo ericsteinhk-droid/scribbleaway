@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { Capacitor } from '@capacitor/core';
 import type { Entry, EntryType, Photo } from '../../types';
 import { ENTRY_TYPE_LABELS, ENTRY_TYPE_COLORS } from '../../types';
 import PhotoGrid from './PhotoGrid';
@@ -146,25 +147,34 @@ export default function EntryForm({ initial, storagePath, onSubmit, onCancel, on
     formData.append('language', 'fr');
 
     try {
-      // Use XHR instead of fetch — Android WebView has a known bug where
-      // fetch() silently fails for binary FormData (Blob) uploads.
-      const text = await new Promise<string>((resolve, reject) => {
-        const xhr = new XMLHttpRequest();
-        xhr.open('POST', 'https://api.openai.com/v1/audio/transcriptions');
-        xhr.setRequestHeader('Authorization', `Bearer ${apiKey}`);
-        xhr.timeout = 30000;
-        xhr.onload = () => {
-          if (xhr.status === 200) {
-            try { resolve((JSON.parse(xhr.responseText) as { text: string }).text); }
-            catch { reject(new Error('Réponse invalide de Whisper')); }
-          } else {
-            reject(new Error(`HTTP ${xhr.status}: ${xhr.responseText.slice(0, 200)}`));
-          }
-        };
-        xhr.onerror = () => reject(new Error('Erreur réseau'));
-        xhr.ontimeout = () => reject(new Error('Délai dépassé (30s)'));
-        xhr.send(formData);
-      });
+      let text: string;
+
+      if (Capacitor.isNativePlatform()) {
+        // On Android/iOS, fetch() and XHR both fail for binary FormData uploads
+        // due to WebView CORS restrictions. CapacitorHttp routes through OkHttp,
+        // which bypasses the WebView sandbox entirely — same approach used for photos.
+        const { CapacitorHttp } = await import('@capacitor/core');
+        const resp = await CapacitorHttp.post({
+          url: 'https://api.openai.com/v1/audio/transcriptions',
+          headers: { Authorization: `Bearer ${apiKey}` },
+          data: formData,
+          // @ts-expect-error — dataType 'formData' tells the native layer to
+          // use OkHttp's MultipartBody builder for binary file uploads
+          dataType: 'formData',
+          readTimeout: 30000,
+        });
+        if (resp.status !== 200) throw new Error(`HTTP ${resp.status}`);
+        text = (resp.data as { text: string }).text;
+      } else {
+        const resp = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${apiKey}` },
+          body: formData,
+        });
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}: ${await resp.text()}`);
+        text = ((await resp.json()) as { text: string }).text;
+      }
+
       setPendingTranscript(text);
     } catch (err) {
       setError(`Erreur de transcription : ${err instanceof Error ? err.message : String(err)}`);
