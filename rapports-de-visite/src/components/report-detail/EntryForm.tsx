@@ -159,7 +159,7 @@ export default function EntryForm({ initial, storagePath, onSubmit, onCancel, on
         // not a plain object. 'base64File' entries also need fileName and contentType.
         const resp = await CapacitorHttp.post({
           url: 'https://api.openai.com/v1/audio/transcriptions',
-          headers: { Authorization: `Bearer ${apiKey}` },
+          headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'multipart/form-data' },
           data: [
             { type: 'base64File', key: 'file', value: base64Audio, fileName: `recording.${ext}`, contentType: mimeType },
             { type: 'string', key: 'model', value: 'whisper-1' },
