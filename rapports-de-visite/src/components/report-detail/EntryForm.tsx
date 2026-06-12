@@ -146,17 +146,28 @@ export default function EntryForm({ initial, storagePath, onSubmit, onCancel, on
     formData.append('language', 'fr');
 
     try {
-      const resp = await fetch('https://api.openai.com/v1/audio/transcriptions', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${apiKey}` },
-        body: formData,
+      // Use XHR instead of fetch — Android WebView has a known bug where
+      // fetch() silently fails for binary FormData (Blob) uploads.
+      const text = await new Promise<string>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', 'https://api.openai.com/v1/audio/transcriptions');
+        xhr.setRequestHeader('Authorization', `Bearer ${apiKey}`);
+        xhr.timeout = 30000;
+        xhr.onload = () => {
+          if (xhr.status === 200) {
+            try { resolve((JSON.parse(xhr.responseText) as { text: string }).text); }
+            catch { reject(new Error('Réponse invalide de Whisper')); }
+          } else {
+            reject(new Error(`HTTP ${xhr.status}: ${xhr.responseText.slice(0, 200)}`));
+          }
+        };
+        xhr.onerror = () => reject(new Error('Erreur réseau'));
+        xhr.ontimeout = () => reject(new Error('Délai dépassé (30s)'));
+        xhr.send(formData);
       });
-      if (!resp.ok) throw new Error(await resp.text());
-      const data = await resp.json() as { text: string };
-      setPendingTranscript(data.text);
+      setPendingTranscript(text);
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      setError(`Erreur de transcription : ${msg}`);
+      setError(`Erreur de transcription : ${err instanceof Error ? err.message : String(err)}`);
     } finally {
       setTranscribing(false);
     }
