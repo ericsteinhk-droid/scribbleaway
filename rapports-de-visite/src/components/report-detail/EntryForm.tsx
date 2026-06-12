@@ -155,14 +155,16 @@ export default function EntryForm({ initial, storagePath, onSubmit, onCancel, on
           reader.readAsDataURL(blob);
         });
         const { CapacitorHttp } = await import('@capacitor/core');
+        // CapacitorHttp formData expects a JSArray of {type,key,value,...} entries,
+        // not a plain object. 'base64File' entries also need fileName and contentType.
         const resp = await CapacitorHttp.post({
           url: 'https://api.openai.com/v1/audio/transcriptions',
           headers: { Authorization: `Bearer ${apiKey}` },
-          data: {
-            file: { name: `recording.${ext}`, type: mimeType, data: base64Audio },
-            model: 'whisper-1',
-            language: 'fr',
-          },
+          data: [
+            { type: 'base64File', key: 'file', value: base64Audio, fileName: `recording.${ext}`, contentType: mimeType },
+            { type: 'string', key: 'model', value: 'whisper-1' },
+            { type: 'string', key: 'language', value: 'fr' },
+          ],
           dataType: 'formData',
           readTimeout: 30000,
         });
