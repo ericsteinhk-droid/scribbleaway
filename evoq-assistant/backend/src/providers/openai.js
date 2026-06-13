@@ -2,9 +2,14 @@ import OpenAI from 'openai';
 
 const DEFAULT_MODEL = 'gpt-4o';
 
-const client = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+let _client = null;
+function getClient() {
+  if (!process.env.OPENAI_API_KEY) {
+    throw new Error('[OpenAI] OPENAI_API_KEY environment variable is not set');
+  }
+  if (!_client) _client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  return _client;
+}
 
 function buildOpenAIMessages(messages, attachments = []) {
   return messages.map((msg, idx) => {
@@ -88,7 +93,7 @@ export async function streamChat(params, onChunk, onDone, signal) {
   }
 
   try {
-    const stream = await client.chat.completions.create(requestParams, { signal });
+    const stream = await getClient().chat.completions.create(requestParams, { signal });
 
     let usage = { inputTokens: 0, outputTokens: 0 };
 

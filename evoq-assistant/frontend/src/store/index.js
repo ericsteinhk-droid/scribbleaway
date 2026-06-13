@@ -2,7 +2,7 @@ import { create } from 'zustand';
 
 const DEFAULT_SETTINGS = {
   defaultProvider: 'anthropic',
-  defaultModel: 'claude-opus-4-5-20251101',
+  defaultModel: 'claude-sonnet-4-6',
   defaultSystemPrompt: '',
   temperature: 0.7,
   maxTokens: 4096,
@@ -11,7 +11,7 @@ const DEFAULT_SETTINGS = {
   sessionTimeoutMin: 0,
   convTtlDays: 0,
   maxFileSizeMb: 10,
-  claudeModel: 'claude-opus-4-5-20251101',
+  claudeModel: 'claude-sonnet-4-6',
   gptModel: 'gpt-4o',
   geminiModel: 'gemini-2.5-flash-preview-05-20',
   geminiImageModel: 'gemini-2.5-flash-preview-05-20',
@@ -124,7 +124,7 @@ export const useStore = create((set, get) => ({
 
   // ── Current chat provider/model ─────────────────────────────
   currentProvider: 'anthropic',
-  currentModel: 'claude-opus-4-5-20251101',
+  currentModel: 'claude-sonnet-4-6',
 
   setCurrentProvider: (p) => set(s => ({
     currentProvider: p,

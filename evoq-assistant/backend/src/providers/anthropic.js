@@ -1,10 +1,15 @@
 import Anthropic from '@anthropic-ai/sdk';
 
-const DEFAULT_MODEL = 'claude-opus-4-5-20251101';
+const DEFAULT_MODEL = 'claude-sonnet-4-6';
 
-const client = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-});
+let _client = null;
+function getClient() {
+  if (!process.env.ANTHROPIC_API_KEY) {
+    throw new Error('[Anthropic] ANTHROPIC_API_KEY environment variable is not set');
+  }
+  if (!_client) _client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+  return _client;
+}
 
 /**
  * Convert internal message format to Anthropic content blocks,
@@ -131,7 +136,7 @@ export async function streamChat(params, onChunk, onDone, signal) {
   }
 
   try {
-    const stream = await client.messages.stream(requestParams, {
+    const stream = await getClient().messages.stream(requestParams, {
       signal,
     });
 
