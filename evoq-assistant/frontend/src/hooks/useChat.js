@@ -182,7 +182,7 @@ export function useChat() {
   }, [store]);
 
   const stopStreaming = useCallback(() => {
-    store.stopStream();
+    store.stopStream(true); // user-initiated: abort the request
   }, [store]);
 
   return { sendMessage, stopStreaming };

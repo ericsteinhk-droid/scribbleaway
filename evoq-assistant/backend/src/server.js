@@ -12,8 +12,18 @@
  */
 
 // ── Environment ───────────────────────────────────────────────────────────────
-// Must come first so every subsequent import can read process.env
-import 'dotenv/config';
+// Must come first so every subsequent import can read process.env.
+// Try backend/.env first, then evoq-assistant/.env (one level up), then CWD.
+import { config as _dotenvConfig } from 'dotenv';
+import { resolve as _resolve, dirname as _dirname } from 'node:path';
+import { fileURLToPath as _fileURLToPath } from 'node:url';
+
+{
+  const _d = _dirname(_fileURLToPath(import.meta.url));
+  _dotenvConfig({ path: _resolve(_d, '../.env') });       // backend/.env
+  _dotenvConfig({ path: _resolve(_d, '../../.env') });    // evoq-assistant/.env
+  _dotenvConfig();                                         // process.cwd()/.env
+}
 
 // ── Core imports ──────────────────────────────────────────────────────────────
 import express    from 'express';

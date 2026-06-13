@@ -81,9 +81,9 @@ export const useStore = create((set, get) => ({
     return controller;
   },
   appendStreamChunk: (text) => set(s => ({ streamingContent: s.streamingContent + text })),
-  stopStream: () => {
+  stopStream: (abort = false) => {
     const { abortController } = get();
-    if (abortController) abortController.abort();
+    if (abort && abortController) abortController.abort();
     set({ streaming: false, streamingContent: '', streamingConvId: null, abortController: null });
   },
 
