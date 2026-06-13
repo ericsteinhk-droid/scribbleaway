@@ -128,6 +128,7 @@ router.get('/search', (req, res) => {
 
 router.post('/', (req, res) => {
   const {
+    id: bodyId,
     title        = 'New Conversation',
     folderId     = null,
     systemPrompt = null,
@@ -136,7 +137,7 @@ router.post('/', (req, res) => {
     ephemeral    = false,
   } = req.body ?? {};
 
-  const id = generateId();
+  const id = bodyId || generateId();
 
   try {
     insertConversation.run({
