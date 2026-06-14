@@ -1,0 +1,36 @@
+{
+  "_readme": "Remplacer '#' par l'URL SharePoint. Les liens '#' apparaissent grisés. Redéployer le fichier pour que les changements soient pris en compte sans modifier index.html.",
+
+  "biblio-voyageurs":       "#",
+  "biblio-comptabilite":    "#",
+  "biblio-promo":           "#",
+  "biblio-talents-culture": "#",
+  "biblio-comites":         "#",
+  "biblio-direction":       "#",
+  "biblio-architectes":     "#",
+
+  "biblio-patrimoine":      "#",
+  "biblio-autochtone":      "#",
+  "biblio-transports":      "#",
+  "biblio-habitation":      "#",
+
+  "comite-secu-briefing":   "https://evoqarchitecture.sharepoint.com/:b:/r/sites/EVOQBureau-EVOQOffice/Shared%20Documents/Proc%C3%A9dures%20et%20Formations%20g%C3%A9n%C3%A9rales/S%C3%A9curit%C3%A9%20des%20Contrats/Briefing_S%C3%A9cut%C3%A9%20Industrielle_2025.pdf?csf=1&web=1&e=rxdvya",
+  "comite-secu-srcl":       "https://evoqarchitecture.sharepoint.com/:b:/r/sites/EVOQBureau-EVOQOffice/Shared%20Documents/Proc%C3%A9dures%20et%20Formations%20g%C3%A9n%C3%A9rales/S%C3%A9curit%C3%A9%20des%20Contrats/SRCL_Presentation_FR.pdf?csf=1&web=1&e=7hbMNG",
+  "comite-secu-manuel":     "https://www.canada.ca/fr/services-publics-approvisionnement/services/securite-industrielle/exigences-securite-contrats/manuel-securite-contrats-gouvernement-canada.html",
+
+  "form-capsules-tc":       "#",
+  "form-trucs-astuces":     "#",
+  "form-bim-clarity":       "https://evoqarchitecture.sharepoint.com/:v:/r/sites/EVOQ-BIM/Vido%20FR/Clarity%20-%20Formation%20usager-20221206_100449.mp4?csf=1&web=1&e=E5Pv7X",
+  "form-bim-standards":     "https://evoqarchitecture.sharepoint.com/:v:/r/sites/EVOQ-BIM/Vido%20FR/Formation%20standards%20BIM%20EVOQ-20220125_111019.mp4?csf=1&web=1&e=tdMNNL",
+  "form-capsules-cyber":    "#",
+  "form-bon-usage-ti":      "#",
+  "form-pratique-pro":      "#",
+
+  "portal-sante-securite":  "https://evoqarchitecture.sharepoint.com/:b:/r/sites/EVOQBureau-EVOQOffice/Shared%20Documents/Sant%C3%A9%20S%C3%A9curit%C3%A9%20-%20Health%20Safety/Info%20g%C3%A9n%C3%A9rale%20-%20General%20Info/231219_Procedure_Salle%C3%89quipement_EquipmentRoom.pdf?csf=1&web=1",
+  "portal-ss-formations":   "https://evoqarchitecture.sharepoint.com/:f:/r/sites/EVOQBureau-EVOQOffice/Shared%20Documents/Sant%C3%A9%20S%C3%A9curit%C3%A9%20-%20Health%20Safety?csf=1&web=1",
+  "portal-accueil":         "#",
+  "portal-manuel":          "https://evoqarchitecture.sharepoint.com/:b:/r/sites/EVOQBureau-EVOQOffice/Shared%20Documents/General/Talents%20et%20Culture/EVOQ_Guide%20de%20l%27employ%C3%A9%20-%20octobre%202024.pdf?csf=1&web=1&e=f4YSgy",
+  "portal-assurances-gpm":  "https://participants.gpm.ca/Login.aspx",
+  "portal-assurances-dialogue": "https://www.dialogue.co/",
+  "portal-employeurd":      "https://employeurd.com/webportal/UserLogin.aspx"
+}

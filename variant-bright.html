@@ -1728,19 +1728,25 @@ var EVOQ_LINKS = {
     });
   });
 
-  // Câblage des liens SharePoint depuis EVOQ_LINKS
-  document.querySelectorAll('[data-link]').forEach(function(a) {
-    var key = a.getAttribute('data-link');
-    var url = (typeof EVOQ_LINKS !== 'undefined' && EVOQ_LINKS[key]) || '#';
-    if (url && url !== '#') {
-      a.href = url;
-      a.target = '_blank';
-    } else {
-      a.classList.add('ei-link-pending');
-      a.setAttribute('title', 'Lien SharePoint à venir');
-      a.addEventListener('click', function(e) { e.preventDefault(); });
-    }
-  });
+  function wireLinks() {
+    document.querySelectorAll('[data-link]').forEach(function(a) {
+      var key = a.getAttribute('data-link');
+      var url = (typeof EVOQ_LINKS !== 'undefined' && EVOQ_LINKS[key]) || '#';
+      if (url && url !== '#') {
+        a.href = url;
+        a.target = '_blank';
+      } else {
+        a.classList.add('ei-link-pending');
+        a.setAttribute('title', 'Lien SharePoint à venir');
+        a.addEventListener('click', function(e) { e.preventDefault(); });
+      }
+    });
+  }
+
+  fetch('links.json')
+    .then(function(r) { return r.json(); })
+    .then(function(data) { Object.assign(EVOQ_LINKS, data); wireLinks(); })
+    .catch(function() { wireLinks(); });
 
 })();
 </script>
