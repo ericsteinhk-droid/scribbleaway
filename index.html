@@ -633,6 +633,90 @@ body { background:#E9E7E0; }
   border-top: none !important;
 }
 </style>
+
+<style>
+/* ── ADMIN MODE (Ctrl+Shift+E) ───────────────────────────────────────────── */
+.ei-admin-exit {
+  display: none;
+  background: none;
+  border: 1px solid #E4003A;
+  color: #E4003A;
+  font-family: 'Open Sans', sans-serif;
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  padding: 0.25rem 0.75rem;
+  cursor: pointer;
+  margin-bottom: 0.75rem;
+}
+.ei-admin-active .ei-admin-exit { display: inline-block; }
+
+/* All data-link cards: overflow visible so the overlay isn't clipped */
+.ei-admin-active [data-link] { overflow: visible !important; }
+
+/* Pending cards: dashed red border, restored opacity */
+.ei-admin-active .ei-link-pending {
+  opacity: 0.85 !important;
+  cursor: pointer !important;
+  border: 1px dashed #E4003A !important;
+}
+.ei-admin-active .ei-link-pending:hover {
+  border-color: #E4003A !important;
+  transform: none !important;
+}
+/* Active cards: crosshair cursor to signal they're editable */
+.ei-admin-active [data-link]:not(.ei-link-pending) { cursor: cell !important; }
+
+/* Edit overlay — appears inside the card */
+.ei-edit-overlay {
+  position: absolute;
+  inset: -1px;
+  background: #fff;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  padding: 0.5rem 0.6rem;
+  border: 1px solid #E4003A;
+  box-shadow: 0 4px 18px rgba(228,0,58,0.18);
+}
+.ei-edit-box { width: 100%; }
+.ei-edit-key {
+  font-size: 0.58rem;
+  font-family: monospace;
+  color: #E4003A;
+  margin-bottom: 0.25rem;
+  word-break: break-all;
+}
+.ei-edit-input {
+  width: 100%;
+  font-size: 0.68rem;
+  padding: 0.25rem 0.35rem;
+  border: 1px solid #D8D6CE;
+  border-radius: 2px;
+  font-family: 'Open Sans', sans-serif;
+  box-sizing: border-box;
+  margin-bottom: 0.28rem;
+}
+.ei-edit-input:focus { outline: none; border-color: #E4003A; }
+.ei-edit-row { display: flex; gap: 0.3rem; }
+.ei-edit-save {
+  background: #E4003A; color: #fff; border: none;
+  padding: 0.2rem 0.55rem; font-size: 0.62rem;
+  font-family: 'Open Sans', sans-serif; font-weight: 600;
+  cursor: pointer;
+}
+.ei-edit-save:disabled { opacity: 0.4; cursor: default; }
+.ei-edit-cancel {
+  background: none; color: #7A7A72;
+  border: 1px solid #D8D6CE;
+  padding: 0.2rem 0.55rem; font-size: 0.62rem;
+  font-family: 'Open Sans', sans-serif; cursor: pointer;
+}
+.ei-edit-msg {
+  font-size: 0.58rem; color: #E4003A;
+  margin-top: 0.2rem; min-height: 0.85em;
+}
+</style>
 </head>
 <body>
 <div class="evoq-intranet">
@@ -1797,6 +1881,164 @@ var EVOQ_LINKS = {
     .then(function(r) { return r.json(); })
     .then(function(data) { Object.assign(EVOQ_LINKS, data); wireLinks(); })
     .catch(function() { wireLinks(); });
+
+  // ── ADMIN MODE (Ctrl+Shift+E) ─────────────────────────────────────────────
+  // Requires a GitHub fine-grained PAT: Contents → Read & write, this repo only.
+  // Generate at: github.com/settings/personal-access-tokens/new
+  var ADMIN_REPO   = 'ericsteinhk-droid/scribbleaway';
+  var ADMIN_BRANCH = 'main'; // GitHub Pages source branch — update if needed
+
+  var adminActive = false;
+
+  function b64ToStr(b64) {
+    return decodeURIComponent(
+      atob(b64.replace(/\n/g, '')).split('').map(function(c) {
+        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+      }).join('')
+    );
+  }
+  function strToB64(str) {
+    return btoa(
+      encodeURIComponent(str).replace(/%([0-9A-F]{2})/gi, function(_, p) {
+        return String.fromCharCode(parseInt(p, 16));
+      })
+    );
+  }
+
+  function toggleAdmin() {
+    if (adminActive) {
+      adminActive = false;
+      document.body.classList.remove('ei-admin-active');
+      document.querySelectorAll('.ei-edit-overlay').forEach(function(el) { el.remove(); });
+      return;
+    }
+    var tok = sessionStorage.getItem('evoq_pat');
+    if (!tok) {
+      tok = window.prompt('Jeton GitHub (fine-grained PAT — Contents: Read & write) :');
+      if (!tok) return;
+      sessionStorage.setItem('evoq_pat', tok.trim());
+      tok = tok.trim();
+    }
+    adminActive = true;
+    document.body.classList.add('ei-admin-active');
+  }
+
+  function showEditOverlay(card) {
+    document.querySelectorAll('.ei-edit-overlay').forEach(function(el) { el.remove(); });
+    var key = card.getAttribute('data-link');
+    var cur = (EVOQ_LINKS[key] && EVOQ_LINKS[key] !== '#') ? EVOQ_LINKS[key] : '';
+
+    var ov = document.createElement('div');
+    ov.className = 'ei-edit-overlay';
+    ov.innerHTML =
+      '<div class="ei-edit-box">' +
+        '<div class="ei-edit-key">' + key + '</div>' +
+        '<input class="ei-edit-input" type="url"' +
+          ' placeholder="https://evoqarchitecture.sharepoint.com/…"' +
+          ' value="' + cur.replace(/"/g, '&quot;') + '">' +
+        '<div class="ei-edit-row">' +
+          '<button class="ei-edit-save">Enregistrer</button>' +
+          '<button class="ei-edit-cancel">Annuler</button>' +
+        '</div>' +
+        '<div class="ei-edit-msg"></div>' +
+      '</div>';
+
+    card.appendChild(ov);
+    var input = ov.querySelector('.ei-edit-input');
+    input.focus(); input.select();
+
+    ov.querySelector('.ei-edit-cancel').onclick = function(e) { e.stopPropagation(); ov.remove(); };
+    ov.onclick = function(e) { e.stopPropagation(); };
+
+    function doSave() {
+      var url = input.value.trim();
+      if (!url) return;
+      var msg = ov.querySelector('.ei-edit-msg');
+      var btn = ov.querySelector('.ei-edit-save');
+      msg.textContent = 'Enregistrement…';
+      btn.disabled = true;
+
+      var apiUrl = 'https://api.github.com/repos/' + ADMIN_REPO + '/contents/links.json';
+      var tok = sessionStorage.getItem('evoq_pat');
+      var hdrs = {
+        'Authorization': 'token ' + tok,
+        'Accept': 'application/vnd.github.v3+json',
+        'Content-Type': 'application/json'
+      };
+
+      fetch(apiUrl + '?ref=' + ADMIN_BRANCH, { headers: hdrs })
+        .then(function(r) {
+          if (!r.ok) throw new Error('Lecture échouée (' + r.status + ') — vérifiez le jeton');
+          return r.json();
+        })
+        .then(function(file) {
+          var data = JSON.parse(b64ToStr(file.content));
+          data[key] = url;
+          return fetch(apiUrl, {
+            method: 'PUT',
+            headers: hdrs,
+            body: JSON.stringify({
+              message: 'intranet: ' + key,
+              content: strToB64(JSON.stringify(data, null, 2) + '\n'),
+              sha: file.sha,
+              branch: ADMIN_BRANCH
+            })
+          });
+        })
+        .then(function(r) {
+          if (!r.ok) throw new Error('Écriture échouée (' + r.status + ')');
+          return r.json();
+        })
+        .then(function() {
+          EVOQ_LINKS[key] = url;
+          card.href = url;
+          card.target = '_blank';
+          card.classList.remove('ei-link-pending');
+          card.removeAttribute('title');
+          ov.remove();
+        })
+        .catch(function(err) {
+          msg.textContent = '⚠ ' + err.message;
+          btn.disabled = false;
+        });
+    }
+
+    ov.querySelector('.ei-edit-save').onclick = function(e) { e.stopPropagation(); doSave(); };
+    input.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') doSave();
+      if (e.key === 'Escape') ov.remove();
+    });
+  }
+
+  // Capture-phase: intercept all [data-link] clicks when admin mode is active
+  document.addEventListener('click', function(e) {
+    if (!adminActive) return;
+    var card = e.target.closest('[data-link]');
+    if (card) {
+      e.preventDefault();
+      e.stopPropagation();
+      showEditOverlay(card);
+    } else if (!e.target.closest('.ei-edit-overlay')) {
+      document.querySelectorAll('.ei-edit-overlay').forEach(function(el) { el.remove(); });
+    }
+  }, true);
+
+  // Ctrl+Shift+E to enter/exit admin mode
+  document.addEventListener('keydown', function(e) {
+    if (e.ctrlKey && e.shiftKey && (e.key === 'E' || e.key === 'e')) {
+      e.preventDefault();
+      toggleAdmin();
+    }
+  });
+
+  // Exit button injected into footer
+  (function() {
+    var btn = document.createElement('button');
+    btn.className = 'ei-admin-exit';
+    btn.textContent = '⚙ Quitter le mode édition';
+    btn.onclick = toggleAdmin;
+    document.querySelector('.ei-footer').prepend(btn);
+  })();
 
 })();
 </script>
