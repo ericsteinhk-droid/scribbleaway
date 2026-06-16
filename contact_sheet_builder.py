@@ -1,10 +1,11 @@
 import os
 import re
+import sys
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 import threading
 
-from PIL import Image
+from PIL import Image, ImageTk
 from docx import Document
 from docx.shared import Inches, Pt, Twips, Emu
 from docx.enum.text import WD_ALIGN_PARAGRAPH
@@ -24,6 +25,11 @@ CAPTION_SPACE_BEFORE_DXA = 40
 CAPTION_SPACE_AFTER_DXA = 80
 CAPTION_FONT_SIZE = 8        # pt
 CAPTION_FONT_NAME = "Arial"
+
+
+def _resource_path(filename):
+    base = getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__)))
+    return os.path.join(base, filename)
 
 
 def natural_sort_key(s):
@@ -250,9 +256,21 @@ class App(tk.Tk):
     def _build_ui(self):
         pad = dict(padx=10, pady=6)
 
+        # Logo
+        self._logo_img = None
+        logo_path = _resource_path('evoq_logo.png')
+        if os.path.exists(logo_path):
+            with Image.open(logo_path) as raw:
+                display_w = 280
+                display_h = round(raw.height / raw.width * display_w)
+                resized = raw.resize((display_w, display_h), Image.LANCZOS)
+                self._logo_img = ImageTk.PhotoImage(resized)
+            tk.Label(self, image=self._logo_img, bg=self.cget('bg')).grid(
+                row=0, column=0, columnspan=2, pady=(12, 4))
+
         # Folder selection
         folder_frame = tk.LabelFrame(self, text="Image Folder")
-        folder_frame.grid(row=0, column=0, columnspan=2, sticky="ew", **pad)
+        folder_frame.grid(row=1, column=0, columnspan=2, sticky="ew", **pad)
 
         self.folder_var = tk.StringVar()
         tk.Entry(folder_frame, textvariable=self.folder_var, width=50).grid(row=0, column=0, padx=5, pady=4)
@@ -260,7 +278,7 @@ class App(tk.Tk):
 
         # Output file
         out_frame = tk.LabelFrame(self, text="Output File")
-        out_frame.grid(row=1, column=0, columnspan=2, sticky="ew", **pad)
+        out_frame.grid(row=2, column=0, columnspan=2, sticky="ew", **pad)
 
         self.output_var = tk.StringVar()
         tk.Entry(out_frame, textvariable=self.output_var, width=50).grid(row=0, column=0, padx=5, pady=4)
@@ -268,7 +286,7 @@ class App(tk.Tk):
 
         # Per-page mode
         mode_frame = tk.LabelFrame(self, text="Photos per Page")
-        mode_frame.grid(row=2, column=0, columnspan=2, sticky="ew", **pad)
+        mode_frame.grid(row=3, column=0, columnspan=2, sticky="ew", **pad)
 
         self.per_page_var = tk.IntVar(value=6)
         tk.Radiobutton(mode_frame, text="4 per page (2×2)", variable=self.per_page_var, value=4).grid(
@@ -278,15 +296,15 @@ class App(tk.Tk):
 
         # Progress
         self.progress = ttk.Progressbar(self, length=400, mode="determinate")
-        self.progress.grid(row=3, column=0, columnspan=2, **pad)
+        self.progress.grid(row=4, column=0, columnspan=2, **pad)
 
         self.status_var = tk.StringVar(value="Ready.")
         tk.Label(self, textvariable=self.status_var, anchor="w").grid(
-            row=4, column=0, columnspan=2, sticky="ew", padx=10)
+            row=5, column=0, columnspan=2, sticky="ew", padx=10)
 
         # Generate button
         self.gen_btn = tk.Button(self, text="Generate Contact Sheet", command=self._generate, width=30)
-        self.gen_btn.grid(row=5, column=0, columnspan=2, pady=10)
+        self.gen_btn.grid(row=6, column=0, columnspan=2, pady=10)
 
     def _browse_folder(self):
         folder = filedialog.askdirectory(title="Select Image Folder")
