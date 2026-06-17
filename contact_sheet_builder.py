@@ -1,32 +1,41 @@
 import os
 import re
 import sys
+import shutil
+import tempfile
+import threading
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
-import threading
+
+try:
+    from tkinterdnd2 import TkinterDnD, DND_FILES
+    HAS_DND = True
+except ImportError:
+    HAS_DND = False
 
 from PIL import Image, ImageTk
 from docx import Document
-from docx.shared import Inches, Pt, Twips, Emu
+from docx.shared import Inches, Pt, Twips
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.oxml.ns import qn
 from docx.oxml import OxmlElement
 
 
-# Layout constants (all in EMU unless noted)
-COL_W_EMU = 3_371_850       # column width in EMU
+# ── Constants ─────────────────────────────────────────────────────────────────
+COL_W_EMU = 3_371_850
 PAGE_W_DXA = 12240
 PAGE_H_DXA = 15840
 MARGIN_DXA = 720
 TABLE_W_DXA = 10800
 COL_W_DXA = 5310
-GAP_DXA = 180
 CAPTION_SPACE_BEFORE_DXA = 40
 CAPTION_SPACE_AFTER_DXA = 80
-CAPTION_FONT_SIZE = 8        # pt
+CAPTION_FONT_SIZE = 8
 CAPTION_FONT_NAME = "Arial"
+MAX_EMBED_PX = 1200  # compress images larger than this before embedding
 
 
+# ── Utilities ─────────────────────────────────────────────────────────────────
 def _resource_path(filename):
     base = getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__)))
     return os.path.join(base, filename)
@@ -37,6 +46,7 @@ def natural_sort_key(s):
     return [int(p) if p.isdigit() else p.lower() for p in parts]
 
 
+# ── DOCX helpers ──────────────────────────────────────────────────────────────
 def set_cell_borders_none(cell):
     tc = cell._tc
     tcPr = tc.get_or_add_tcPr()
@@ -111,7 +121,7 @@ def set_column_widths(table):
     tbl.insert(1, tblGrid)
 
 
-def add_caption(cell, filename_no_ext):
+def add_caption(cell, text):
     para = cell.add_paragraph()
     para.alignment = WD_ALIGN_PARAGRAPH.LEFT
     pPr = para._p.get_or_add_pPr()
@@ -119,7 +129,7 @@ def add_caption(cell, filename_no_ext):
     spacing.set(qn('w:before'), str(CAPTION_SPACE_BEFORE_DXA))
     spacing.set(qn('w:after'), str(CAPTION_SPACE_AFTER_DXA))
     pPr.append(spacing)
-    run = para.add_run(filename_no_ext)
+    run = para.add_run(text)
     run.font.name = CAPTION_FONT_NAME
     run.font.size = Pt(CAPTION_FONT_SIZE)
 
@@ -127,7 +137,9 @@ def add_caption(cell, filename_no_ext):
 def add_image_to_cell(cell, image_path, width_emu, height_emu):
     para = cell.paragraphs[0]
     run = para.add_run()
-    run.add_picture(image_path, width=Inches(width_emu / 914400), height=Inches(height_emu / 914400))
+    run.add_picture(image_path,
+                    width=Inches(width_emu / 914400),
+                    height=Inches(height_emu / 914400))
 
 
 def get_image_dims(path):
@@ -135,43 +147,42 @@ def get_image_dims(path):
         return img.width, img.height
 
 
+def prepare_image(src_path, tmpdir, idx):
+    """Return path for embedding — compressed copy if original exceeds MAX_EMBED_PX."""
+    with Image.open(src_path) as img:
+        w, h = img.width, img.height
+    if max(w, h) <= MAX_EMBED_PX:
+        return src_path
+    ratio = MAX_EMBED_PX / max(w, h)
+    new_w, new_h = int(w * ratio), int(h * ratio)
+    out_path = os.path.join(tmpdir, f'{idx:05d}.jpg')
+    with Image.open(src_path) as img:
+        resized = img.resize((new_w, new_h), Image.LANCZOS)
+        if resized.mode in ('RGBA', 'P', 'LA'):
+            resized = resized.convert('RGB')
+        resized.save(out_path, 'JPEG', quality=90)
+    return out_path
+
+
 def compute_row_sizes(row_images):
-    """
-    row_images: list of (path, natural_w, natural_h)
-    Returns list of (final_w_emu, final_h_emu) for each image in the row.
-    """
+    """row_images: [(path, nat_w, nat_h), ...] → [(final_w_emu, final_h_emu), ...]"""
     if len(row_images) == 1:
-        path, nat_w, nat_h = row_images[0]
-        display_h = nat_h / nat_w * COL_W_EMU
-        return [(COL_W_EMU, display_h)]
-
-    # Step 2: scale each image to column width
-    display_heights = []
-    for path, nat_w, nat_h in row_images:
-        display_h = nat_h / nat_w * COL_W_EMU
-        display_heights.append(display_h)
-
-    # Step 3: min height across row
-    target_h = min(display_heights)
-
-    # Step 4: re-scale each image so height = target_h
-    result = []
-    for (path, nat_w, nat_h), dh in zip(row_images, display_heights):
-        final_w = target_h * nat_w / nat_h
-        final_h = target_h
-        result.append((final_w, final_h))
-    return result
+        _, nat_w, nat_h = row_images[0]
+        return [(COL_W_EMU, nat_h / nat_w * COL_W_EMU)]
+    dhs = [nat_h / nat_w * COL_W_EMU for _, nat_w, nat_h in row_images]
+    target_h = min(dhs)
+    return [(target_h * nat_w / nat_h, target_h) for _, nat_w, nat_h in row_images]
 
 
-def build_contact_sheet(image_paths, output_path, per_page, progress_cb, status_cb):
+# ── Core document builder ─────────────────────────────────────────────────────
+def build_contact_sheet(image_paths, output_path, per_page, title,
+                        progress_cb, status_cb):
     images = sorted(image_paths, key=lambda p: natural_sort_key(os.path.basename(p)))
     total = len(images)
     if total == 0:
-        raise ValueError("No images found in the selected folder.")
+        raise ValueError("No images selected.")
 
     doc = Document()
-
-    # Configure section
     section = doc.sections[0]
     section.page_width = Twips(PAGE_W_DXA)
     section.page_height = Twips(PAGE_H_DXA)
@@ -180,194 +191,380 @@ def build_contact_sheet(image_paths, output_path, per_page, progress_cb, status_
     section.left_margin = Twips(MARGIN_DXA)
     section.right_margin = Twips(MARGIN_DXA)
 
-    rows_per_page = per_page // 2  # 2 or 3
-    pages = [images[i:i + per_page] for i in range(0, total, per_page)]
+    if title and title.strip():
+        para = doc.add_paragraph()
+        para.alignment = WD_ALIGN_PARAGRAPH.LEFT
+        pPr = para._p.get_or_add_pPr()
+        sp = OxmlElement('w:spacing')
+        sp.set(qn('w:before'), '0')
+        sp.set(qn('w:after'), '120')
+        pPr.append(sp)
+        run = para.add_run(title.strip())
+        run.font.name = 'Arial'
+        run.font.size = Pt(14)
+        run.bold = True
 
+    rows_per_page = per_page // 2
+    pages = [images[i:i + per_page] for i in range(0, total, per_page)]
     first_page = True
     processed = 0
+    embed_idx = 0
+    tmpdir = tempfile.mkdtemp()
 
-    for page_idx, page_images in enumerate(pages):
-        if not first_page:
-            # Page break paragraph
-            pb_para = doc.add_paragraph()
-            pb_run = pb_para.add_run()
-            br = OxmlElement('w:br')
-            br.set(qn('w:type'), 'page')
-            pb_run._r.append(br)
-        first_page = False
+    try:
+        for page_images in pages:
+            if not first_page:
+                pb_para = doc.add_paragraph()
+                br = OxmlElement('w:br')
+                br.set(qn('w:type'), 'page')
+                pb_para.add_run()._r.append(br)
+            first_page = False
 
-        # Create table for this page
-        table = doc.add_table(rows=rows_per_page * 2, cols=2)
-        set_table_borders_none(table)
-        set_table_width(table)
-        set_column_widths(table)
+            table = doc.add_table(rows=rows_per_page * 2, cols=2)
+            set_table_borders_none(table)
+            set_table_width(table)
+            set_column_widths(table)
 
-        # Group page images into rows of 2
-        rows_data = [page_images[i:i + 2] for i in range(0, len(page_images), 2)]
+            for row_idx, row_imgs in enumerate(
+                    [page_images[i:i + 2] for i in range(0, len(page_images), 2)]):
+                row_info = [(p, *get_image_dims(p)) for p in row_imgs]
+                sizes = compute_row_sizes(row_info)
+                img_row = table.rows[row_idx * 2]
+                cap_row = table.rows[row_idx * 2 + 1]
 
-        for row_idx, row_imgs in enumerate(rows_data):
-            # Read natural dims
-            row_info = []
-            for img_path in row_imgs:
-                nat_w, nat_h = get_image_dims(img_path)
-                row_info.append((img_path, nat_w, nat_h))
+                for col_idx in range(2):
+                    ic = img_row.cells[col_idx]
+                    cc = cap_row.cells[col_idx]
+                    for cell in (ic, cc):
+                        set_cell_borders_none(cell)
+                        set_cell_margins_zero(cell)
+                        set_cell_width(cell, COL_W_DXA)
+                    if col_idx < len(row_imgs):
+                        path = row_imgs[col_idx]
+                        fw, fh = sizes[col_idx]
+                        embed = prepare_image(path, tmpdir, embed_idx)
+                        embed_idx += 1
+                        add_image_to_cell(ic, embed, fw, fh)
+                        add_caption(cc, os.path.splitext(os.path.basename(path))[0])
 
-            sizes = compute_row_sizes(row_info)
+                processed += len(row_imgs)
+                progress_cb(processed / total * 100)
+                status_cb(f"Processing image {processed} of {total}…")
 
-            img_table_row = table.rows[row_idx * 2]
-            cap_table_row = table.rows[row_idx * 2 + 1]
-
-            for col_idx in range(2):
-                img_cell = img_table_row.cells[col_idx]
-                cap_cell = cap_table_row.cells[col_idx]
-
-                set_cell_borders_none(img_cell)
-                set_cell_margins_zero(img_cell)
-                set_cell_width(img_cell, COL_W_DXA)
-
-                set_cell_borders_none(cap_cell)
-                set_cell_margins_zero(cap_cell)
-                set_cell_width(cap_cell, COL_W_DXA)
-
-                if col_idx < len(row_imgs):
-                    img_path = row_imgs[col_idx]
-                    final_w, final_h = sizes[col_idx]
-                    add_image_to_cell(img_cell, img_path, final_w, final_h)
-                    caption_text = os.path.splitext(os.path.basename(img_path))[0]
-                    add_caption(cap_cell, caption_text)
-                # else: filler cell — leave empty, borders/width already set
-
-            processed += len(row_imgs)
-            progress_cb(processed / total * 100)
-            status_cb(f"Processing image {processed} of {total}...")
-
-    doc.save(output_path)
-    status_cb(f"Done! Saved to {output_path}")
-    progress_cb(100)
+        doc.save(output_path)
+        status_cb(f"Done! Saved to {output_path}")
+        progress_cb(100)
+    finally:
+        shutil.rmtree(tmpdir, ignore_errors=True)
 
 
-class App(tk.Tk):
+# ── GUI ───────────────────────────────────────────────────────────────────────
+_AppBase = TkinterDnD.Tk if HAS_DND else tk.Tk
+
+
+class App(_AppBase):
     def __init__(self):
         super().__init__()
         self.title("Contact Sheet Builder")
         self.resizable(False, False)
+        self._image_vars = {}   # path → BooleanVar
+        self._image_order = []  # paths in display/sort order
+        self._logo_img = None
         self._build_ui()
+        if HAS_DND:
+            self.drop_target_register(DND_FILES)
+            self.dnd_bind('<<Drop>>', self._handle_drop)
+
+    # ── UI construction ───────────────────────────────────────────────────────
 
     def _build_ui(self):
-        pad = dict(padx=10, pady=6)
+        pad = dict(padx=10, pady=5)
 
         # Logo
-        self._logo_img = None
         logo_path = _resource_path('evoq_logo.png')
         if os.path.exists(logo_path):
             with Image.open(logo_path) as raw:
-                display_w = 280
-                display_h = round(raw.height / raw.width * display_w)
-                resized = raw.resize((display_w, display_h), Image.LANCZOS)
-                self._logo_img = ImageTk.PhotoImage(resized)
+                dw = 280
+                dh = round(raw.height / raw.width * dw)
+                self._logo_img = ImageTk.PhotoImage(
+                    raw.resize((dw, dh), Image.LANCZOS))
             tk.Label(self, image=self._logo_img, bg=self.cget('bg')).grid(
                 row=0, column=0, columnspan=2, pady=(12, 4))
 
-        # Folder selection
-        folder_frame = tk.LabelFrame(self, text="Image Folder")
-        folder_frame.grid(row=1, column=0, columnspan=2, sticky="ew", **pad)
+        # Images panel
+        self._build_image_panel().grid(
+            row=1, column=0, columnspan=2, sticky="ew", **pad)
 
-        self.folder_var = tk.StringVar()
-        tk.Entry(folder_frame, textvariable=self.folder_var, width=50).grid(row=0, column=0, padx=5, pady=4)
-        tk.Button(folder_frame, text="Browse...", command=self._browse_folder).grid(row=0, column=1, padx=5, pady=4)
+        # Document settings
+        settings = tk.LabelFrame(self, text="Document Settings")
+        settings.grid(row=2, column=0, columnspan=2, sticky="ew", **pad)
+        tk.Label(settings, text="Title (optional):").grid(
+            row=0, column=0, sticky="w", padx=5, pady=4)
+        self.title_var = tk.StringVar()
+        tk.Entry(settings, textvariable=self.title_var, width=38).grid(
+            row=0, column=1, sticky="ew", padx=5, pady=4)
+        settings.columnconfigure(1, weight=1)
 
-        # Output file
+        # Output
         out_frame = tk.LabelFrame(self, text="Output File")
-        out_frame.grid(row=2, column=0, columnspan=2, sticky="ew", **pad)
-
+        out_frame.grid(row=3, column=0, columnspan=2, sticky="ew", **pad)
         self.output_var = tk.StringVar()
-        tk.Entry(out_frame, textvariable=self.output_var, width=50).grid(row=0, column=0, padx=5, pady=4)
-        tk.Button(out_frame, text="Save As...", command=self._browse_output).grid(row=0, column=1, padx=5, pady=4)
+        tk.Entry(out_frame, textvariable=self.output_var, width=42).grid(
+            row=0, column=0, padx=5, pady=4)
+        tk.Button(out_frame, text="Save As…",
+                  command=self._browse_output).grid(row=0, column=1, padx=5, pady=4)
+        self.open_after_var = tk.BooleanVar(value=True)
+        tk.Checkbutton(out_frame, text="Open in Word when done",
+                       variable=self.open_after_var).grid(
+            row=1, column=0, columnspan=2, sticky="w", padx=5, pady=(0, 4))
 
-        # Per-page mode
-        mode_frame = tk.LabelFrame(self, text="Photos per Page")
-        mode_frame.grid(row=3, column=0, columnspan=2, sticky="ew", **pad)
-
+        # Per-page
+        mode = tk.LabelFrame(self, text="Photos per Page")
+        mode.grid(row=4, column=0, columnspan=2, sticky="ew", **pad)
         self.per_page_var = tk.IntVar(value=6)
-        tk.Radiobutton(mode_frame, text="4 per page (2×2)", variable=self.per_page_var, value=4).grid(
+        tk.Radiobutton(mode, text="4 per page (2×2)",
+                       variable=self.per_page_var, value=4).grid(
             row=0, column=0, padx=10, pady=4, sticky="w")
-        tk.Radiobutton(mode_frame, text="6 per page (2×3)", variable=self.per_page_var, value=6).grid(
+        tk.Radiobutton(mode, text="6 per page (2×3)",
+                       variable=self.per_page_var, value=6).grid(
             row=0, column=1, padx=10, pady=4, sticky="w")
 
-        # Progress
-        self.progress = ttk.Progressbar(self, length=400, mode="determinate")
-        self.progress.grid(row=4, column=0, columnspan=2, **pad)
-
+        # Progress + status
+        self.progress = ttk.Progressbar(self, length=440, mode="determinate")
+        self.progress.grid(row=5, column=0, columnspan=2, padx=10, pady=(8, 2))
         self.status_var = tk.StringVar(value="Ready.")
         tk.Label(self, textvariable=self.status_var, anchor="w").grid(
-            row=5, column=0, columnspan=2, sticky="ew", padx=10)
+            row=6, column=0, columnspan=2, sticky="ew", padx=10)
 
-        # Generate button
-        self.gen_btn = tk.Button(self, text="Generate Contact Sheet", command=self._generate, width=30)
-        self.gen_btn.grid(row=6, column=0, columnspan=2, pady=10)
+        # Generate
+        self.gen_btn = tk.Button(self, text="Generate Contact Sheet",
+                                 command=self._generate, width=30)
+        self.gen_btn.grid(row=7, column=0, columnspan=2, pady=(4, 12))
+
+    def _build_image_panel(self):
+        dnd_hint = "  —  drag a folder or files here" if HAS_DND else ""
+        frame = tk.LabelFrame(self, text=f"Images{dnd_hint}")
+
+        # Buttons row
+        btn_row = tk.Frame(frame)
+        btn_row.pack(fill="x", padx=5, pady=(5, 2))
+        tk.Button(btn_row, text="Browse Folder…",
+                  command=self._browse_folder).pack(side="left", padx=(0, 4))
+        tk.Button(btn_row, text="Add Files…",
+                  command=self._browse_files).pack(side="left", padx=(0, 4))
+        tk.Button(btn_row, text="Clear",
+                  command=self._clear_images).pack(side="left", padx=(0, 12))
+        self.subfolder_var = tk.BooleanVar(value=False)
+        tk.Checkbutton(btn_row, text="Include sub-folders",
+                       variable=self.subfolder_var).pack(side="left")
+
+        # Scrollable checklist
+        outer = tk.Frame(frame, relief="sunken", bd=1)
+        outer.pack(fill="both", expand=True, padx=5, pady=(2, 0))
+        self._list_canvas = tk.Canvas(
+            outer, height=180, borderwidth=0, highlightthickness=0, bg="white")
+        vsb = tk.Scrollbar(outer, orient="vertical",
+                           command=self._list_canvas.yview)
+        self._check_frame = tk.Frame(self._list_canvas, bg="white")
+        self._cwin = self._list_canvas.create_window(
+            (0, 0), window=self._check_frame, anchor="nw")
+        self._list_canvas.configure(yscrollcommand=vsb.set)
+        self._list_canvas.pack(side="left", fill="both", expand=True)
+        vsb.pack(side="right", fill="y")
+        self._check_frame.bind("<Configure>", lambda e: self._list_canvas.configure(
+            scrollregion=self._list_canvas.bbox("all")))
+        self._list_canvas.bind("<Configure>", lambda e: self._list_canvas.itemconfig(
+            self._cwin, width=e.width))
+        self._list_canvas.bind("<Enter>", lambda e: self._list_canvas.bind_all(
+            "<MouseWheel>", self._on_mousewheel))
+        self._list_canvas.bind("<Leave>", lambda e: self._list_canvas.unbind_all(
+            "<MouseWheel>"))
+
+        # Count row
+        count_row = tk.Frame(frame)
+        count_row.pack(fill="x", padx=5, pady=(2, 5))
+        self.count_var = tk.StringVar(value="No images added.")
+        tk.Label(count_row, textvariable=self.count_var, anchor="w").pack(
+            side="left", expand=True, fill="x")
+        tk.Button(count_row, text="None", command=self._select_none,
+                  width=5).pack(side="right", padx=(2, 0))
+        tk.Button(count_row, text="All", command=self._select_all,
+                  width=5).pack(side="right")
+
+        return frame
+
+    # ── Image list management ─────────────────────────────────────────────────
+
+    def _on_mousewheel(self, event):
+        self._list_canvas.yview_scroll(-1 * (event.delta // 120), "units")
+
+    def _add_images(self, paths):
+        for path in paths:
+            if path in self._image_vars:
+                continue
+            var = tk.BooleanVar(value=True)
+            var.trace_add("write", lambda *_: self._update_count())
+            self._image_vars[path] = var
+            self._image_order.append(path)
+            row = tk.Frame(self._check_frame, bg="white")
+            row.pack(fill="x", padx=2, pady=0)
+            tk.Checkbutton(row, variable=var, bg="white").pack(side="left")
+            tk.Label(row, text=os.path.basename(path),
+                     anchor="w", bg="white").pack(side="left", fill="x", expand=True)
+        self._update_count()
+
+    def _collect_from_folder(self, folder):
+        exts = {'.jpg', '.jpeg', '.png'}
+        images = []
+        if self.subfolder_var.get():
+            for root, dirs, files in os.walk(folder):
+                dirs.sort(key=natural_sort_key)
+                for fname in sorted(files, key=natural_sort_key):
+                    if os.path.splitext(fname)[1].lower() in exts:
+                        images.append(os.path.join(root, fname))
+        else:
+            for fname in sorted(os.listdir(folder), key=natural_sort_key):
+                if os.path.splitext(fname)[1].lower() in exts:
+                    images.append(os.path.join(folder, fname))
+        return images
+
+    def _clear_images(self):
+        for w in self._check_frame.winfo_children():
+            w.destroy()
+        self._image_vars.clear()
+        self._image_order.clear()
+        self._update_count()
+
+    def _select_all(self):
+        for v in self._image_vars.values():
+            v.set(True)
+
+    def _select_none(self):
+        for v in self._image_vars.values():
+            v.set(False)
+
+    def _update_count(self):
+        total = len(self._image_order)
+        sel = sum(1 for v in self._image_vars.values() if v.get())
+        if total == 0:
+            self.count_var.set("No images added.")
+        elif sel == total:
+            self.count_var.set(f"{total} image{'s' if total != 1 else ''} selected.")
+        else:
+            self.count_var.set(f"{sel} of {total} images selected.")
+
+    def _get_selected(self):
+        return [p for p in self._image_order if self._image_vars[p].get()]
+
+    # ── Event handlers ────────────────────────────────────────────────────────
+
+    def _handle_drop(self, event):
+        paths = self._parse_dnd(event.data)
+        images = []
+        for path in paths:
+            if os.path.isdir(path):
+                imgs = self._collect_from_folder(path)
+                images.extend(imgs)
+                if imgs:
+                    self._auto_name_output(path)
+            elif os.path.isfile(path):
+                if os.path.splitext(path)[1].lower() in {'.jpg', '.jpeg', '.png'}:
+                    images.append(path)
+        if images:
+            self._add_images(images)
+
+    @staticmethod
+    def _parse_dnd(raw):
+        paths, i = [], 0
+        while i < len(raw):
+            if raw[i] == '{':
+                end = raw.index('}', i)
+                paths.append(raw[i + 1:end])
+                i = end + 2
+            elif raw[i] == ' ':
+                i += 1
+            else:
+                end = raw.find(' ', i)
+                if end == -1:
+                    end = len(raw)
+                paths.append(raw[i:end])
+                i = end + 1
+        return [p for p in paths if p]
 
     def _browse_folder(self):
         folder = filedialog.askdirectory(title="Select Image Folder")
-        if folder:
-            self.folder_var.set(folder)
+        if not folder:
+            return
+        images = self._collect_from_folder(folder)
+        if images:
+            self._add_images(images)
+            self._auto_name_output(folder)
+        else:
+            messagebox.showwarning("No Images",
+                                   "No JPG or PNG images found in that folder.")
+
+    def _browse_files(self):
+        paths = filedialog.askopenfilenames(
+            title="Select Images",
+            filetypes=[("Image files", "*.jpg *.jpeg *.png"), ("All files", "*.*")])
+        if paths:
+            self._add_images(list(paths))
+
+    def _auto_name_output(self, folder):
+        name = os.path.basename(folder.rstrip('/\\'))
+        parent = os.path.dirname(folder.rstrip('/\\'))
+        self.output_var.set(os.path.join(parent, f"{name}_contact_sheet.docx"))
 
     def _browse_output(self):
         path = filedialog.asksaveasfilename(
             title="Save Contact Sheet As",
             defaultextension=".docx",
-            filetypes=[("Word Document", "*.docx"), ("All Files", "*.*")]
-        )
+            filetypes=[("Word Document", "*.docx"), ("All Files", "*.*")])
         if path:
             self.output_var.set(path)
 
-    def _collect_images(self, folder):
-        exts = {'.jpg', '.jpeg', '.png'}
-        images = []
-        for fname in os.listdir(folder):
-            if os.path.splitext(fname)[1].lower() in exts:
-                images.append(os.path.join(folder, fname))
-        return images
-
     def _generate(self):
-        folder = self.folder_var.get().strip()
+        images = self._get_selected()
         output = self.output_var.get().strip()
         per_page = self.per_page_var.get()
+        title = self.title_var.get().strip()
 
-        if not folder:
-            messagebox.showerror("Error", "Please select an image folder.")
-            return
-        if not os.path.isdir(folder):
-            messagebox.showerror("Error", f"Folder not found:\n{folder}")
+        if not images:
+            messagebox.showerror("Error",
+                                 "No images selected. Add images and check at least one.")
             return
         if not output:
             messagebox.showerror("Error", "Please specify an output file path.")
             return
 
-        images = self._collect_images(folder)
-        if not images:
-            messagebox.showerror("Error", "No JPG or PNG images found in the selected folder.")
-            return
-
         self.gen_btn.config(state="disabled")
         self.progress["value"] = 0
-        self.status_var.set("Starting...")
+        self.status_var.set("Starting…")
 
         def run():
             try:
                 build_contact_sheet(
-                    images, output, per_page,
-                    progress_cb=lambda v: self.after(0, lambda: self.progress.config(value=v)),
-                    status_cb=lambda s: self.after(0, lambda: self.status_var.set(s))
-                )
-                self.after(0, lambda: messagebox.showinfo("Done", f"Contact sheet saved to:\n{output}"))
+                    images, output, per_page, title,
+                    progress_cb=lambda v: self.after(
+                        0, lambda: self.progress.config(value=v)),
+                    status_cb=lambda s: self.after(
+                        0, lambda: self.status_var.set(s)))
+                if self.open_after_var.get():
+                    try:
+                        os.startfile(output)
+                    except Exception:
+                        pass
+                self.after(0, lambda: messagebox.showinfo(
+                    "Done", f"Contact sheet saved to:\n{output}"))
             except PermissionError:
                 self.after(0, lambda: messagebox.showerror(
                     "Permission Error",
-                    f"Cannot write to:\n{output}\n\nCheck that the file is not open in another program."
-                ))
+                    f"Cannot write to:\n{output}\n\n"
+                    "Check that the file is not open in another program."))
             except Exception as e:
                 err = str(e)
-                self.after(0, lambda: messagebox.showerror("Error", f"Failed to generate contact sheet:\n{err}"))
+                self.after(0, lambda: messagebox.showerror(
+                    "Error", f"Failed to generate contact sheet:\n{err}"))
             finally:
                 self.after(0, lambda: self.gen_btn.config(state="normal"))
 
