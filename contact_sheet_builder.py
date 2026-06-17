@@ -13,7 +13,7 @@ try:
 except ImportError:
     HAS_DND = False
 
-from PIL import Image, ImageTk
+from PIL import Image, ImageTk, ImageOps
 from docx import Document
 from docx.shared import Inches, Pt, Twips
 from docx.enum.text import WD_ALIGN_PARAGRAPH
@@ -122,7 +122,8 @@ def set_column_widths(table):
 
 
 def add_caption(cell, text):
-    para = cell.add_paragraph()
+    # Reuse the cell's default first paragraph — avoids a spurious empty paragraph gap
+    para = cell.paragraphs[0]
     para.alignment = WD_ALIGN_PARAGRAPH.LEFT
     pPr = para._p.get_or_add_pPr()
     spacing = OxmlElement('w:spacing')
@@ -136,6 +137,12 @@ def add_caption(cell, text):
 
 def add_image_to_cell(cell, image_path, width_emu, height_emu):
     para = cell.paragraphs[0]
+    pPr = para._p.get_or_add_pPr()
+    # Suppress default Normal-style spacing-after so caption sits flush below photo
+    spacing = OxmlElement('w:spacing')
+    spacing.set(qn('w:before'), '0')
+    spacing.set(qn('w:after'), '0')
+    pPr.append(spacing)
     run = para.add_run()
     run.add_picture(image_path,
                     width=Inches(width_emu / 914400),
@@ -144,23 +151,22 @@ def add_image_to_cell(cell, image_path, width_emu, height_emu):
 
 def get_image_dims(path):
     with Image.open(path) as img:
+        img = ImageOps.exif_transpose(img)
         return img.width, img.height
 
 
 def prepare_image(src_path, tmpdir, idx):
-    """Return path for embedding — compressed copy if original exceeds MAX_EMBED_PX."""
+    """Normalize EXIF orientation and compress if needed. Always saves a copy."""
     with Image.open(src_path) as img:
+        img = ImageOps.exif_transpose(img)  # apply rotation before anything else
         w, h = img.width, img.height
-    if max(w, h) <= MAX_EMBED_PX:
-        return src_path
-    ratio = MAX_EMBED_PX / max(w, h)
-    new_w, new_h = int(w * ratio), int(h * ratio)
-    out_path = os.path.join(tmpdir, f'{idx:05d}.jpg')
-    with Image.open(src_path) as img:
-        resized = img.resize((new_w, new_h), Image.LANCZOS)
-        if resized.mode in ('RGBA', 'P', 'LA'):
-            resized = resized.convert('RGB')
-        resized.save(out_path, 'JPEG', quality=90)
+        if max(w, h) > MAX_EMBED_PX:
+            ratio = MAX_EMBED_PX / max(w, h)
+            img = img.resize((int(w * ratio), int(h * ratio)), Image.LANCZOS)
+        if img.mode in ('RGBA', 'P', 'LA'):
+            img = img.convert('RGB')
+        out_path = os.path.join(tmpdir, f'{idx:05d}.jpg')
+        img.save(out_path, 'JPEG', quality=90)
     return out_path
 
 
@@ -267,8 +273,8 @@ class App(_AppBase):
         super().__init__()
         self.title("Contact Sheet Builder")
         self.resizable(False, False)
-        self._image_vars = {}   # path → BooleanVar
-        self._image_order = []  # paths in display/sort order
+        self._image_order = []  # ordered list of absolute paths
+        self._image_set = set() # fast duplicate check
         self._logo_img = None
         self._build_ui()
         if HAS_DND:
@@ -308,7 +314,9 @@ class App(_AppBase):
         # Output
         out_frame = tk.LabelFrame(self, text="Output File")
         out_frame.grid(row=3, column=0, columnspan=2, sticky="ew", **pad)
-        self.output_var = tk.StringVar()
+        docs = os.path.join(os.path.expanduser("~"), "Documents")
+        default_dir = docs if os.path.isdir(docs) else os.path.expanduser("~")
+        self.output_var = tk.StringVar(value=os.path.join(default_dir, "ContactSheet.docx"))
         tk.Entry(out_frame, textvariable=self.output_var, width=42).grid(
             row=0, column=0, padx=5, pady=4)
         tk.Button(out_frame, text="Save As…",
@@ -358,27 +366,18 @@ class App(_AppBase):
         tk.Checkbutton(btn_row, text="Include sub-folders",
                        variable=self.subfolder_var).pack(side="left")
 
-        # Scrollable checklist
-        outer = tk.Frame(frame, relief="sunken", bd=1)
-        outer.pack(fill="both", expand=True, padx=5, pady=(2, 0))
-        self._list_canvas = tk.Canvas(
-            outer, height=180, borderwidth=0, highlightthickness=0, bg="white")
-        vsb = tk.Scrollbar(outer, orient="vertical",
-                           command=self._list_canvas.yview)
-        self._check_frame = tk.Frame(self._list_canvas, bg="white")
-        self._cwin = self._list_canvas.create_window(
-            (0, 0), window=self._check_frame, anchor="nw")
-        self._list_canvas.configure(yscrollcommand=vsb.set)
-        self._list_canvas.pack(side="left", fill="both", expand=True)
+        # Native Listbox — fast even with 200+ files, EXTENDED selection = click to toggle
+        list_outer = tk.Frame(frame, relief="sunken", bd=1)
+        list_outer.pack(fill="both", expand=True, padx=5, pady=(2, 0))
+        self._listbox = tk.Listbox(list_outer, selectmode=tk.EXTENDED,
+                                   height=10, activestyle="none",
+                                   exportselection=False)
+        vsb = tk.Scrollbar(list_outer, orient="vertical",
+                           command=self._listbox.yview)
+        self._listbox.configure(yscrollcommand=vsb.set)
+        self._listbox.pack(side="left", fill="both", expand=True)
         vsb.pack(side="right", fill="y")
-        self._check_frame.bind("<Configure>", lambda e: self._list_canvas.configure(
-            scrollregion=self._list_canvas.bbox("all")))
-        self._list_canvas.bind("<Configure>", lambda e: self._list_canvas.itemconfig(
-            self._cwin, width=e.width))
-        self._list_canvas.bind("<Enter>", lambda e: self._list_canvas.bind_all(
-            "<MouseWheel>", self._on_mousewheel))
-        self._list_canvas.bind("<Leave>", lambda e: self._list_canvas.unbind_all(
-            "<MouseWheel>"))
+        self._listbox.bind("<<ListboxSelect>>", lambda _: self._update_count())
 
         # Count row
         count_row = tk.Frame(frame)
@@ -395,22 +394,17 @@ class App(_AppBase):
 
     # ── Image list management ─────────────────────────────────────────────────
 
-    def _on_mousewheel(self, event):
-        self._list_canvas.yview_scroll(-1 * (event.delta // 120), "units")
-
     def _add_images(self, paths):
+        start = len(self._image_order)
         for path in paths:
-            if path in self._image_vars:
+            if path in self._image_set:
                 continue
-            var = tk.BooleanVar(value=True)
-            var.trace_add("write", lambda *_: self._update_count())
-            self._image_vars[path] = var
             self._image_order.append(path)
-            row = tk.Frame(self._check_frame, bg="white")
-            row.pack(fill="x", padx=2, pady=0)
-            tk.Checkbutton(row, variable=var, bg="white").pack(side="left")
-            tk.Label(row, text=os.path.basename(path),
-                     anchor="w", bg="white").pack(side="left", fill="x", expand=True)
+            self._image_set.add(path)
+            self._listbox.insert(tk.END, os.path.basename(path))
+        # Auto-select newly added items
+        if len(self._image_order) > start:
+            self._listbox.select_set(start, tk.END)
         self._update_count()
 
     def _collect_from_folder(self, folder):
@@ -429,23 +423,22 @@ class App(_AppBase):
         return images
 
     def _clear_images(self):
-        for w in self._check_frame.winfo_children():
-            w.destroy()
-        self._image_vars.clear()
+        self._listbox.delete(0, tk.END)
         self._image_order.clear()
+        self._image_set.clear()
         self._update_count()
 
     def _select_all(self):
-        for v in self._image_vars.values():
-            v.set(True)
+        self._listbox.select_set(0, tk.END)
+        self._update_count()
 
     def _select_none(self):
-        for v in self._image_vars.values():
-            v.set(False)
+        self._listbox.select_clear(0, tk.END)
+        self._update_count()
 
     def _update_count(self):
         total = len(self._image_order)
-        sel = sum(1 for v in self._image_vars.values() if v.get())
+        sel = len(self._listbox.curselection())
         if total == 0:
             self.count_var.set("No images added.")
         elif sel == total:
@@ -454,7 +447,7 @@ class App(_AppBase):
             self.count_var.set(f"{sel} of {total} images selected.")
 
     def _get_selected(self):
-        return [p for p in self._image_order if self._image_vars[p].get()]
+        return [self._image_order[i] for i in self._listbox.curselection()]
 
     # ── Event handlers ────────────────────────────────────────────────────────
 
@@ -492,6 +485,7 @@ class App(_AppBase):
         return [p for p in paths if p]
 
     def _browse_folder(self):
+        self.update_idletasks()
         folder = filedialog.askdirectory(title="Select Image Folder")
         if not folder:
             return
@@ -504,6 +498,7 @@ class App(_AppBase):
                                    "No JPG or PNG images found in that folder.")
 
     def _browse_files(self):
+        self.update_idletasks()
         paths = filedialog.askopenfilenames(
             title="Select Images",
             filetypes=[("Image files", "*.jpg *.jpeg *.png"), ("All files", "*.*")])
