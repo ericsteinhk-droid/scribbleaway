@@ -1,0 +1,35 @@
+name: Build Contact Sheet Builder
+
+on:
+  workflow_dispatch:   # manual trigger from the GitHub UI
+
+permissions:
+  contents: write      # needed to create releases and upload assets
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Build contact_sheet_builder.exe
+        run: pyinstaller --onefile --windowed --add-data "evoq_logo.png;." contact_sheet_builder.py
+
+      - name: Publish exe as GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "contact-sheet-v1.0-run${{ github.run_number }}" `
+            dist\contact_sheet_builder.exe `
+            --title "Contact Sheet Builder v1.0 (run ${{ github.run_number }})" `
+            --notes "## Contact Sheet Builder`n`nAssembles a contact sheet Word document from a folder of JPG/PNG images.`n`n**Features:**`n- 4 or 6 photos per page`n- Filename captions`n- Natural sort order`n- US Letter layout with 0.5"" margins"
