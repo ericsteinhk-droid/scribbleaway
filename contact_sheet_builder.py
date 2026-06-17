@@ -170,14 +170,17 @@ def prepare_image(src_path, tmpdir, idx):
     return out_path
 
 
-def compute_row_sizes(row_images):
+def compute_row_sizes(row_images, max_row_h_emu=None):
     """row_images: [(path, nat_w, nat_h), ...] → [(final_w_emu, final_h_emu), ...]"""
     if len(row_images) == 1:
         _, nat_w, nat_h = row_images[0]
-        return [(COL_W_EMU, nat_h / nat_w * COL_W_EMU)]
-    dhs = [nat_h / nat_w * COL_W_EMU for _, nat_w, nat_h in row_images]
-    target_h = min(dhs)
-    return [(target_h * nat_w / nat_h, target_h) for _, nat_w, nat_h in row_images]
+        h = nat_h / nat_w * COL_W_EMU
+    else:
+        dhs = [nat_h / nat_w * COL_W_EMU for _, nat_w, nat_h in row_images]
+        h = min(dhs)
+    if max_row_h_emu is not None:
+        h = min(h, max_row_h_emu)
+    return [(h * nat_w / nat_h, h) for _, nat_w, nat_h in row_images]
 
 
 # ── Core document builder ─────────────────────────────────────────────────────
@@ -212,6 +215,13 @@ def build_contact_sheet(image_paths, output_path, per_page, title,
 
     rows_per_page = per_page // 2
     pages = [images[i:i + per_page] for i in range(0, total, per_page)]
+
+    # Max image-row height so all rows + captions fit on the page
+    _page_h_emu = (PAGE_H_DXA - 2 * MARGIN_DXA) / 1440 * 914400
+    _caption_h_emu = (CAPTION_SPACE_BEFORE_DXA + CAPTION_SPACE_AFTER_DXA + 200) / 1440 * 914400
+    _title_h_emu = (14 * 20 + 120) / 1440 * 914400 if title and title.strip() else 0
+    max_row_h = (_page_h_emu - _caption_h_emu * rows_per_page - _title_h_emu) / rows_per_page * 0.95
+
     first_page = True
     processed = 0
     embed_idx = 0
@@ -234,7 +244,7 @@ def build_contact_sheet(image_paths, output_path, per_page, title,
             for row_idx, row_imgs in enumerate(
                     [page_images[i:i + 2] for i in range(0, len(page_images), 2)]):
                 row_info = [(p, *get_image_dims(p)) for p in row_imgs]
-                sizes = compute_row_sizes(row_info)
+                sizes = compute_row_sizes(row_info, max_row_h)
                 img_row = table.rows[row_idx * 2]
                 cap_row = table.rows[row_idx * 2 + 1]
 
