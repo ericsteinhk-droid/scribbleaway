@@ -1,7 +1,7 @@
 name: meeting_minutes_app
 description: Audio transcription and meeting minutes with bilingual lexicon support.
 publish_to: 'none'
-version: 1.0.0+1
+version: 1.0.1+2
 
 environment:
   sdk: '>=3.2.0 <4.0.0'
