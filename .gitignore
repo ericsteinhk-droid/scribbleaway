@@ -1,6 +1,2 @@
-__pycache__/
-*.pyc
-*.pyo
-build/
-dist/
-*.spec.bak
+*.apk
+*.aab
