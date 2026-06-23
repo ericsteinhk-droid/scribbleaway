@@ -1,7 +1,7 @@
 name: Build Android APK — Transcripteur de Réunion
 
 on:
-  workflow_dispatch:          # trigger manually from GitHub mobile app or web
+  workflow_dispatch:
   push:
     branches:
       - claude/audio-recorder-transcription-8t4bz3
@@ -11,7 +11,7 @@ on:
       - '.github/workflows/build-meeting-recorder.yml'
 
 permissions:
-  contents: write             # needed to create releases
+  contents: write
 
 jobs:
   build-apk:
@@ -24,7 +24,7 @@ jobs:
         with:
           ref: claude/audio-recorder-transcription-8t4bz3
 
-      # ── Java 21 (required by AGP 8.5 + Kotlin 2.x) ─────────────────────────
+      # ── Java 21 ─────────────────────────────────────────────────────────────
       - name: Set up Java 21
         uses: actions/setup-java@v4
         with:
@@ -35,7 +35,7 @@ jobs:
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
 
-      # ── Gradle cache (speeds up subsequent runs significantly) ───────────────
+      # ── Gradle cache ────────────────────────────────────────────────────────
       - name: Cache Gradle packages
         uses: actions/cache@v4
         with:
@@ -43,31 +43,47 @@ jobs:
             ~/.gradle/caches
             ~/.gradle/wrapper
           key: gradle-${{ runner.os }}-${{ hashFiles('meeting-recorder/**/*.gradle.kts', 'meeting-recorder/gradle/libs.versions.toml') }}
-          restore-keys: |
-            gradle-${{ runner.os }}-
+          restore-keys: gradle-${{ runner.os }}-
 
-      # ── Make gradlew executable ──────────────────────────────────────────────
+      # ── Bootstrap gradle-wrapper.jar ─────────────────────────────────────────
+      # The JAR is a binary that can't be stored as text in the repo.
+      # We download the matching Gradle distribution and extract just the jar.
+      - name: Bootstrap gradle-wrapper.jar
+        working-directory: meeting-recorder
+        run: |
+          GRADLE_VERSION=$(grep distributionUrl gradle/wrapper/gradle-wrapper.properties \
+            | sed 's/.*gradle-\(.*\)-bin.zip/\1/')
+          echo "Bootstrapping gradle-wrapper.jar for Gradle $GRADLE_VERSION"
+          curl -fsSL \
+            "https://services.gradle.org/distributions/gradle-${GRADLE_VERSION}-bin.zip" \
+            -o /tmp/gradle.zip
+          unzip -p /tmp/gradle.zip \
+            "gradle-${GRADLE_VERSION}/lib/gradle-wrapper-main-${GRADLE_VERSION}.jar" \
+            > gradle/wrapper/gradle-wrapper.jar 2>/dev/null \
+          || unzip -j /tmp/gradle.zip \
+            "gradle-${GRADLE_VERSION}/lib/gradle-wrapper*.jar" \
+            -d /tmp/gradle-libs/ \
+          && cp /tmp/gradle-libs/gradle-wrapper*.jar gradle/wrapper/gradle-wrapper.jar
+          ls -lh gradle/wrapper/gradle-wrapper.jar
+
       - name: Make gradlew executable
         working-directory: meeting-recorder
         run: chmod +x gradlew
 
       # ── Build debug APK ─────────────────────────────────────────────────────
-      # CLAUDE_API_KEY is optional — users can enter it in the app's Settings tab.
-      # Add it to GitHub Secrets (Settings → Secrets → Actions → CLAUDE_API_KEY)
-      # if you want it baked into the build.
       - name: Build debug APK
         working-directory: meeting-recorder
         env:
           CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
         run: ./gradlew assembleDebug --no-daemon --stacktrace
 
-      # ── Rename APK to something readable ────────────────────────────────────
+      # ── Rename APK ──────────────────────────────────────────────────────────
       - name: Rename APK
         run: |
           mv meeting-recorder/app/build/outputs/apk/debug/app-debug.apk \
              meeting-recorder/app/build/outputs/apk/debug/TranscripteurReunion-${{ github.run_number }}.apk
 
-      # ── Upload as workflow artifact (14-day retention) ───────────────────────
+      # ── Upload artifact ──────────────────────────────────────────────────────
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
@@ -75,7 +91,7 @@ jobs:
           path: meeting-recorder/app/build/outputs/apk/debug/TranscripteurReunion-${{ github.run_number }}.apk
           retention-days: 14
 
-      # ── GitHub Release — direct download link ────────────────────────────────
+      # ── GitHub Release ───────────────────────────────────────────────────────
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -96,9 +112,9 @@ jobs:
           2. Sur votre téléphone : **Paramètres → Applications → Installer des applications inconnues** → autorisez votre navigateur
           3. Ouvrez le fichier téléchargé et appuyez sur **Installer**
 
-          ### Configuration
-          Après l'installation, ouvrez l'app et allez dans l'onglet **Paramètres** pour saisir votre clé API Claude (console.anthropic.com).
-          L'enregistrement et la transcription fonctionnent sans clé.
+          ### Première ouverture
+          Allez dans l'onglet **Paramètres ⚙️** pour saisir votre clé API Claude.
+          L'enregistrement et la transcription fonctionnent même sans clé.
 
           ---
           > Build debug non signé — usage personnel uniquement."
