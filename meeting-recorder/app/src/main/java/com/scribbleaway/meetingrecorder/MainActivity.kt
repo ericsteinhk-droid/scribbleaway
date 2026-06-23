@@ -60,7 +60,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             MeetingRecorderTheme {
-                MeetingRecorderApp()
+                AppContent()
             }
         }
     }
@@ -68,7 +68,7 @@ class MainActivity : ComponentActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MeetingRecorderApp() {
+fun AppContent() {
     val navController = rememberNavController()
     val vm: MeetingViewModel = viewModel()
     val uiState by vm.uiState.collectAsStateWithLifecycle()
