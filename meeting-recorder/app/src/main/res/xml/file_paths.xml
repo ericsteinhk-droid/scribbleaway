@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <external-files-path
+        name="recordings"
+        path="Recordings/" />
+    <external-files-path
+        name="transcriptions"
+        path="Transcriptions/" />
+    <cache-path
+        name="cache"
+        path="." />
+</paths>

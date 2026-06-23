@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Transcripteur de Réunion</string>
+    <string name="channel_name">Enregistrement en cours</string>
+    <string name="channel_description">Notification d\'enregistrement de réunion active</string>
+    <string name="notification_title">Enregistrement actif</string>
+    <string name="notification_text">La réunion est en cours d\'enregistrement et de transcription</string>
+</resources>
