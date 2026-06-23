@@ -35,47 +35,21 @@ jobs:
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
 
-      # ── Gradle cache ────────────────────────────────────────────────────────
-      - name: Cache Gradle packages
-        uses: actions/cache@v4
+      # ── Install Gradle 8.7 directly (avoids needing gradle-wrapper.jar) ─────
+      # gradle/actions/setup-gradle downloads and installs the exact Gradle
+      # version; we then call `gradle` directly instead of ./gradlew.
+      - name: Set up Gradle 8.7
+        uses: gradle/actions/setup-gradle@v4
         with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: gradle-${{ runner.os }}-${{ hashFiles('meeting-recorder/**/*.gradle.kts', 'meeting-recorder/gradle/libs.versions.toml') }}
-          restore-keys: gradle-${{ runner.os }}-
-
-      # ── Bootstrap gradle-wrapper.jar ─────────────────────────────────────────
-      # The JAR is a binary that can't be stored as text in the repo.
-      # We download the matching Gradle distribution and extract just the jar.
-      - name: Bootstrap gradle-wrapper.jar
-        working-directory: meeting-recorder
-        run: |
-          GRADLE_VERSION=$(grep distributionUrl gradle/wrapper/gradle-wrapper.properties \
-            | sed 's/.*gradle-\(.*\)-bin.zip/\1/')
-          echo "Bootstrapping gradle-wrapper.jar for Gradle $GRADLE_VERSION"
-          curl -fsSL \
-            "https://services.gradle.org/distributions/gradle-${GRADLE_VERSION}-bin.zip" \
-            -o /tmp/gradle.zip
-          unzip -p /tmp/gradle.zip \
-            "gradle-${GRADLE_VERSION}/lib/gradle-wrapper-main-${GRADLE_VERSION}.jar" \
-            > gradle/wrapper/gradle-wrapper.jar 2>/dev/null \
-          || unzip -j /tmp/gradle.zip \
-            "gradle-${GRADLE_VERSION}/lib/gradle-wrapper*.jar" \
-            -d /tmp/gradle-libs/ \
-          && cp /tmp/gradle-libs/gradle-wrapper*.jar gradle/wrapper/gradle-wrapper.jar
-          ls -lh gradle/wrapper/gradle-wrapper.jar
-
-      - name: Make gradlew executable
-        working-directory: meeting-recorder
-        run: chmod +x gradlew
+          gradle-version: '8.7'
+          cache-read-only: false
 
       # ── Build debug APK ─────────────────────────────────────────────────────
       - name: Build debug APK
         working-directory: meeting-recorder
         env:
           CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
-        run: ./gradlew assembleDebug --no-daemon --stacktrace
+        run: gradle assembleDebug --no-daemon --stacktrace
 
       # ── Rename APK ──────────────────────────────────────────────────────────
       - name: Rename APK
