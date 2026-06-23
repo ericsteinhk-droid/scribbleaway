@@ -11,6 +11,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.scribbleaway.meetingrecorder.data.MeetingDatabase
 import com.scribbleaway.meetingrecorder.data.MeetingEntity
+import com.scribbleaway.meetingrecorder.data.SettingsRepository
 import com.scribbleaway.meetingrecorder.minutes.MinutesGenerator
 import com.scribbleaway.meetingrecorder.service.RecordingService
 import com.scribbleaway.meetingrecorder.transcription.TranscriptionManager
@@ -18,6 +19,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.flow.first
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
@@ -52,8 +54,10 @@ class MeetingViewModel(application: Application) : AndroidViewModel(application)
     private val transcriptionManager = TranscriptionManager(application)
     private val minutesGenerator = MinutesGenerator()
     private val db = MeetingDatabase.getInstance(application)
+    private val settings = SettingsRepository.getInstance(application)
 
     val allMeetings = db.meetingDao().getAllMeetings()
+    val claudeApiKey = settings.claudeApiKey
 
     private var currentAudioPath = ""
     private var meetingStartTime = 0L
@@ -213,6 +217,10 @@ class MeetingViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
+    fun saveApiKey(key: String) {
+        viewModelScope.launch { settings.setClaudeApiKey(key) }
+    }
+
     fun generateMeetingMinutes() {
         val state = _uiState.value
         if (state.transcript.isBlank()) {
@@ -222,11 +230,13 @@ class MeetingViewModel(application: Application) : AndroidViewModel(application)
         _uiState.update { it.copy(isGeneratingMinutes = true, error = null) }
 
         viewModelScope.launch {
+            val runtimeKey = settings.claudeApiKey.first()
             val result = minutesGenerator.generate(
                 transcription = state.transcript,
                 contextText = state.contextText.ifBlank { null },
                 participantCount = state.participantCount,
-                durationMinutes = state.durationSeconds / 60
+                durationMinutes = state.durationSeconds / 60,
+                apiKeyOverride = runtimeKey
             )
             result.fold(
                 onSuccess = { minutes ->

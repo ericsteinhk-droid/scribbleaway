@@ -22,14 +22,21 @@ Application Android haute précision pour l'enregistrement, la transcription en 
 
 ## Configuration
 
-1. Copiez `local.properties.example` → `local.properties`
-2. Renseignez `sdk.dir` et `CLAUDE_API_KEY`
-3. Ouvrez dans Android Studio ou compilez avec `./gradlew assembleDebug`
+1. Copiez `local.properties.example` → `local.properties` et renseignez `sdk.dir`
+2. Ouvrez dans Android Studio (Hedgehog ou plus récent) ou compilez avec `./gradlew assembleDebug`
+3. Lancez l'app et allez dans **Paramètres** pour saisir votre clé API Claude
 
-### Obtenir une clé API Claude
+### Clé API Claude — deux options
 
-Créez un compte sur [console.anthropic.com](https://console.anthropic.com/) pour obtenir votre clé.
-Sans clé, l'enregistrement et la transcription fonctionnent, mais la génération de comptes rendus est désactivée.
+| Option | Quand l'utiliser |
+|---|---|
+| **In-app** (onglet Paramètres) | Recommandé — stockée dans DataStore chiffré sur l'appareil, aucune recompilation nécessaire |
+| **Compile-time** (`local.properties`) | CI/CD ou builds de distribution — `CLAUDE_API_KEY=sk-ant-...` |
+
+La clé saisie dans l'app a la priorité sur celle de `local.properties`.
+Sans clé, l'enregistrement et la transcription fonctionnent ; seule la génération de comptes rendus est désactivée.
+
+Créez votre clé sur [console.anthropic.com](https://console.anthropic.com/).
 
 ## Architecture
 

@@ -22,10 +22,12 @@ import java.io.File
 @Composable
 fun CompletionScreen(
     uiState: MeetingUiState,
+    hasApiKey: Boolean,
     onSaveTranscription: () -> String,
     onSaveMeetingToDb: () -> Unit,
     onGenerateMinutes: () -> Unit,
     onViewMinutes: () -> Unit,
+    onGoToSettings: () -> Unit,
     onNewMeeting: () -> Unit
 ) {
     val context = LocalContext.current
@@ -225,25 +227,37 @@ fun CompletionScreen(
                         }
                     }
                 } else {
-                    Button(
-                        onClick = onGenerateMinutes,
-                        modifier = Modifier.fillMaxWidth().height(48.dp),
-                        enabled = !uiState.isGeneratingMinutes && uiState.transcript.isNotBlank(),
-                        shape = RoundedCornerShape(8.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
-                    ) {
-                        if (uiState.isGeneratingMinutes) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(20.dp),
-                                strokeWidth = 2.dp,
-                                color = MaterialTheme.colorScheme.onSecondary
-                            )
+                    if (!hasApiKey) {
+                        OutlinedButton(
+                            onClick = onGoToSettings,
+                            modifier = Modifier.fillMaxWidth().height(48.dp),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Icon(Icons.Default.Key, contentDescription = null, modifier = Modifier.size(18.dp))
                             Spacer(Modifier.width(8.dp))
-                            Text("Génération en cours…")
-                        } else {
-                            Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(20.dp))
-                            Spacer(Modifier.width(8.dp))
-                            Text("Générer avec l'IA", fontWeight = FontWeight.SemiBold)
+                            Text("Configurer la clé API Claude")
+                        }
+                    } else {
+                        Button(
+                            onClick = onGenerateMinutes,
+                            modifier = Modifier.fillMaxWidth().height(48.dp),
+                            enabled = !uiState.isGeneratingMinutes && uiState.transcript.isNotBlank(),
+                            shape = RoundedCornerShape(8.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
+                        ) {
+                            if (uiState.isGeneratingMinutes) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(20.dp),
+                                    strokeWidth = 2.dp,
+                                    color = MaterialTheme.colorScheme.onSecondary
+                                )
+                                Spacer(Modifier.width(8.dp))
+                                Text("Génération en cours…")
+                            } else {
+                                Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(20.dp))
+                                Spacer(Modifier.width(8.dp))
+                                Text("Générer avec l'IA", fontWeight = FontWeight.SemiBold)
+                            }
                         }
                     }
                 }

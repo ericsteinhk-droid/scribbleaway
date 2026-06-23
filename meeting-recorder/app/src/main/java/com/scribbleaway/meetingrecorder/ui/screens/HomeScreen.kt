@@ -26,10 +26,12 @@ import com.scribbleaway.meetingrecorder.viewmodel.MeetingUiState
 @Composable
 fun HomeScreen(
     uiState: MeetingUiState,
+    hasApiKey: Boolean,
     onParticipantCountChange: (Int) -> Unit,
     onLoadContextFile: (Uri) -> Unit,
     onClearContextFile: () -> Unit,
-    onStartRecording: () -> Unit
+    onStartRecording: () -> Unit,
+    onGoToSettings: () -> Unit
 ) {
     val filePicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
@@ -247,6 +249,49 @@ fun HomeScreen(
                             modifier = Modifier.padding(top = 2.dp)
                         )
                     }
+                }
+            }
+        }
+
+        // API key nudge — shown only when key is missing
+        if (!hasApiKey) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.tertiaryContainer
+                ),
+                shape = RoundedCornerShape(12.dp),
+                onClick = onGoToSettings
+            ) {
+                Row(
+                    modifier = Modifier.padding(14.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        Icons.Default.Key,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.tertiary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(Modifier.width(10.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            text = "Clé API Claude manquante",
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onTertiaryContainer
+                        )
+                        Text(
+                            text = "L'enregistrement fonctionne, mais la génération de comptes rendus sera désactivée. Appuyez pour configurer.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.8f)
+                        )
+                    }
+                    Icon(
+                        Icons.Default.ChevronRight,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.5f)
+                    )
                 }
             }
         }

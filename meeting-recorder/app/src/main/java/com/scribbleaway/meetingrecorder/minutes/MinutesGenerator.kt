@@ -49,12 +49,14 @@ class MinutesGenerator {
         transcription: String,
         contextText: String?,
         participantCount: Int,
-        durationMinutes: Long
+        durationMinutes: Long,
+        apiKeyOverride: String = ""
     ): Result<String> = withContext(Dispatchers.IO) {
-        val apiKey = BuildConfig.CLAUDE_API_KEY
+        // Prefer runtime key (from Settings screen) over compile-time build config key
+        val apiKey = apiKeyOverride.ifBlank { BuildConfig.CLAUDE_API_KEY }
         if (apiKey.isBlank()) {
             return@withContext Result.failure(
-                IllegalStateException("Clé API Claude non configurée. Ajoutez CLAUDE_API_KEY dans local.properties.")
+                IllegalStateException("Clé API Claude non configurée. Saisissez votre clé dans Paramètres.")
             )
         }
 

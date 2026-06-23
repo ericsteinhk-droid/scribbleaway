@@ -25,12 +25,13 @@ import com.scribbleaway.meetingrecorder.ui.theme.MeetingRecorderTheme
 import com.scribbleaway.meetingrecorder.viewmodel.MeetingViewModel
 import com.scribbleaway.meetingrecorder.viewmodel.RecordingState
 
-sealed class Screen(val route: String, val label: String) {
-    object Home : Screen("home", "Accueil")
-    object Recording : Screen("recording", "Enregistrement")
-    object Completion : Screen("completion", "Résultats")
-    object Minutes : Screen("minutes", "Compte rendu")
-    object History : Screen("history", "Historique")
+sealed class Screen(val route: String) {
+    object Home : Screen("home")
+    object Recording : Screen("recording")
+    object Completion : Screen("completion")
+    object Minutes : Screen("minutes")
+    object History : Screen("history")
+    object Settings : Screen("settings")
 }
 
 class MainActivity : ComponentActivity() {
@@ -47,8 +48,7 @@ class MainActivity : ComponentActivity() {
     private val permissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { results ->
-        val allGranted = results.all { it.value }
-        if (allGranted) onPermissionsGranted?.invoke()
+        if (results.all { it.value }) onPermissionsGranted?.invoke()
     }
 
     fun requestPermissionsAndThen(action: () -> Unit) {
@@ -73,10 +73,11 @@ fun MeetingRecorderApp() {
     val vm: MeetingViewModel = viewModel()
     val uiState by vm.uiState.collectAsStateWithLifecycle()
     val meetings by vm.allMeetings.collectAsStateWithLifecycle(initialValue = emptyList())
+    val apiKey by vm.claudeApiKey.collectAsStateWithLifecycle(initialValue = "")
     val activity = androidx.compose.ui.platform.LocalContext.current as MainActivity
     val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
 
-    // Navigate automatically based on recording state
+    // Auto-navigate when recording state changes
     LaunchedEffect(uiState.recordingState) {
         when (uiState.recordingState) {
             RecordingState.RECORDING, RecordingState.PAUSED -> {
@@ -95,6 +96,8 @@ fun MeetingRecorderApp() {
         }
     }
 
+    val hideNav = currentRoute in listOf(Screen.Recording.route, Screen.Minutes.route)
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -106,6 +109,7 @@ fun MeetingRecorderApp() {
                             Screen.Completion.route -> "Fin de réunion"
                             Screen.Minutes.route -> "Compte rendu"
                             Screen.History.route -> "Historique"
+                            Screen.Settings.route -> "Paramètres"
                             else -> "Transcripteur"
                         },
                         fontWeight = FontWeight.SemiBold
@@ -117,7 +121,7 @@ fun MeetingRecorderApp() {
             )
         },
         bottomBar = {
-            if (currentRoute !in listOf(Screen.Recording.route, Screen.Minutes.route)) {
+            if (!hideNav) {
                 NavigationBar {
                     NavigationBarItem(
                         selected = currentRoute == Screen.Home.route,
@@ -143,13 +147,29 @@ fun MeetingRecorderApp() {
                         icon = { Icon(Icons.Default.History, contentDescription = null) },
                         label = { Text("Historique") }
                     )
-                }
-            }
-        },
-        snackbarHost = {
-            uiState.error?.let { error ->
-                LaunchedEffect(error) {
-                    // shown inline on screens, not via snackbar
+                    NavigationBarItem(
+                        selected = currentRoute == Screen.Settings.route,
+                        onClick = {
+                            navController.navigate(Screen.Settings.route) {
+                                popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        },
+                        icon = {
+                            // Badge if API key not set
+                            if (apiKey.isBlank()) {
+                                BadgedBox(badge = {
+                                    Badge { Text("!") }
+                                }) {
+                                    Icon(Icons.Default.Settings, contentDescription = null)
+                                }
+                            } else {
+                                Icon(Icons.Default.Settings, contentDescription = null)
+                            }
+                        },
+                        label = { Text("Paramètres") }
+                    )
                 }
             }
         }
@@ -162,13 +182,15 @@ fun MeetingRecorderApp() {
             composable(Screen.Home.route) {
                 HomeScreen(
                     uiState = uiState,
+                    hasApiKey = apiKey.isNotBlank(),
                     onParticipantCountChange = vm::setParticipantCount,
                     onLoadContextFile = vm::loadContextFile,
                     onClearContextFile = vm::clearContextFile,
                     onStartRecording = {
-                        activity.requestPermissionsAndThen {
-                            vm.startRecording()
-                        }
+                        activity.requestPermissionsAndThen { vm.startRecording() }
+                    },
+                    onGoToSettings = {
+                        navController.navigate(Screen.Settings.route)
                     }
                 )
             }
@@ -185,12 +207,12 @@ fun MeetingRecorderApp() {
             composable(Screen.Completion.route) {
                 CompletionScreen(
                     uiState = uiState,
+                    hasApiKey = apiKey.isNotBlank(),
                     onSaveTranscription = vm::saveTranscription,
                     onSaveMeetingToDb = vm::saveMeetingToDatabase,
                     onGenerateMinutes = vm::generateMeetingMinutes,
-                    onViewMinutes = {
-                        navController.navigate(Screen.Minutes.route)
-                    },
+                    onViewMinutes = { navController.navigate(Screen.Minutes.route) },
+                    onGoToSettings = { navController.navigate(Screen.Settings.route) },
                     onNewMeeting = {
                         vm.resetSession()
                         navController.navigate(Screen.Home.route) {
@@ -211,9 +233,14 @@ fun MeetingRecorderApp() {
             composable(Screen.History.route) {
                 HistoryScreen(
                     meetings = meetings,
-                    onMeetingClick = { meeting ->
-                        // Future: navigate to meeting detail screen
-                    }
+                    onMeetingClick = { /* detail screen — future */ }
+                )
+            }
+
+            composable(Screen.Settings.route) {
+                SettingsScreen(
+                    currentApiKey = apiKey,
+                    onSaveApiKey = vm::saveApiKey
                 )
             }
         }
