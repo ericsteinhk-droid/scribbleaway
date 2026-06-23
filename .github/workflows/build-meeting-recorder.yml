@@ -1,0 +1,104 @@
+name: Build Android APK — Transcripteur de Réunion
+
+on:
+  workflow_dispatch:          # trigger manually from GitHub mobile app or web
+  push:
+    branches:
+      - claude/audio-recorder-transcription-8t4bz3
+      - main
+    paths:
+      - 'meeting-recorder/**'
+      - '.github/workflows/build-meeting-recorder.yml'
+
+permissions:
+  contents: write             # needed to create releases
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+
+    steps:
+      # ── Checkout ────────────────────────────────────────────────────────────
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          ref: claude/audio-recorder-transcription-8t4bz3
+
+      # ── Java 21 (required by AGP 8.5 + Kotlin 2.x) ─────────────────────────
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      # ── Android SDK ─────────────────────────────────────────────────────────
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      # ── Gradle cache (speeds up subsequent runs significantly) ───────────────
+      - name: Cache Gradle packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('meeting-recorder/**/*.gradle.kts', 'meeting-recorder/gradle/libs.versions.toml') }}
+          restore-keys: |
+            gradle-${{ runner.os }}-
+
+      # ── Make gradlew executable ──────────────────────────────────────────────
+      - name: Make gradlew executable
+        working-directory: meeting-recorder
+        run: chmod +x gradlew
+
+      # ── Build debug APK ─────────────────────────────────────────────────────
+      # CLAUDE_API_KEY is optional — users can enter it in the app's Settings tab.
+      # Add it to GitHub Secrets (Settings → Secrets → Actions → CLAUDE_API_KEY)
+      # if you want it baked into the build.
+      - name: Build debug APK
+        working-directory: meeting-recorder
+        env:
+          CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
+        run: ./gradlew assembleDebug --no-daemon --stacktrace
+
+      # ── Rename APK to something readable ────────────────────────────────────
+      - name: Rename APK
+        run: |
+          mv meeting-recorder/app/build/outputs/apk/debug/app-debug.apk \
+             meeting-recorder/app/build/outputs/apk/debug/TranscripteurReunion-${{ github.run_number }}.apk
+
+      # ── Upload as workflow artifact (14-day retention) ───────────────────────
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: TranscripteurReunion-debug-${{ github.run_number }}
+          path: meeting-recorder/app/build/outputs/apk/debug/TranscripteurReunion-${{ github.run_number }}.apk
+          retention-days: 14
+
+      # ── GitHub Release — direct download link ────────────────────────────────
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "transcripteur-build-${{ github.run_number }}" \
+            "meeting-recorder/app/build/outputs/apk/debug/TranscripteurReunion-${{ github.run_number }}.apk#TranscripteurReunion.apk" \
+            --title "Transcripteur de Réunion — Build ${{ github.run_number }}" \
+            --notes "## Transcripteur de Réunion — APK debug
+
+          **Branche :** \`${{ github.ref_name }}\`
+          **Commit :** \`${{ github.sha }}\`
+
+          ---
+
+          ### Installer sur Android
+
+          1. Téléchargez **TranscripteurReunion.apk** ci-dessous
+          2. Sur votre téléphone : **Paramètres → Applications → Installer des applications inconnues** → autorisez votre navigateur
+          3. Ouvrez le fichier téléchargé et appuyez sur **Installer**
+
+          ### Configuration
+          Après l'installation, ouvrez l'app et allez dans l'onglet **Paramètres** pour saisir votre clé API Claude (console.anthropic.com).
+          L'enregistrement et la transcription fonctionnent sans clé.
+
+          ---
+          > Build debug non signé — usage personnel uniquement."
