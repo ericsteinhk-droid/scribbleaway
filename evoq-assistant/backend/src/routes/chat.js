@@ -132,8 +132,17 @@ router.post('/', async (req, res) => {
   };
 
   // ── Abort on client disconnect ──────────────────────────────────────────────
+  // IMPORTANT: listen on `res`, not `req`. With body-parsing middleware the
+  // request stream's 'close' event fires as soon as the request body has been
+  // consumed (Node 16+), which would abort the provider call before it streams
+  // a single token. The response stream only closes on a genuine client
+  // disconnect, and the `finished` flag prevents a self-inflicted abort once we
+  // have ended the response normally.
   const abortController = new AbortController();
-  req.on('close', () => abortController.abort());
+  let finished = false;
+  res.on('close', () => {
+    if (!finished) abortController.abort();
+  });
 
   // ── Accumulate the full response for DB persistence ─────────────────────────
   let fullContent = '';
@@ -206,17 +215,28 @@ router.post('/', async (req, res) => {
           });
         }
 
+        finished = true;
         sendEvent({ type: 'done', inputTokens, outputTokens, cost });
         res.end();
       },
       abortController.signal,
     );
+
+    // Safety net: if the provider returned without ever calling onDone
+    // (e.g. an empty completion), make sure we still close the SSE stream
+    // instead of leaving the client hanging.
+    if (!res.writableEnded) {
+      finished = true;
+      sendEvent({ type: 'done', inputTokens: 0, outputTokens: 0, cost: 0 });
+      res.end();
+    }
   } catch (err) {
+    finished = true;
     if (!abortController.signal.aborted) {
       console.error('[chat] streaming error:', err.message);
       sendEvent({ type: 'error', message: err.message ?? 'Streaming failed' });
     }
-    res.end();
+    if (!res.writableEnded) res.end();
   }
 });
 
