@@ -3,12 +3,32 @@
 Remove construction-site clutter from a single architectural photo using
 Google's Gemini image editing ("Nano Banana"). Windows desktop app (PySide6).
 
-> **Build status:** Stage 3 — real `google-genai` integration is live. The
-> "Remove clutter" action calls the model and returns the edited image. Errors
-> (invalid/missing key, rate limits, no internet, oversized images, blocked or
-> image-less responses) are mapped to clear messages. Set
-> `USE_STUB = True` in `app/core/gemini_client.py` to run the UI offline
-> against a placeholder. The Windows `.exe` build workflow arrives in Stage 4.
+> **Build status:** Complete. Real `google-genai` integration plus a GitHub
+> Actions workflow that builds the Windows `.exe`. Set `USE_STUB = True` in
+> `app/core/gemini_client.py` to run the UI offline against a placeholder.
+
+## Download the Windows .exe
+
+The exe is built on a Windows runner by GitHub Actions
+(`.github/workflows/build-scribbleaway.yml`). No API keys or secrets are used
+in or baked into the build — you supply your Gemini key at runtime in Settings.
+
+**From a build run (any push):**
+1. Go to the repo's **Actions** tab.
+2. Click the latest **"Build ScribbleAway (Windows exe)"** run.
+3. Scroll to **Artifacts** at the bottom and download **`ScribbleAway-windows`**.
+4. Unzip it — inside is `ScribbleAway.exe`. Double-click to run.
+
+**From a Release (tagged builds):** push a tag like `v1.0.0` and the exe is
+attached to a GitHub **Release**. Then go to the repo's **Releases** page and
+download `ScribbleAway.exe` from the latest release's **Assets**.
+
+```bash
+git tag v1.0.0 && git push origin v1.0.0
+```
+
+> Windows SmartScreen may warn on first launch because the exe is unsigned —
+> choose **More info → Run anyway**.
 
 ## Model & terms (verified against Google docs, July 2026)
 
