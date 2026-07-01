@@ -46,12 +46,12 @@ jobs:
       - name: Upload exe as build artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ScribbleAway-windows
-          path: scribbleaway/dist/ScribbleAway.exe
+          name: photoclean-windows
+          path: scribbleaway/dist/photoclean.exe
           if-no-files-found: error
 
       - name: Attach exe to GitHub Release (tagged builds only)
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          files: scribbleaway/dist/ScribbleAway.exe
+          files: scribbleaway/dist/photoclean.exe

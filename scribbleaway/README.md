@@ -16,12 +16,12 @@ in or baked into the build — you supply your Gemini key at runtime in Settings
 **From a build run (any push):**
 1. Go to the repo's **Actions** tab.
 2. Click the latest **"Build ScribbleAway (Windows exe)"** run.
-3. Scroll to **Artifacts** at the bottom and download **`ScribbleAway-windows`**.
-4. Unzip it — inside is `ScribbleAway.exe`. Double-click to run.
+3. Scroll to **Artifacts** at the bottom and download **`photoclean-windows`**.
+4. Unzip it — inside is `photoclean.exe`. Double-click to run.
 
 **From a Release (tagged builds):** push a tag like `v1.0.0` and the exe is
 attached to a GitHub **Release**. Then go to the repo's **Releases** page and
-download `ScribbleAway.exe` from the latest release's **Assets**.
+download `photoclean.exe` from the latest release's **Assets**.
 
 ```bash
 git tag v1.0.0 && git push origin v1.0.0
