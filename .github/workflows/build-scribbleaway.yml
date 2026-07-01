@@ -1,0 +1,77 @@
+name: Build ScribbleAway (Windows exe)
+
+# Builds the single-file Windows .exe (photoclean.exe) on a Windows runner.
+#   * every build uploads the exe as a downloadable workflow artifact
+#   * pushing a tag like photoclean-v1.0.0 attaches the exe to a GitHub Release
+#   * a manual run (workflow_dispatch) with a "release_tag" input creates that
+#     tag + Release server-side using the runner's GITHUB_TOKEN
+# No secrets or API keys are used or bundled — the user supplies their Gemini
+# key at runtime through the app's Settings screen.
+
+on:
+  push:
+    branches:
+      - main
+      - master
+      - claude/windows-clutter-removal-gemini-527nty
+    tags:
+      - "photoclean-v*"
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Create a GitHub Release with this tag (e.g. photoclean-v1.0.0). Leave blank to only build the artifact."
+        required: false
+        default: ""
+
+permissions:
+  contents: write   # needed to create the tag and attach assets to a Release
+
+jobs:
+  build:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: scribbleaway
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Build exe with PyInstaller
+        run: pyinstaller --clean --noconfirm scribbleaway.spec
+
+      - name: Upload exe as build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: photoclean-windows
+          path: scribbleaway/dist/photoclean.exe
+          if-no-files-found: error
+
+      - name: Publish GitHub Release with the exe
+        # Fires on a tag push, or on a manual run when release_tag is provided.
+        if: startsWith(github.ref, 'refs/tags/') || inputs.release_tag != ''
+        uses: softprops/action-gh-release@v2
+        with:
+          # On tag pushes github.ref_name is the tag; on manual runs use the input.
+          tag_name: ${{ inputs.release_tag != '' && inputs.release_tag || github.ref_name }}
+          name: PhotoClean ${{ inputs.release_tag != '' && inputs.release_tag || github.ref_name }}
+          body: |
+            PhotoClean — remove construction-site clutter from an architectural
+            photo using Google's Gemini image editing.
+
+            Download `photoclean.exe` below and double-click to run. On first
+            launch, open Settings and paste your Gemini API key.
+
+            > Unsigned build — Windows SmartScreen may warn on first run
+            > (More info → Run anyway).
+          files: scribbleaway/dist/photoclean.exe
