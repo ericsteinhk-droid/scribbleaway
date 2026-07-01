@@ -1,11 +1,13 @@
 """ScribbleAway main window — single-window UI."""
 
 from PySide6.QtCore import Qt, QThread
+from PySide6.QtGui import QIcon, QPixmap
 from PySide6.QtWidgets import (
     QCheckBox, QFileDialog, QFrame, QGroupBox, QHBoxLayout, QLabel,
     QMainWindow, QMessageBox, QPlainTextEdit, QPushButton, QVBoxLayout, QWidget,
 )
 
+from app.resources import logo_path
 from app.core import images, keystore
 from app.core.gemini_client import MODEL_ID, USE_STUB
 from app.core.images import ImageError
@@ -22,6 +24,9 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.setWindowTitle("ScribbleAway — construction-site clutter removal")
         self.resize(1100, 720)
+        self._logo = QPixmap(logo_path())
+        if not self._logo.isNull():
+            self.setWindowIcon(QIcon(self._logo))
 
         self._original = None   # PIL.Image loaded from disk
         self._result = None      # PIL.Image returned by the edit
@@ -43,6 +48,14 @@ class MainWindow(QMainWindow):
         panel = QWidget()
         panel.setFixedWidth(320)
         v = QVBoxLayout(panel)
+
+        if not self._logo.isNull():
+            logo_label = QLabel()
+            logo_label.setPixmap(self._logo.scaledToWidth(
+                240, Qt.SmoothTransformation))
+            logo_label.setAlignment(Qt.AlignLeft)
+            logo_label.setContentsMargins(0, 0, 0, 8)
+            v.addWidget(logo_label)
 
         self.load_btn = QPushButton("📂  Load image…")
         self.load_btn.clicked.connect(self.on_load)

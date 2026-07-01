@@ -9,6 +9,9 @@ from PyInstaller.utils.hooks import collect_all
 
 datas, binaries, hiddenimports = [], [], []
 
+# Bundle the EVOQ logo (used as the header image and window icon).
+datas += [("app/assets/evoq_logo.png", "app/assets")]
+
 # keyring and google-genai load parts of themselves lazily (backends / entry
 # points), which PyInstaller's static analysis misses. Pull them in wholesale.
 for pkg in ("keyring", "google.genai"):
@@ -61,4 +64,5 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
+    icon="app/assets/evoq_logo.ico",
 )
