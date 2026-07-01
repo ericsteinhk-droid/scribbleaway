@@ -3,10 +3,12 @@
 Remove construction-site clutter from a single architectural photo using
 Google's Gemini image editing ("Nano Banana"). Windows desktop app (PySide6).
 
-> **Build status:** Stage 2 — full GUI with a **stubbed** Gemini call. The
-> "Remove clutter" action currently returns a placeholder preview (a desaturated
-> copy with a red banner) so the whole flow works without an API key. Stage 3
-> wires in the real `google-genai` call.
+> **Build status:** Stage 3 — real `google-genai` integration is live. The
+> "Remove clutter" action calls the model and returns the edited image. Errors
+> (invalid/missing key, rate limits, no internet, oversized images, blocked or
+> image-less responses) are mapped to clear messages. Set
+> `USE_STUB = True` in `app/core/gemini_client.py` to run the UI offline
+> against a placeholder. The Windows `.exe` build workflow arrives in Stage 4.
 
 ## Model & terms (verified against Google docs, July 2026)
 
