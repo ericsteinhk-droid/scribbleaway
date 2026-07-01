@@ -2,7 +2,7 @@
 
 from io import BytesIO
 
-from PIL import Image
+from PIL import Image, ImageOps
 from PySide6.QtGui import QImage, QPixmap
 
 # Long-edge cap applied before sending to the API. Keeps the request under the
@@ -22,6 +22,10 @@ def load_image(path: str) -> Image.Image:
         img.load()
     except Exception as exc:  # noqa: BLE001 - surfaced to the user as a message
         raise ImageError(f"Could not open image:\n{exc}") from exc
+    # Bake in any EXIF orientation so the photo keeps its original rotation
+    # through display, editing, and save (and drop the now-stale orientation
+    # tag so viewers don't rotate it a second time).
+    img = ImageOps.exif_transpose(img)
     # Normalise to RGB so downstream save/encode is predictable.
     if img.mode not in ("RGB", "RGBA"):
         img = img.convert("RGB")
