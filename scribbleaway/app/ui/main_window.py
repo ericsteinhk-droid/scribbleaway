@@ -1,5 +1,7 @@
 """ScribbleAway main window — single-window UI."""
 
+import os
+
 from PySide6.QtCore import Qt, QThread
 from PySide6.QtGui import QIcon, QPixmap
 from PySide6.QtWidgets import (
@@ -29,7 +31,8 @@ class MainWindow(QMainWindow):
             self.setWindowIcon(QIcon(self._logo))
 
         self._original = None   # PIL.Image loaded from disk
-        self._result = None      # PIL.Image returned by the edit
+        self._source_path = None  # path the original was loaded from
+        self._result = None      # PIL.Image returned by the edit (watermarked)
         self._thread = None
         self._worker = None
 
@@ -154,6 +157,7 @@ class MainWindow(QMainWindow):
         except ImageError as exc:
             QMessageBox.critical(self, "Cannot open image", str(exc))
             return
+        self._source_path = path
         self._result = None
         self.view.set_single(images.pil_to_qpixmap(self._original))
         self.accept_btn.setEnabled(False)
@@ -198,9 +202,11 @@ class MainWindow(QMainWindow):
         self._thread.start()
 
     def _on_edit_done(self, result_image):
-        self._result = result_image
+        # Stamp the discreet "AI edited for clarity" watermark so the preview
+        # shows exactly what will be saved.
+        self._result = images.add_watermark(result_image)
         self.view.set_compare(images.pil_to_qpixmap(self._original),
-                              images.pil_to_qpixmap(result_image))
+                              images.pil_to_qpixmap(self._result))
         self.accept_btn.setEnabled(True)
         self.reject_btn.setEnabled(True)
         self._set_busy(False)
@@ -215,7 +221,7 @@ class MainWindow(QMainWindow):
         if self._result is None:
             return
         path, _ = QFileDialog.getSaveFileName(
-            self, "Save cleaned image", "cleaned.png",
+            self, "Save cleaned image", self._default_save_path(),
             "PNG (*.png);;JPEG (*.jpg);;WebP (*.webp)")
         if not path:
             return
@@ -225,6 +231,16 @@ class MainWindow(QMainWindow):
             QMessageBox.critical(self, "Cannot save", str(exc))
             return
         self.statusBar().showMessage(f"Saved to {path}")
+
+    def _default_save_path(self):
+        """Same folder as the source, original name + '_declutter' suffix."""
+        if not self._source_path:
+            return "cleaned_declutter.png"
+        folder = os.path.dirname(self._source_path)
+        stem, ext = os.path.splitext(os.path.basename(self._source_path))
+        if not ext:
+            ext = ".png"
+        return os.path.join(folder, f"{stem}_declutter{ext}")
 
     def on_reject(self):
         self._result = None
