@@ -1,0 +1,13 @@
+<resources>
+    <string name="app_name">ScribbleAway</string>
+    <string name="tagline">Transcription hors ligne — français canadien (Whisper base)</string>
+    <string name="pick_audio">Choisir un fichier audio</string>
+    <string name="show_timestamps">Afficher les horodatages</string>
+    <string name="selected_file">Fichier sélectionné</string>
+    <string name="transcript">Transcription</string>
+    <string name="copy">Copier</string>
+    <string name="share">Partager</string>
+    <string name="copied">Transcription copiée</string>
+    <string name="share_transcript">Partager la transcription</string>
+    <string name="error_prefix">Erreur : %1$s</string>
+</resources>

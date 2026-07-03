@@ -1,0 +1,2 @@
+# The Whisper model (ggml-base.bin) is downloaded here by scripts/fetch-deps.sh
+# and packaged into the APK. It is intentionally not committed to git.

@@ -1,0 +1,18 @@
+# Build outputs
+.gradle/
+build/
+*/build/
+local.properties
+
+# Fetched dependencies (populated by scripts/fetch-deps.sh)
+third_party/
+
+# Bundled model — downloaded at build time, too large to commit
+app/src/main/assets/models/*.bin
+
+# IDE
+.idea/
+*.iml
+captures/
+.externalNativeBuild/
+.cxx/

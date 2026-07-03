@@ -1,0 +1,60 @@
+plugins {
+    id 'com.android.library'
+    id 'org.jetbrains.kotlin.android'
+}
+
+// Location of the whisper.cpp source tree that the native code is compiled
+// against. Provided by scripts/fetch-deps.sh / the CI workflow. Defaults to
+// third_party/whisper.cpp under the project root.
+def whisperDir = project.findProperty('whisperDir') ?: "${rootProject.projectDir}/third_party/whisper.cpp"
+
+android {
+    namespace 'com.whispercpp'
+    compileSdk 34
+
+    defaultConfig {
+        minSdk 26
+
+        // Real-world phones are ARM. Skip x86/x86_64 to keep the APK smaller;
+        // add them back here if you need emulator support.
+        ndk {
+            abiFilters 'arm64-v8a', 'armeabi-v7a'
+        }
+        externalNativeBuild {
+            cmake {
+                arguments "-DWHISPER_DIR=${whisperDir}"
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    kotlinOptions {
+        jvmTarget = '17'
+    }
+
+    ndkVersion "26.1.10909125"
+    externalNativeBuild {
+        cmake {
+            path = file("src/main/jni/whisper/CMakeLists.txt")
+            version "3.22.1"
+        }
+    }
+    packagingOptions {
+        resources {
+            excludes += '/META-INF/{AL2.0,LGPL2.1}'
+        }
+    }
+}
+
+dependencies {
+    implementation 'androidx.core:core-ktx:1.13.1'
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1'
+}

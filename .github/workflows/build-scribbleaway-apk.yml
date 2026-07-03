@@ -1,0 +1,88 @@
+name: Build ScribbleAway APK (Canadian French transcriber)
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - claude/canadian-french-transcriber-apk-oka4ry
+      - main
+    paths:
+      - 'android/**'
+      - '.github/workflows/build-scribbleaway-apk.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: android
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+          cache-dependency-path: android
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install NDK and CMake
+        run: |
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager "ndk;26.1.10909125" "cmake;3.22.1" "platforms;android-34" "build-tools;34.0.0"
+
+      - name: Fetch whisper.cpp source + Whisper base model
+        run: bash scripts/fetch-deps.sh
+
+      - name: Make gradlew executable
+        run: chmod +x gradlew
+
+      - name: Build release APK
+        run: ./gradlew :app:assembleRelease --no-daemon --stacktrace
+
+      - name: Locate APK
+        id: apk
+        run: |
+          APK=$(find app/build/outputs/apk/release -name '*.apk' | head -n1)
+          echo "Found APK: $APK"
+          echo "path=android/$APK" >> "$GITHUB_OUTPUT"
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ScribbleAway-release-${{ github.run_number }}
+          path: ${{ steps.apk.outputs.path }}
+          retention-days: 30
+
+      - name: Publish GitHub Release with APK
+        if: github.ref_name == 'claude/canadian-french-transcriber-apk-oka4ry' || github.ref_name == 'main'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: scribbleaway-build-${{ github.run_number }}
+          name: ScribbleAway — Build ${{ github.run_number }}
+          prerelease: true
+          files: ${{ steps.apk.outputs.path }}
+          body: |
+            ## ScribbleAway — Canadian French transcriber (Whisper base)
+
+            On-device, fully offline speech-to-text tuned for Canadian French.
+
+            **Built from:** `${{ github.ref_name }}` @ `${{ github.sha }}`
+
+            ### Install on Android
+            1. Download `app-release.apk` below.
+            2. On your device: Settings → Apps → Special access → *Install unknown apps* → allow your browser/files app.
+            3. Open the downloaded APK to install.
+            4. Launch **ScribbleAway**, tap *Choisir un fichier audio*, pick any audio file (mp3, m4a, wav, ogg…) and wait for the transcription.
+
+            > First launch loads the ~148 MB Whisper base model, so give it a few seconds.
+            > Everything runs locally — no internet, no accounts, nothing leaves the phone.
