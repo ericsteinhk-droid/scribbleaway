@@ -222,6 +222,91 @@ function buildPrompt () {
   return hint ? `${base} ${hint}` : base
 }
 
+// ── Découpage des longs enregistrements ────────────────────────────────────
+// OpenAI limite chaque requête à 25 Mo. On garde une marge à 24 Mo. Les longs
+// fichiers sont décodés, ramenés en mono 16 kHz (ce que le modèle utilise de
+// toute façon) puis découpés en segments WAV envoyés l'un après l'autre.
+const SIZE_LIMIT = 24 * 1024 * 1024
+const TARGET_RATE = 16000
+const CHUNK_SECONDS = 600 // 10 min → WAV mono 16 kHz ≈ 19 Mo par segment
+
+// Envoie un blob audio à l'API et renvoie { ok, status, detail, text }.
+async function requestTranscription (key, model, blob, filename, extraPrompt) {
+  const form = new FormData()
+  form.append('file', blob, filename)
+  form.append('model', model)
+  form.append('language', 'fr')
+  form.append('response_format', 'json')
+  form.append('prompt', extraPrompt ? `${buildPrompt()} ${extraPrompt}` : buildPrompt())
+
+  const resp = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${key}` },
+    body: form
+  })
+  if (!resp.ok) {
+    let detail = ''
+    try { const j = await resp.json(); detail = j.error?.message || '' } catch (_) {}
+    return { ok: false, status: resp.status, detail }
+  }
+  const data = await resp.json()
+  return { ok: true, text: (data.text || '').trim() }
+}
+
+// Décode n'importe quel format supporté puis rééchantillonne en mono 16 kHz.
+async function decodeToMono16k (blob) {
+  const arrayBuf = await blob.arrayBuffer()
+  const AC = window.AudioContext || window.webkitAudioContext
+  const tmpCtx = new AC()
+  let decoded
+  try {
+    decoded = await tmpCtx.decodeAudioData(arrayBuf)
+  } finally {
+    tmpCtx.close()
+  }
+  const frames = Math.ceil(decoded.duration * TARGET_RATE)
+  const offline = new OfflineAudioContext(1, frames, TARGET_RATE)
+  const src = offline.createBufferSource()
+  src.buffer = decoded
+  src.connect(offline.destination)
+  src.start()
+  return offline.startRendering() // AudioBuffer mono 16 kHz
+}
+
+function writeWavString (view, offset, str) {
+  for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i))
+}
+
+// Encode l'intervalle [startSample, endSample[ d'un AudioBuffer mono en WAV 16 bits.
+function encodeWavRange (buffer, startSample, endSample) {
+  const channel = buffer.getChannelData(0)
+  const numSamples = endSample - startSample
+  const dataSize = numSamples * 2
+  const ab = new ArrayBuffer(44 + dataSize)
+  const view = new DataView(ab)
+  writeWavString(view, 0, 'RIFF')
+  view.setUint32(4, 36 + dataSize, true)
+  writeWavString(view, 8, 'WAVE')
+  writeWavString(view, 12, 'fmt ')
+  view.setUint32(16, 16, true)
+  view.setUint16(20, 1, true)          // PCM
+  view.setUint16(22, 1, true)          // mono
+  view.setUint32(24, TARGET_RATE, true)
+  view.setUint32(28, TARGET_RATE * 2, true) // byte rate
+  view.setUint16(32, 2, true)          // block align
+  view.setUint16(34, 16, true)         // bits per sample
+  writeWavString(view, 36, 'data')
+  view.setUint32(40, dataSize, true)
+  let offset = 44
+  for (let i = startSample; i < endSample; i++) {
+    let s = Math.max(-1, Math.min(1, channel[i]))
+    s = s < 0 ? s * 0x8000 : s * 0x7fff
+    view.setInt16(offset, s, true)
+    offset += 2
+  }
+  return new Blob([ab], { type: 'audio/wav' })
+}
+
 async function transcribe () {
   const key = getApiKey()
   if (!key) {
@@ -233,54 +318,77 @@ async function transcribe () {
     setStatus('Aucun audio à transcrire.', 'error')
     return
   }
-  // Limite OpenAI : 25 Mo par fichier.
-  if (recordedBlob.size > 25 * 1024 * 1024) {
-    setStatus('Fichier trop volumineux (max 25 Mo). Faites un enregistrement plus court.', 'error')
-    return
-  }
 
   const model = getModel()
   btnTranscribe.disabled = true
-  setStatus('Transcription en cours…', 'working')
-
-  const form = new FormData()
-  const filename = `audio.${extFor(recordedMime)}`
-  form.append('file', recordedBlob, filename)
-  form.append('model', model)
-  form.append('language', 'fr')
-  form.append('response_format', 'json')
-  form.append('prompt', buildPrompt())
 
   try {
-    const resp = await fetch('https://api.openai.com/v1/audio/transcriptions', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${key}` },
-      body: form
-    })
-    if (!resp.ok) {
-      let detail = ''
-      try { const j = await resp.json(); detail = j.error?.message || '' } catch (_) {}
-      if (resp.status === 401) {
-        setStatus('Clé API invalide ou expirée.', 'error')
-      } else {
-        setStatus(`Erreur ${resp.status}${detail ? ' : ' + detail : ''}`, 'error')
+    // Fichier sous la limite : envoi direct (rapide, format d'origine conservé).
+    if (recordedBlob.size <= SIZE_LIMIT) {
+      setStatus('Transcription en cours…', 'working')
+      const r = await requestTranscription(key, model, recordedBlob, `audio.${extFor(recordedMime)}`)
+      if (!r.ok) {
+        setStatus(r.status === 401 ? 'Clé API invalide ou expirée.'
+          : `Erreur ${r.status}${r.detail ? ' : ' + r.detail : ''}`, 'error')
+        return
       }
-      btnTranscribe.disabled = false
+      transcriptEl.value = r.text
+      finishTranscript(r.text)
       return
     }
-    const data = await resp.json()
-    const text = (data.text || '').trim()
-    transcriptEl.value = text
-    const hadText = text.length > 0
-    btnCopy.disabled = !hadText
-    btnSave.disabled = !hadText
-    setStatus(hadText ? 'Transcription terminée.' : 'Aucune parole détectée.', hadText ? 'ok' : 'error')
+
+    // Fichier volumineux : décodage puis découpage en segments.
+    setStatus('Préparation du découpage (décodage audio)…', 'working')
+    let rendered
+    try {
+      rendered = await decodeToMono16k(recordedBlob)
+    } catch (_) {
+      setStatus('Impossible de décoder cet audio pour le découper. Essayez un enregistrement plus court ou un autre format.', 'error')
+      return
+    }
+
+    const total = rendered.length
+    const chunkLen = CHUNK_SECONDS * TARGET_RATE
+    const numChunks = Math.ceil(total / chunkLen)
+    const parts = []
+
+    for (let c = 0; c < numChunks; c++) {
+      const start = c * chunkLen
+      const end = Math.min(total, start + chunkLen)
+      const wav = encodeWavRange(rendered, start, end)
+      setStatus(`Transcription du segment ${c + 1}/${numChunks}…`, 'working')
+      // On passe la fin du segment précédent comme contexte pour la continuité.
+      const tail = parts.length ? parts[parts.length - 1].slice(-200) : ''
+      const r = await requestTranscription(key, model, wav, `segment_${c + 1}.wav`, tail)
+      if (!r.ok) {
+        setStatus(`Erreur au segment ${c + 1}/${numChunks} (${r.status})${r.detail ? ' : ' + r.detail : ''}`, 'error')
+        // On conserve ce qui a déjà été transcrit.
+        if (parts.length) { transcriptEl.value = parts.join(' '); finishTranscript(transcriptEl.value) }
+        return
+      }
+      if (r.text) parts.push(r.text)
+      transcriptEl.value = parts.join(' ')
+    }
+
+    const full = parts.join(' ')
+    transcriptEl.value = full
+    finishTranscript(full, numChunks)
   } catch (err) {
     const detail = (err && err.message) ? err.message : 'erreur inconnue'
     setStatus('Échec de la requête : ' + detail, 'error')
   } finally {
     btnTranscribe.disabled = false
   }
+}
+
+function finishTranscript (text, segments) {
+  const hadText = text.trim().length > 0
+  btnCopy.disabled = !hadText
+  btnSave.disabled = !hadText
+  if (!hadText) { setStatus('Aucune parole détectée.', 'error'); return }
+  setStatus(segments && segments > 1
+    ? `Transcription terminée (${segments} segments recollés).`
+    : 'Transcription terminée.', 'ok')
 }
 
 btnTranscribe.addEventListener('click', transcribe)
