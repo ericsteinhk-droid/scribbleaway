@@ -66,32 +66,11 @@ jobs:
           sed -i 's|<uses-permission android:name="android.permission.INTERNET" />|<uses-permission android:name="android.permission.INTERNET" />\n    <uses-permission android:name="android.permission.RECORD_AUDIO" />\n    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />|' \
             app/src/main/AndroidManifest.xml
 
-      # ── Autoriser le micro du WebView ─────────────────────────────────────
-      - name: Patch MainActivity — grant WebView microphone permission
-        working-directory: transcripteur-vocal/android
-        run: |
-          cat > app/src/main/java/com/evoq/transcripteur/MainActivity.java << 'JAVA'
-          package com.evoq.transcripteur;
-
-          import android.webkit.PermissionRequest;
-          import com.getcapacitor.BridgeActivity;
-          import com.getcapacitor.BridgeWebChromeClient;
-
-          public class MainActivity extends BridgeActivity {
-              @Override
-              public void onResume() {
-                  super.onResume();
-                  if (bridge != null && bridge.getWebView() != null) {
-                      bridge.getWebView().setWebChromeClient(new BridgeWebChromeClient(bridge) {
-                          @Override
-                          public void onPermissionRequest(final PermissionRequest request) {
-                              runOnUiThread(() -> request.grant(request.getResources()));
-                          }
-                      });
-                  }
-              }
-          }
-          JAVA
+      # NOTE : aucun patch de MainActivity. Le BridgeWebChromeClient par défaut
+      # de Capacitor gère déjà onPermissionRequest pour le micro (il demande
+      # RECORD_AUDIO à l'exécution puis accorde l'accès au WebView). Recréer un
+      # BridgeWebChromeClient dans onResume appelait registerForActivityResult
+      # après l'état STARTED → IllegalStateException, plantage au démarrage.
 
       # ── Build Gradle ─────────────────────────────────────────────────────
       - name: Make gradlew executable
