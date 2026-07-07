@@ -202,6 +202,9 @@ html, body {
   justify-content: center;
   z-index: 20;
 }
+/* L'attribut `hidden` doit l'emporter sur `display: flex` ci-dessus,
+   sinon le panneau de réglages ne se ferme jamais. */
+.overlay[hidden] { display: none; }
 .sheet {
   background: var(--bg-card);
   width: 100%;
