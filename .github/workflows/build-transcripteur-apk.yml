@@ -1,0 +1,136 @@
+name: Build Android APK — Transcripteur vocal
+
+on:
+  workflow_dispatch:   # déclenchement manuel depuis l'interface GitHub
+  push:
+    branches:
+      - claude/android-voice-transcriber-apk-g82j3f
+      - main
+    paths:
+      - 'transcripteur-vocal/**'
+      - '.github/workflows/build-transcripteur-apk.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+
+    steps:
+      # ── Checkout ──────────────────────────────────────────────────────────
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # ── Node.js ───────────────────────────────────────────────────────────
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      # ── Build web (Vite) ─────────────────────────────────────────────────
+      - name: Install npm dependencies
+        working-directory: transcripteur-vocal
+        run: npm install
+
+      - name: Build web assets (Vite)
+        working-directory: transcripteur-vocal
+        env:
+          VITE_OPENAI_API_KEY: ${{ secrets.VITE_OPENAI_API_KEY }}
+        run: npm run build
+
+      # ── Projet Android (Capacitor) ────────────────────────────────────────
+      - name: Add Capacitor Android platform
+        working-directory: transcripteur-vocal
+        run: npx cap add android
+
+      - name: Sync web assets into Android project
+        working-directory: transcripteur-vocal
+        run: npx cap sync android
+
+      # ── Android SDK ───────────────────────────────────────────────────────
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      # ── Java 21 — après setup-android pour gagner la course JAVA_HOME ─────
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      # ── Permissions micro dans le manifeste ───────────────────────────────
+      - name: Patch AndroidManifest — add audio permissions
+        working-directory: transcripteur-vocal/android
+        run: |
+          sed -i 's|<uses-permission android:name="android.permission.INTERNET" />|<uses-permission android:name="android.permission.INTERNET" />\n    <uses-permission android:name="android.permission.RECORD_AUDIO" />\n    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />|' \
+            app/src/main/AndroidManifest.xml
+
+      # ── Autoriser le micro du WebView ─────────────────────────────────────
+      - name: Patch MainActivity — grant WebView microphone permission
+        working-directory: transcripteur-vocal/android
+        run: |
+          cat > app/src/main/java/com/evoq/transcripteur/MainActivity.java << 'JAVA'
+          package com.evoq.transcripteur;
+
+          import android.webkit.PermissionRequest;
+          import com.getcapacitor.BridgeActivity;
+          import com.getcapacitor.BridgeWebChromeClient;
+
+          public class MainActivity extends BridgeActivity {
+              @Override
+              public void onResume() {
+                  super.onResume();
+                  if (bridge != null && bridge.getWebView() != null) {
+                      bridge.getWebView().setWebChromeClient(new BridgeWebChromeClient(bridge) {
+                          @Override
+                          public void onPermissionRequest(final PermissionRequest request) {
+                              runOnUiThread(() -> request.grant(request.getResources()));
+                          }
+                      });
+                  }
+              }
+          }
+          JAVA
+
+      # ── Build Gradle ─────────────────────────────────────────────────────
+      - name: Make gradlew executable
+        working-directory: transcripteur-vocal/android
+        run: chmod +x gradlew
+
+      - name: Build debug APK
+        working-directory: transcripteur-vocal/android
+        run: ./gradlew assembleDebug --no-daemon
+
+      # ── Publication ──────────────────────────────────────────────────────
+      - name: Upload APK as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: transcripteur-vocal-debug-${{ github.run_number }}
+          path: transcripteur-vocal/android/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 30
+
+      - name: Create GitHub Release with APK
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "transcripteur-build-${{ github.run_number }}-${{ github.run_attempt }}" \
+            "transcripteur-vocal/android/app/build/outputs/apk/debug/app-debug.apk#Transcripteur-vocal-debug.apk" \
+            --title "Transcripteur vocal — Build ${{ github.run_number }}" \
+            --notes "## Transcripteur vocal — APK debug
+
+          Transcription vocale haute qualité en **français canadien** → fichier texte.
+
+          **Compilé depuis :** \`${{ github.ref_name }}\` @ \`${{ github.sha }}\`
+
+          ### Installation sur Android
+          1. Téléchargez \`Transcripteur-vocal-debug.apk\`
+          2. Sur l'appareil : Paramètres → Applications → Installer des applis inconnues → autorisez votre navigateur
+          3. Ouvrez le fichier téléchargé pour installer
+
+          ### Première utilisation
+          1. Ouvrez l'app, touchez ⚙️ et collez votre clé API OpenAI (stockée localement sur l'appareil)
+          2. Enregistrez ou importez un audio, puis touchez « Transcrire »
+          3. Corrigez au besoin, puis « Enregistrer .txt »
+
+          > Build debug. Pour une version de production, ajoutez un keystore de signature aux GitHub Secrets et utilisez \`assembleRelease\`."

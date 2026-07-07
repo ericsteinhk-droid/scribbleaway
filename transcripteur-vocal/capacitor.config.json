@@ -1,0 +1,8 @@
+{
+  "appId": "com.evoq.transcripteur",
+  "appName": "Transcripteur vocal",
+  "webDir": "dist",
+  "android": {
+    "allowMixedContent": false
+  }
+}
