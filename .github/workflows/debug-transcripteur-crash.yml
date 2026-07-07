@@ -2,6 +2,11 @@ name: Debug Transcripteur crash (emulator logcat)
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - claude/android-voice-transcriber-apk-g82j3f
+    paths:
+      - '.github/workflows/debug-transcripteur-crash.yml'
 
 permissions:
   contents: read
