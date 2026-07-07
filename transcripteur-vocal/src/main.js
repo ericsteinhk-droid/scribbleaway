@@ -30,6 +30,7 @@ let mediaStream = null
 let chunks = []
 let recordedBlob = null
 let recordedMime = 'audio/webm'
+let audioDuration = 0 // secondes, sert à décider du découpage
 let timerInterval = null
 let elapsed = 0
 let audioCtx = null
@@ -157,6 +158,7 @@ async function startRecording () {
   mediaRecorder.ondataavailable = (e) => { if (e.data && e.data.size) chunks.push(e.data) }
   mediaRecorder.onstop = () => {
     recordedBlob = new Blob(chunks, { type: recordedMime })
+    audioDuration = elapsed // la minuterie donne une durée fiable pour un enregistrement
     const url = URL.createObjectURL(recordedBlob)
     playback.src = url
     playback.hidden = false
@@ -196,10 +198,19 @@ fileInput.addEventListener('change', () => {
   if (!f) return
   recordedBlob = f
   recordedMime = f.type || 'audio/mpeg'
+  audioDuration = 0
   playback.src = URL.createObjectURL(f)
   playback.hidden = false
   btnTranscribe.disabled = false
   timerEl.textContent = '00:00'
+  // Récupère la durée depuis les métadonnées (sert au choix du découpage).
+  playback.addEventListener('loadedmetadata', () => {
+    const d = playback.duration
+    if (isFinite(d) && d > 0) {
+      audioDuration = d
+      timerEl.textContent = fmt(Math.round(d))
+    }
+  }, { once: true })
   const kb = Math.round(f.size / 1024)
   setStatus(`Fichier importé : ${f.name} (${kb} Ko).`, 'ok')
 })
@@ -223,10 +234,13 @@ function buildPrompt () {
 }
 
 // ── Découpage des longs enregistrements ────────────────────────────────────
-// OpenAI limite chaque requête à 25 Mo. On garde une marge à 24 Mo. Les longs
-// fichiers sont décodés, ramenés en mono 16 kHz (ce que le modèle utilise de
-// toute façon) puis découpés en segments WAV envoyés l'un après l'autre.
+// OpenAI impose deux limites par requête : 25 Mo de taille ET, pour les modèles
+// gpt-4o-transcribe, 1400 s (~23 min) de durée. On garde une marge (24 Mo,
+// 1380 s). Les fichiers qui dépassent l'une ou l'autre sont décodés, ramenés en
+// mono 16 kHz (ce que le modèle utilise de toute façon) puis découpés en
+// segments WAV envoyés l'un après l'autre.
 const SIZE_LIMIT = 24 * 1024 * 1024
+const MAX_DIRECT_SECONDS = 1380 // sous la limite de 1400 s de gpt-4o-transcribe
 const TARGET_RATE = 16000
 const CHUNK_SECONDS = 600 // 10 min → WAV mono 16 kHz ≈ 19 Mo par segment
 
@@ -307,6 +321,50 @@ function encodeWavRange (buffer, startSample, endSample) {
   return new Blob([ab], { type: 'audio/wav' })
 }
 
+// L'erreur 400 de dépassement de durée (variable selon le modèle).
+function isDurationError (detail) {
+  return /longer than|duration|too long|maximum/i.test(detail || '')
+}
+
+// Décode, découpe en segments et transcrit chacun. Renvoie true si terminé.
+async function transcribeByChunks (key, model) {
+  setStatus('Préparation du découpage (décodage audio)…', 'working')
+  let rendered
+  try {
+    rendered = await decodeToMono16k(recordedBlob)
+  } catch (_) {
+    setStatus('Impossible de décoder cet audio pour le découper. Essayez un autre format.', 'error')
+    return false
+  }
+
+  const total = rendered.length
+  const chunkLen = CHUNK_SECONDS * TARGET_RATE
+  const numChunks = Math.ceil(total / chunkLen)
+  const parts = []
+
+  for (let c = 0; c < numChunks; c++) {
+    const start = c * chunkLen
+    const end = Math.min(total, start + chunkLen)
+    const wav = encodeWavRange(rendered, start, end)
+    setStatus(`Transcription du segment ${c + 1}/${numChunks}…`, 'working')
+    // On passe la fin du segment précédent comme contexte pour la continuité.
+    const tail = parts.length ? parts[parts.length - 1].slice(-200) : ''
+    const r = await requestTranscription(key, model, wav, `segment_${c + 1}.wav`, tail)
+    if (!r.ok) {
+      setStatus(`Erreur au segment ${c + 1}/${numChunks} (${r.status})${r.detail ? ' : ' + r.detail : ''}`, 'error')
+      if (parts.length) { transcriptEl.value = parts.join(' '); finishTranscript(transcriptEl.value) }
+      return false
+    }
+    if (r.text) parts.push(r.text)
+    transcriptEl.value = parts.join(' ')
+  }
+
+  const full = parts.join(' ')
+  transcriptEl.value = full
+  finishTranscript(full, numChunks)
+  return true
+}
+
 async function transcribe () {
   const key = getApiKey()
   if (!key) {
@@ -323,56 +381,30 @@ async function transcribe () {
   btnTranscribe.disabled = true
 
   try {
-    // Fichier sous la limite : envoi direct (rapide, format d'origine conservé).
-    if (recordedBlob.size <= SIZE_LIMIT) {
-      setStatus('Transcription en cours…', 'working')
-      const r = await requestTranscription(key, model, recordedBlob, `audio.${extFor(recordedMime)}`)
-      if (!r.ok) {
-        setStatus(r.status === 401 ? 'Clé API invalide ou expirée.'
-          : `Erreur ${r.status}${r.detail ? ' : ' + r.detail : ''}`, 'error')
-        return
-      }
+    // Découpage nécessaire si le fichier dépasse la taille OU la durée maximale.
+    const tooBig = recordedBlob.size > SIZE_LIMIT
+    const tooLong = audioDuration > MAX_DIRECT_SECONDS
+    if (tooBig || tooLong) {
+      await transcribeByChunks(key, model)
+      return
+    }
+
+    // Sinon : envoi direct (rapide, format d'origine conservé).
+    setStatus('Transcription en cours…', 'working')
+    const r = await requestTranscription(key, model, recordedBlob, `audio.${extFor(recordedMime)}`)
+    if (r.ok) {
       transcriptEl.value = r.text
       finishTranscript(r.text)
       return
     }
-
-    // Fichier volumineux : décodage puis découpage en segments.
-    setStatus('Préparation du découpage (décodage audio)…', 'working')
-    let rendered
-    try {
-      rendered = await decodeToMono16k(recordedBlob)
-    } catch (_) {
-      setStatus('Impossible de décoder cet audio pour le découper. Essayez un enregistrement plus court ou un autre format.', 'error')
+    // Filet de sécurité : durée inconnue à l'avance mais rejetée par l'API →
+    // on bascule automatiquement en découpage.
+    if (r.status === 400 && isDurationError(r.detail)) {
+      await transcribeByChunks(key, model)
       return
     }
-
-    const total = rendered.length
-    const chunkLen = CHUNK_SECONDS * TARGET_RATE
-    const numChunks = Math.ceil(total / chunkLen)
-    const parts = []
-
-    for (let c = 0; c < numChunks; c++) {
-      const start = c * chunkLen
-      const end = Math.min(total, start + chunkLen)
-      const wav = encodeWavRange(rendered, start, end)
-      setStatus(`Transcription du segment ${c + 1}/${numChunks}…`, 'working')
-      // On passe la fin du segment précédent comme contexte pour la continuité.
-      const tail = parts.length ? parts[parts.length - 1].slice(-200) : ''
-      const r = await requestTranscription(key, model, wav, `segment_${c + 1}.wav`, tail)
-      if (!r.ok) {
-        setStatus(`Erreur au segment ${c + 1}/${numChunks} (${r.status})${r.detail ? ' : ' + r.detail : ''}`, 'error')
-        // On conserve ce qui a déjà été transcrit.
-        if (parts.length) { transcriptEl.value = parts.join(' '); finishTranscript(transcriptEl.value) }
-        return
-      }
-      if (r.text) parts.push(r.text)
-      transcriptEl.value = parts.join(' ')
-    }
-
-    const full = parts.join(' ')
-    transcriptEl.value = full
-    finishTranscript(full, numChunks)
+    setStatus(r.status === 401 ? 'Clé API invalide ou expirée.'
+      : `Erreur ${r.status}${r.detail ? ' : ' + r.detail : ''}`, 'error')
   } catch (err) {
     const detail = (err && err.message) ? err.message : 'erreur inconnue'
     setStatus('Échec de la requête : ' + detail, 'error')
