@@ -1,4 +1,5 @@
 name: Debug Transcripteur crash (emulator logcat)
+# Re-run to confirm CapacitorHttp does not regress startup.
 
 on:
   workflow_dispatch:

@@ -276,7 +276,8 @@ async function transcribe () {
     btnSave.disabled = !hadText
     setStatus(hadText ? 'Transcription terminée.' : 'Aucune parole détectée.', hadText ? 'ok' : 'error')
   } catch (err) {
-    setStatus('Échec réseau. Vérifiez votre connexion internet.', 'error')
+    const detail = (err && err.message) ? err.message : 'erreur inconnue'
+    setStatus('Échec de la requête : ' + detail, 'error')
   } finally {
     btnTranscribe.disabled = false
   }
