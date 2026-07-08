@@ -48,6 +48,13 @@ jobs:
         working-directory: transcripteur-vocal
         run: npx cap sync android
 
+      # ── Icône de l'app (« Onde sonore ») ──────────────────────────────────
+      # Remplace les mipmaps par défaut par nos densités et bascule l'icône
+      # adaptative sur un fond dégradé (drawable) + notre avant-plan d'onde.
+      - name: Apply app icons
+        working-directory: transcripteur-vocal
+        run: cp -R android-res/. android/app/src/main/res/
+
       # ── Android SDK ───────────────────────────────────────────────────────
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
