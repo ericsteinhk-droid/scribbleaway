@@ -1,0 +1,50 @@
+name: Release Render Enhancer
+
+# Publishes RenderEnhancer.exe as a GitHub Release when a version tag is pushed.
+# Cut a release with:
+#   git tag v1.0
+#   git push origin v1.0
+# The exe is then available at a stable, no-login URL:
+#   https://github.com/<owner>/<repo>/releases/latest/download/RenderEnhancer.exe
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag/version name for a manual release (e.g. v1.0)'
+        required: true
+
+permissions:
+  contents: write   # needed to create the Release
+
+jobs:
+  build-and-release:
+    runs-on: windows-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Build executable
+        run: pyinstaller render_enhancer.spec
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.inputs.tag || github.ref_name }}
+          name: Render Enhancer ${{ github.event.inputs.tag || github.ref_name }}
+          generate_release_notes: true
+          files: dist/RenderEnhancer.exe
+          fail_on_unmatched_files: true

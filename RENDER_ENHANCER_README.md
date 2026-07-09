@@ -69,10 +69,29 @@ pyinstaller render_enhancer.spec
 
 ### No Windows machine? Let GitHub build it
 
-A GitHub Actions workflow (`.github/workflows/build-render-enhancer.yml`) builds
-`RenderEnhancer.exe` on a Windows runner automatically on every push to the
-feature branch (and via **Run workflow** on the Actions tab). Download the built
-exe from the run's **Artifacts** section — no local Windows/Python setup needed.
+Two GitHub Actions workflows build the exe for you — no local Windows/Python
+setup needed:
+
+- **Test builds** (`build-render-enhancer.yml`) run automatically on every push
+  to the feature branch (and via **Run workflow** on the Actions tab). Download
+  the exe from the run's **Artifacts** section. Artifacts expire after 90 days
+  and download as a `.zip`.
+- **Releases** (`release-render-enhancer.yml`) run when you push a version tag,
+  and publish a permanent GitHub Release with `RenderEnhancer.exe` attached:
+
+  ```sh
+  git tag v1.0
+  git push origin v1.0
+  ```
+
+  The exe is then downloadable from a stable, no-login URL (no unzip needed):
+
+  ```
+  https://github.com/<owner>/<repo>/releases/latest/download/RenderEnhancer.exe
+  ```
+
+  Share that link directly with colleagues or clients. You can also trigger a
+  release manually from the Actions tab via **Run workflow**.
 
 ## Running from source (any platform with a display)
 
