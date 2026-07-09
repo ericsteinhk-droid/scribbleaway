@@ -169,7 +169,7 @@ LANGUAGES = [("English", "en"), ("Français", "fr")]
 
 I18N = {
     "en": {
-        "subtitle": "Render Enhancer — hyper-photorealistic upgrades for client approval",
+        "subtitle": "Render Enhancer — Rehaussement de rendus",
         "language": "Language:",
         "src_frame": "Source Renders",
         "dnd_hint": "  —  drag renders here",
@@ -249,7 +249,7 @@ I18N = {
         "filetype_all": "All files",
     },
     "fr": {
-        "subtitle": "Améliorateur de rendus — réalisme photographique pour l'approbation du client",
+        "subtitle": "Render Enhancer — Rehaussement de rendus",
         "language": "Langue :",
         "src_frame": "Rendus source",
         "dnd_hint": "  —  glissez les rendus ici",
@@ -625,7 +625,7 @@ class App(_AppBase):
                     self._logo_img = ImageTk.PhotoImage(
                         raw.resize((dw, dh), Image.LANCZOS))
             tk.Label(header, image=self._logo_img, bg=self.cget('bg')).grid(
-                row=0, column=0)
+                row=0, column=0, sticky="w", padx=(10, 0))
         lang_box = tk.Frame(header)
         lang_box.grid(row=0, column=1, sticky="ne", padx=8)
         tk.Label(lang_box, text=self.t("language")).pack(side="left")
@@ -820,11 +820,15 @@ class App(_AppBase):
         code = dict((n, c) for n, c in LANGUAGES).get(self.lang_var.get(), "en")
         if code == self._lang:
             return
+        ready_texts = {I18N[l]["ready"] for l in I18N}
+        was_idle = self.status_var.get() in ready_texts
         self._lang = code
         sel = list(self._listbox.curselection())
         for w in self.winfo_children():
             w.destroy()
         self._build_ui()
+        if was_idle:
+            self.status_var.set(self.t("ready"))
         for i in sel:
             self._listbox.select_set(i)
         self._refresh_count()
