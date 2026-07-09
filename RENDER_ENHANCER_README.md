@@ -126,6 +126,42 @@ python render_enhancer.py
 `tkinterdnd2` is optional — without it the app still works, just without
 drag-and-drop.
 
+## Limitations & getting the best results
+
+This tool uses a general-purpose generative image model (Gemini "Nano Banana"),
+which **outputs at roughly 1 megapixel (~1024 px on the long edge)** regardless
+of input size. That single fact sets realistic expectations:
+
+**What it does well**
+- Relighting a render into a convincing narrative (golden hour, overcast, blue
+  hour, post-rain) — sun angle, shadows, sky, ambience.
+- Mood, atmosphere, wet-ground reflections, glass reflections/transparency.
+- Adding believable, well-placed background entourage for scale.
+- A general lift from "CGI render" toward "photograph."
+
+**What it cannot reliably do**
+- Crisp, construction-accurate **fine repetitive micro-texture across a whole
+  building** — most notably **brick coursing and mortar joints on a full
+  façade**. At ~1024 px output, a full elevation gives each brick only 2–3
+  pixels, which is far too few to draw a correct running bond. No prompt wording
+  can overcome this pixel budget; it is a limitation of single-shot generation
+  at this resolution, not of the prompt.
+
+**Tips to get the most out of it**
+- **Frame tighter.** A closer or cropped view (one bay, an entrance, a corner)
+  puts far more pixels on each brick, so material and coursing read much better
+  than on a wide whole-building shot. Enhance detail views separately from the
+  hero wide shot.
+- **Attach a material reference** (Material References panel) for accurate
+  colour, finish and reflectivity of the specified brick/stone/glass.
+- Treat outputs as **presentation / mood imagery for client approval**, not as
+  construction-accurate material studies.
+- Generate a few variations and pick the best; results vary run to run.
+
+> Achieving crisp façade-scale brick would require a tiling pipeline (enhance
+> overlapping crops at full resolution, then stitch) or a dedicated upscaler.
+> That is out of scope for this version; ask if you want it explored later.
+
 ## App icon
 
 The executable ships with a custom icon (a modernist building in two-point
