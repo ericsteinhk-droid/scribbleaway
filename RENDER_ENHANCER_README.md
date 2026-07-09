@@ -44,9 +44,12 @@ narrative for any run.
 1. Add one or more renders (drag-and-drop, **Add Files…**, or **Add Folder…**).
    Supported: JPG, PNG, WEBP, BMP.
 2. Select the renders you want to enhance in the list.
-3. Tick one or more narrative styles (or **All 4**).
-4. Choose an output folder.
-5. Click **Enhance Render(s)**. Use **Cancel** to stop a batch mid-run.
+3. *(Optional but recommended for material fidelity)* attach up to **3 material
+   reference photos** — close-ups of the real brick, stone or glass — via
+   **Material References → Add reference…**. See below.
+4. Tick one or more narrative styles (or **All 4**).
+5. Choose an output folder.
+6. Click **Enhance Render(s)**. Use **Cancel** to stop a batch mid-run.
 
 Each result is saved as `<originalname>_<style>.png` in the output folder, and
 the latest result is previewed in the window. Click either preview image to open
@@ -56,6 +59,20 @@ to 2048 px on the long edge before upload.
 Transient API errors (rate limits, server hiccups, network blips) are retried
 automatically with exponential backoff, so a single glitch won't fail a whole
 batch.
+
+### Material references (for accurate brick, stone & glass)
+
+The single biggest lever for material realism is showing the model the *actual*
+specified materials. Attach 1–3 close-up photos of the real brick, stone or
+glazing and the model reproduces their exact colour, texture, mortar joints,
+weathering, finish and reflectivity on the matching surfaces of the building —
+instead of inventing generic materials — while keeping the geometry unchanged.
+
+- Use tightly-cropped material swatches (a wall of the brick, a stone sample, a
+  glazing close-up), not full scenes; the model treats them as material samples,
+  not compositions to copy.
+- References apply to every render and every style in the run.
+- They are sent alongside each render on every request (downscaled to 1280 px).
 
 ## Building the Windows .exe
 

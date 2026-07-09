@@ -63,7 +63,22 @@ GEMINI_ENDPOINT = (
 
 IMAGE_EXTS = {'.jpg', '.jpeg', '.png', '.webp', '.bmp'}
 MAX_UPLOAD_PX = 2048   # downscale huge renders before upload to stay within limits
+MAX_REF_PX = 1280      # material reference swatches need less resolution
+MAX_REFS = 3           # max material reference images per request
 REQUEST_TIMEOUT = 180  # seconds per image
+
+# Appended to the prompt when material reference photos are attached.
+REF_INSTRUCTION = (
+    "\nMaterial reference: the FIRST attached image is the architectural render "
+    "to enhance; the remaining attached image(s) are real material reference "
+    "photographs. Faithfully reproduce the exact materials shown in those "
+    "references — the brick, stone, metal and glass — matching their true colour, "
+    "surface texture, mortar joints, weathering, finish and reflectivity, and "
+    "apply them to the corresponding surfaces of the building. Do not copy the "
+    "references' shapes, lighting or composition; use them only as material "
+    "samples, while strictly preserving the render's geometry, viewpoint and "
+    "proportions."
+)
 MAX_RETRIES = 3        # attempts per request on transient errors
 RETRYABLE_STATUS = {429, 500, 502, 503, 504}
 
@@ -183,6 +198,15 @@ I18N = {
         "count_some": "{sel} of {total} renders selected.",
         "no_images_title": "No Images",
         "no_images_msg": "No images found in that folder.",
+        "ref_frame": "Material References (optional)",
+        "ref_hint": ("Attach photos of the real brick, stone or glass to "
+                     "reproduce — the model copies their exact material onto the "
+                     "building. Up to 3."),
+        "ref_add": "Add reference…",
+        "ref_none": "No references.",
+        "ref_count": "{n} reference(s):",
+        "ref_max": "You can attach at most {n} material references.",
+        "sel_refs": "Select Material References",
         "narr_frame": "Narrative Styles  (tick one or more)",
         "narr_hint": "Each ticked style produces its own image per render.",
         "all4": "All 4",
@@ -263,6 +287,15 @@ I18N = {
         "count_some": "{sel} de {total} rendus sélectionnés.",
         "no_images_title": "Aucune image",
         "no_images_msg": "Aucune image trouvée dans ce dossier.",
+        "ref_frame": "Références de matériaux (facultatif)",
+        "ref_hint": ("Joignez des photos de la brique, pierre ou vitrage réels à "
+                     "reproduire — le modèle applique leur matériau exact au "
+                     "bâtiment. Jusqu'à 3."),
+        "ref_add": "Ajouter une référence…",
+        "ref_none": "Aucune référence.",
+        "ref_count": "{n} référence(s) :",
+        "ref_max": "Vous pouvez joindre au maximum {n} références de matériaux.",
+        "sel_refs": "Sélectionner les références de matériaux",
         "narr_frame": "Styles narratifs  (cochez-en un ou plusieurs)",
         "narr_hint": "Chaque style coché produit sa propre image par rendu.",
         "all4": "Les 4",
@@ -388,15 +421,15 @@ def _retry_after(resp):
         return None
 
 
-def _encode_image(path):
+def _encode_image(path, max_px=MAX_UPLOAD_PX):
     """Load, EXIF-correct, downscale if huge, return (base64_png, mime)."""
     with Image.open(path) as img:
         img = ImageOps.exif_transpose(img)
         if img.mode not in ('RGB', 'RGBA'):
             img = img.convert('RGB')
         w, h = img.width, img.height
-        if max(w, h) > MAX_UPLOAD_PX:
-            ratio = MAX_UPLOAD_PX / max(w, h)
+        if max(w, h) > max_px:
+            ratio = max_px / max(w, h)
             img = img.resize((int(w * ratio), int(h * ratio)), Image.LANCZOS)
         import io
         buf = io.BytesIO()
@@ -405,13 +438,14 @@ def _encode_image(path):
 
 
 def enhance_image(api_key, prompt, image_path, status_cb=None, should_cancel=None,
-                  messages=None):
+                  messages=None, ref_paths=None):
     """Call Gemini image model. Returns raw bytes of the enhanced image.
 
     Transient failures (429 / 5xx / network) are retried with exponential
     backoff. Passing should_cancel (a callable returning bool) lets a running
     batch be aborted between attempts. messages optionally supplies localised
-    'retry_net' / 'retry_busy' templates for status_cb.
+    'retry_net' / 'retry_busy' templates for status_cb. ref_paths is an optional
+    list of material-reference image paths sent alongside the render.
     """
     if not HAS_REQUESTS:
         raise GeminiError("The 'requests' library is not installed.")
@@ -421,15 +455,21 @@ def enhance_image(api_key, prompt, image_path, status_cb=None, should_cancel=Non
     msg_busy = (messages or {}).get(
         "retry_busy", "Gemini busy (HTTP {code}) — retrying in {wait}s ({a}/{m})…")
 
+    refs = ref_paths or []
+    if refs:
+        prompt = prompt + REF_INSTRUCTION
+
     b64, mime = _encode_image(image_path)
+    parts = [
+        {"text": prompt},
+        {"inline_data": {"mime_type": mime, "data": b64}},
+    ]
+    for ref in refs[:MAX_REFS]:
+        rb64, rmime = _encode_image(ref, max_px=MAX_REF_PX)
+        parts.append({"inline_data": {"mime_type": rmime, "data": rb64}})
+
     body = {
-        "contents": [{
-            "role": "user",
-            "parts": [
-                {"text": prompt},
-                {"inline_data": {"mime_type": mime, "data": b64}},
-            ],
-        }],
+        "contents": [{"role": "user", "parts": parts}],
         "generationConfig": {"responseModalities": ["TEXT", "IMAGE"]},
     }
     headers = {
@@ -542,6 +582,8 @@ class App(_AppBase):
         self.minsize(720, 660)
         self._image_order = []
         self._image_set = set()
+        self._ref_order = []
+        self._ref_set = set()
         self._logo_img = None
         self._icon_img = None
         self._orig_preview = None
@@ -565,6 +607,7 @@ class App(_AppBase):
         self.lang_var = tk.StringVar(
             value=next(n for n, c in LANGUAGES if c == self._lang))
         self.count_var = tk.StringVar()
+        self.ref_count_var = tk.StringVar()
         self.narrative_vars = {n["key"]: tk.BooleanVar(value=(i == 0))
                                for i, n in enumerate(NARRATIVES)}
         self.extra_var = tk.StringVar()
@@ -648,6 +691,7 @@ class App(_AppBase):
         self.rowconfigure(2, weight=1)
 
         self._build_image_panel(left)
+        self._build_ref_panel(left)
         self._build_narrative_panel(left)
         self._build_api_panel(left)
         self._build_output_panel(left)
@@ -714,6 +758,23 @@ class App(_AppBase):
                   width=5).pack(side="right", padx=(2, 0))
         tk.Button(count_row, text=self.t("all"), command=self._select_all,
                   width=5).pack(side="right")
+
+    def _build_ref_panel(self, parent):
+        frame = tk.LabelFrame(parent, text=self.t("ref_frame"))
+        frame.pack(fill="x", pady=(0, 6))
+        tk.Label(frame, text=self.t("ref_hint"), fg="#555",
+                 font=("Segoe UI", 8), wraplength=360, justify="left").pack(
+            anchor="w", padx=8, pady=(4, 0))
+        row = tk.Frame(frame)
+        row.pack(fill="x", padx=8, pady=(2, 6))
+        tk.Button(row, text=self.t("ref_add"),
+                  command=self._browse_refs).pack(side="left", padx=(0, 4))
+        tk.Button(row, text=self.t("clear"),
+                  command=self._clear_refs).pack(side="left")
+        tk.Label(row, textvariable=self.ref_count_var, anchor="w",
+                 fg="#555", font=("Segoe UI", 8)).pack(
+            side="left", padx=(8, 0), expand=True, fill="x")
+        self._refresh_ref_count()
 
     def _build_narrative_panel(self, parent):
         frame = tk.LabelFrame(parent, text=self.t("narr_frame"))
@@ -927,6 +988,40 @@ class App(_AppBase):
     def _get_selected(self):
         return [self._image_order[i] for i in self._listbox.curselection()]
 
+    # ── Material reference management ───────────────────────────────────────────
+    def _browse_refs(self):
+        paths = filedialog.askopenfilenames(
+            title=self.t("sel_refs"),
+            filetypes=[(self.t("filetype_images"), "*.jpg *.jpeg *.png *.webp *.bmp"),
+                       (self.t("filetype_all"), "*.*")])
+        if paths:
+            self._add_refs(list(paths))
+
+    def _add_refs(self, paths):
+        for path in paths:
+            if len(self._ref_order) >= MAX_REFS:
+                messagebox.showinfo(self.t("ref_frame"),
+                                    self.t("ref_max", n=MAX_REFS))
+                break
+            if path in self._ref_set:
+                continue
+            self._ref_order.append(path)
+            self._ref_set.add(path)
+        self._refresh_ref_count()
+
+    def _clear_refs(self):
+        self._ref_order.clear()
+        self._ref_set.clear()
+        self._refresh_ref_count()
+
+    def _refresh_ref_count(self):
+        n = len(self._ref_order)
+        if n == 0:
+            self.ref_count_var.set(self.t("ref_none"))
+        else:
+            names = ", ".join(os.path.basename(p) for p in self._ref_order)
+            self.ref_count_var.set(self.t("ref_count", n=n) + "  " + names)
+
     # ── Preview rendering ────────────────────────────────────────────────────────
     def _show_original_preview(self, path):
         img = self._make_thumb(path)
@@ -1046,6 +1141,7 @@ class App(_AppBase):
 
         self._persist_config()
         jobs = [(path, n) for path in images for n in narratives]
+        refs = list(self._ref_order)
         retry_msgs = {"retry_net": self.t("retry_net"),
                       "retry_busy": self.t("retry_busy")}
 
@@ -1080,7 +1176,8 @@ class App(_AppBase):
                         api_key, prompt, path,
                         status_cb=status,
                         should_cancel=self._cancel.is_set,
-                        messages=retry_msgs)
+                        messages=retry_msgs,
+                        ref_paths=refs)
                     out_path = self._output_path(output_dir, path, narrative["key"])
                     with open(out_path, 'wb') as f:
                         f.write(data)
