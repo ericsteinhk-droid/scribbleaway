@@ -8,8 +8,11 @@ viewpoint, geometry and proportions while re-lighting and re-texturing the scene
 
 ## The four narrative styles
 
-Pick one style per run. Each prompt enforces strict adherence to the base
-render's geometry and keeps human figures small and in the mid/background only.
+Tick **one or more** styles per run — each ticked style produces its own image
+for every selected render (use **All 4** to generate the full comparison set in
+one click, ideal for presenting options to a client). Each prompt enforces
+strict adherence to the base render's geometry and keeps human figures small and
+in the mid/background only.
 
 1. **Golden Hour** — high-contrast low-angle morning sun, long shadows, tactile
    masonry, warm specular metal.
@@ -35,13 +38,18 @@ narrative for any run.
 1. Add one or more renders (drag-and-drop, **Add Files…**, or **Add Folder…**).
    Supported: JPG, PNG, WEBP, BMP.
 2. Select the renders you want to enhance in the list.
-3. Choose a narrative style.
+3. Tick one or more narrative styles (or **All 4**).
 4. Choose an output folder.
-5. Click **Enhance Render(s)**.
+5. Click **Enhance Render(s)**. Use **Cancel** to stop a batch mid-run.
 
 Each result is saved as `<originalname>_<style>.png` in the output folder, and
-the last result is previewed in the window. Large renders are automatically
-downscaled to 2048 px on the long edge before upload.
+the latest result is previewed in the window. Click either preview image to open
+it full-size in your default viewer. Large renders are automatically downscaled
+to 2048 px on the long edge before upload.
+
+Transient API errors (rate limits, server hiccups, network blips) are retried
+automatically with exponential backoff, so a single glitch won't fail a whole
+batch.
 
 ## Building the Windows .exe
 
@@ -59,10 +67,17 @@ Equivalent explicit command (uses the committed spec):
 pyinstaller render_enhancer.spec
 ```
 
+### No Windows machine? Let GitHub build it
+
+A GitHub Actions workflow (`.github/workflows/build-render-enhancer.yml`) builds
+`RenderEnhancer.exe` on a Windows runner automatically on every push to the
+feature branch (and via **Run workflow** on the Actions tab). Download the built
+exe from the run's **Artifacts** section — no local Windows/Python setup needed.
+
 ## Running from source (any platform with a display)
 
 ```sh
-pip install Pillow requests tkinterdnd2
+pip install Pillow requests certifi tkinterdnd2
 python render_enhancer.py
 ```
 

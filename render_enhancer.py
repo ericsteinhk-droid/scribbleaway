@@ -16,8 +16,11 @@ import os
 import re
 import sys
 import json
+import time
 import base64
 import threading
+import subprocess
+import webbrowser
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 
@@ -35,6 +38,14 @@ try:
 except ImportError:
     HAS_REQUESTS = False
 
+# Pin the CA bundle explicitly so HTTPS works in a frozen (PyInstaller) build,
+# where requests' bundled certificates can otherwise be missing.
+try:
+    import certifi
+    _CA_BUNDLE = certifi.where()
+except Exception:
+    _CA_BUNDLE = True  # fall back to requests' default verification
+
 
 # ── Constants ─────────────────────────────────────────────────────────────────
 APP_VERSION = "v1.0"
@@ -51,7 +62,10 @@ GEMINI_ENDPOINT = (
 IMAGE_EXTS = {'.jpg', '.jpeg', '.png', '.webp', '.bmp'}
 MAX_UPLOAD_PX = 2048   # downscale huge renders before upload to stay within limits
 REQUEST_TIMEOUT = 180  # seconds per image
+MAX_RETRIES = 3        # attempts per request on transient errors
+RETRYABLE_STATUS = {429, 500, 502, 503, 504}
 
+GET_KEY_URL = "https://aistudio.google.com/app/apikey"
 CONFIG_PATH = os.path.join(os.path.expanduser("~"), ".evoq_render_enhancer.json")
 
 
@@ -188,6 +202,28 @@ class GeminiError(Exception):
     pass
 
 
+class CancelledError(Exception):
+    """Raised when the user cancels an in-progress batch."""
+    pass
+
+
+def _sleep_cancellable(seconds, should_cancel):
+    """Sleep in small steps so a cancel request is honoured promptly."""
+    waited = 0.0
+    while waited < seconds:
+        if should_cancel and should_cancel():
+            raise CancelledError()
+        time.sleep(0.2)
+        waited += 0.2
+
+
+def _retry_after(resp):
+    try:
+        return int(resp.headers.get("Retry-After", ""))
+    except (TypeError, ValueError):
+        return None
+
+
 def _encode_image(path):
     """Load, EXIF-correct, downscale if huge, return (base64_png, mime)."""
     with Image.open(path) as img:
@@ -204,8 +240,13 @@ def _encode_image(path):
         return base64.b64encode(buf.getvalue()).decode('ascii'), 'image/png'
 
 
-def enhance_image(api_key, prompt, image_path):
-    """Call Gemini image model. Returns raw bytes of the enhanced image."""
+def enhance_image(api_key, prompt, image_path, status_cb=None, should_cancel=None):
+    """Call Gemini image model. Returns raw bytes of the enhanced image.
+
+    Transient failures (429 / 5xx / network) are retried with exponential
+    backoff. Passing should_cancel (a callable returning bool) lets a running
+    batch be aborted between attempts.
+    """
     if not HAS_REQUESTS:
         raise GeminiError("The 'requests' library is not installed.")
 
@@ -228,12 +269,36 @@ def enhance_image(api_key, prompt, image_path):
     last_err = None
     for model in GEMINI_MODELS:
         url = GEMINI_ENDPOINT.format(model=model)
-        try:
-            resp = requests.post(url, headers=headers, json=body,
-                                 timeout=REQUEST_TIMEOUT)
-        except requests.exceptions.RequestException as e:
-            raise GeminiError(f"Network error contacting Gemini: {e}")
+        resp = None
+        for attempt in range(1, MAX_RETRIES + 1):
+            if should_cancel and should_cancel():
+                raise CancelledError()
+            try:
+                resp = requests.post(url, headers=headers, json=body,
+                                     timeout=REQUEST_TIMEOUT, verify=_CA_BUNDLE)
+            except requests.exceptions.RequestException as e:
+                last_err = f"Network error: {e}"
+                if attempt < MAX_RETRIES:
+                    if status_cb:
+                        status_cb(f"Network error — retrying "
+                                  f"({attempt}/{MAX_RETRIES})…")
+                    _sleep_cancellable(2 ** attempt, should_cancel)
+                    continue
+                raise GeminiError(
+                    f"Network error contacting Gemini after {MAX_RETRIES} "
+                    f"attempts: {e}")
 
+            if resp.status_code in RETRYABLE_STATUS and attempt < MAX_RETRIES:
+                wait = _retry_after(resp) or 2 ** attempt
+                if status_cb:
+                    status_cb(f"Gemini busy (HTTP {resp.status_code}) — retrying "
+                              f"in {wait}s ({attempt}/{MAX_RETRIES})…")
+                _sleep_cancellable(wait, should_cancel)
+                continue
+            break  # non-retryable response, or retries exhausted
+
+        if resp is None:
+            continue
         if resp.status_code == 404:
             last_err = f"Model '{model}' not found (404)."
             continue  # try the next model id
@@ -312,7 +377,9 @@ class App(_AppBase):
         self._logo_img = None
         self._orig_preview = None
         self._result_preview = None
-        self._result_bytes = None
+        self._orig_path = None
+        self._last_result_path = None
+        self._cancel = threading.Event()
         self._cfg = load_config()
         self._build_ui()
         self._restore_config()
@@ -362,11 +429,17 @@ class App(_AppBase):
         tk.Label(self, textvariable=self.status_var, anchor="w").grid(
             row=4, column=0, columnspan=2, sticky="ew", padx=10)
 
-        # Generate button
-        self.gen_btn = tk.Button(self, text="Enhance Render(s)",
-                                 command=self._generate, width=30,
+        # Generate + Cancel buttons
+        btn_bar = tk.Frame(self)
+        btn_bar.grid(row=5, column=0, columnspan=2, pady=(4, 4))
+        self.gen_btn = tk.Button(btn_bar, text="Enhance Render(s)",
+                                 command=self._generate, width=26,
                                  font=("Segoe UI", 10, "bold"))
-        self.gen_btn.grid(row=5, column=0, columnspan=2, pady=(4, 4))
+        self.gen_btn.pack(side="left", padx=(0, 6))
+        self.cancel_btn = tk.Button(btn_bar, text="Cancel", width=10,
+                                    command=self._request_cancel,
+                                    state="disabled")
+        self.cancel_btn.pack(side="left")
 
         tk.Label(self, text=COPYRIGHT, anchor="center",
                  fg="#666", font=("Segoe UI", 8)).grid(
@@ -415,15 +488,27 @@ class App(_AppBase):
                   width=5).pack(side="right")
 
     def _build_narrative_panel(self, parent):
-        frame = tk.LabelFrame(parent, text="Narrative Style")
+        frame = tk.LabelFrame(parent,
+                              text="Narrative Styles  (tick one or more)")
         frame.pack(fill="x", pady=(0, 6))
-        self.narrative_var = tk.StringVar(value=NARRATIVES[0]["key"])
-        for n in NARRATIVES:
-            rb = tk.Radiobutton(frame, text=n["name"], value=n["key"],
-                                variable=self.narrative_var,
-                                font=("Segoe UI", 9, "bold"),
-                                command=self._on_narrative)
-            rb.pack(anchor="w", padx=8, pady=(4, 0))
+
+        hdr = tk.Frame(frame)
+        hdr.pack(fill="x", padx=8, pady=(4, 0))
+        tk.Label(hdr, text="Each ticked style produces its own image per render.",
+                 fg="#555", font=("Segoe UI", 8)).pack(side="left")
+        tk.Button(hdr, text="All 4", width=5,
+                  command=lambda: self._set_all_narratives(True)).pack(side="right")
+        tk.Button(hdr, text="None", width=5,
+                  command=lambda: self._set_all_narratives(False)).pack(
+            side="right", padx=(0, 2))
+
+        self.narrative_vars = {}
+        for i, n in enumerate(NARRATIVES):
+            var = tk.BooleanVar(value=(i == 0))
+            self.narrative_vars[n["key"]] = var
+            tk.Checkbutton(frame, text=n["name"], variable=var,
+                           font=("Segoe UI", 9, "bold")).pack(
+                anchor="w", padx=8, pady=(4, 0))
             tk.Label(frame, text=n["blurb"], fg="#555",
                      font=("Segoe UI", 8)).pack(anchor="w", padx=28, pady=(0, 2))
 
@@ -433,6 +518,13 @@ class App(_AppBase):
                  font=("Segoe UI", 8)).pack(anchor="w")
         self.extra_var = tk.StringVar()
         tk.Entry(extra_row, textvariable=self.extra_var).pack(fill="x")
+
+    def _set_all_narratives(self, value):
+        for var in self.narrative_vars.values():
+            var.set(value)
+
+    def _selected_narratives(self):
+        return [n for n in NARRATIVES if self.narrative_vars[n["key"]].get()]
 
     def _build_api_panel(self, parent):
         frame = tk.LabelFrame(parent, text="Gemini API Key (Nano Banana)")
@@ -445,10 +537,15 @@ class App(_AppBase):
         self._show_key = tk.BooleanVar(value=False)
         tk.Checkbutton(row, text="Show", variable=self._show_key,
                        command=self._toggle_key).pack(side="left", padx=(4, 0))
+        bottom = tk.Frame(frame)
+        bottom.pack(fill="x", padx=6, pady=(0, 4))
         self.remember_key = tk.BooleanVar(value=True)
-        tk.Checkbutton(frame, text="Remember key on this computer",
-                       variable=self.remember_key).pack(
-            anchor="w", padx=6, pady=(0, 4))
+        tk.Checkbutton(bottom, text="Remember key on this computer",
+                       variable=self.remember_key).pack(side="left")
+        link = tk.Label(bottom, text="Get a key…", fg="#1a5276",
+                        cursor="hand2", font=("Segoe UI", 8, "underline"))
+        link.pack(side="right")
+        link.bind("<Button-1>", lambda _: webbrowser.open(GET_KEY_URL))
 
     def _build_output_panel(self, parent):
         frame = tk.LabelFrame(parent, text="Output Folder")
@@ -468,31 +565,53 @@ class App(_AppBase):
             anchor="w", padx=6, pady=(0, 4))
 
     def _build_preview_panel(self, parent):
-        frame = tk.LabelFrame(parent, text="Preview")
+        frame = tk.LabelFrame(parent, text="Preview  (click an image to open it)")
         frame.pack(fill="both", expand=True)
         tk.Label(frame, text="Selected render", font=("Segoe UI", 8, "bold")).pack(
             anchor="w", padx=6, pady=(4, 0))
         self._orig_label = tk.Label(frame, text="(none)", fg="#888",
-                                    width=40, height=9, relief="sunken", bd=1)
+                                    width=40, height=9, relief="sunken", bd=1,
+                                    cursor="hand2")
         self._orig_label.pack(fill="both", expand=True, padx=6, pady=(2, 6))
+        self._orig_label.bind(
+            "<Button-1>", lambda _: self._open_path(self._orig_path))
         tk.Label(frame, text="Enhanced result", font=("Segoe UI", 8, "bold")).pack(
             anchor="w", padx=6, pady=(0, 0))
         self._result_label = tk.Label(frame, text="(none)", fg="#888",
-                                      width=40, height=9, relief="sunken", bd=1)
+                                      width=40, height=9, relief="sunken", bd=1,
+                                      cursor="hand2")
         self._result_label.pack(fill="both", expand=True, padx=6, pady=(2, 6))
+        self._result_label.bind(
+            "<Button-1>", lambda _: self._open_path(self._last_result_path))
+
+    @staticmethod
+    def _open_path(path):
+        if not path or not os.path.exists(path):
+            return
+        try:
+            if sys.platform.startswith("win"):
+                os.startfile(path)  # noqa: Windows only
+            elif sys.platform == "darwin":
+                subprocess.Popen(["open", path])
+            else:
+                subprocess.Popen(["xdg-open", path])
+        except Exception:
+            pass
 
     # ── Config persistence ─────────────────────────────────────────────────────
     def _restore_config(self):
         if self._cfg.get("api_key"):
             self.api_var.set(self._cfg["api_key"])
-        if self._cfg.get("narrative") in NARRATIVE_BY_KEY:
-            self.narrative_var.set(self._cfg["narrative"])
+        saved = self._cfg.get("narratives")
+        if isinstance(saved, list) and any(k in NARRATIVE_BY_KEY for k in saved):
+            for key, var in self.narrative_vars.items():
+                var.set(key in saved)
         if self._cfg.get("output_dir") and os.path.isdir(self._cfg["output_dir"]):
             self.output_var.set(self._cfg["output_dir"])
 
     def _persist_config(self):
         cfg = dict(self._cfg)
-        cfg["narrative"] = self.narrative_var.get()
+        cfg["narratives"] = [n["key"] for n in self._selected_narratives()]
         cfg["output_dir"] = self.output_var.get().strip()
         if self.remember_key.get():
             cfg["api_key"] = self.api_var.get().strip()
@@ -504,9 +623,6 @@ class App(_AppBase):
     # ── Small UI helpers ────────────────────────────────────────────────────────
     def _toggle_key(self):
         self.api_entry.config(show="" if self._show_key.get() else "•")
-
-    def _on_narrative(self):
-        pass  # placeholder for future live-preview of the prompt
 
     def _on_select(self):
         self._update_count()
@@ -570,6 +686,7 @@ class App(_AppBase):
         img = self._make_thumb(path)
         if img is not None:
             self._orig_preview = img
+            self._orig_path = path
             self._orig_label.config(image=img, text="")
 
     def _show_result_preview_from_bytes(self, data):
@@ -652,11 +769,16 @@ class App(_AppBase):
             self.output_var.set(folder)
 
     # ── Generation ──────────────────────────────────────────────────────────────
+    def _request_cancel(self):
+        self._cancel.set()
+        self.cancel_btn.config(state="disabled")
+        self.status_var.set("Cancelling… (finishing current step)")
+
     def _generate(self):
         images = self._get_selected()
         api_key = self.api_var.get().strip()
         output_dir = self.output_var.get().strip()
-        narrative = NARRATIVE_BY_KEY[self.narrative_var.get()]
+        narratives = self._selected_narratives()
         extra = self.extra_var.get().strip()
 
         if not HAS_REQUESTS:
@@ -668,6 +790,9 @@ class App(_AppBase):
         if not images:
             messagebox.showerror("Error", "Select at least one render to enhance.")
             return
+        if not narratives:
+            messagebox.showerror("Error", "Tick at least one narrative style.")
+            return
         if not api_key:
             messagebox.showerror("Error", "Enter your Gemini API key.")
             return
@@ -676,40 +801,60 @@ class App(_AppBase):
             return
 
         self._persist_config()
-        prompt = narrative["prompt"]
-        if extra:
-            prompt = prompt + "\nAdditional direction: " + extra
 
+        # One job per (render × style) combination
+        jobs = [(path, n) for path in images for n in narratives]
+
+        self._cancel.clear()
         self.gen_btn.config(state="disabled")
+        self.cancel_btn.config(state="normal")
         self.progress["value"] = 0
         self.status_var.set("Starting…")
 
+        def status(msg):
+            self.after(0, lambda: self.status_var.set(msg))
+
         def run():
-            total = len(images)
+            total = len(jobs)
             done = 0
             saved_paths = []
             errors = []
-            for path in images:
+            cancelled = False
+            for path, narrative in jobs:
+                if self._cancel.is_set():
+                    cancelled = True
+                    break
                 name = os.path.basename(path)
-                self.after(0, lambda n=name, d=done: self.status_var.set(
-                    f"Enhancing {n} ({d + 1} of {total})…"))
+                status(f"Enhancing {name} — {narrative['name']} "
+                       f"({done + 1} of {total})…")
+                prompt = narrative["prompt"]
+                if extra:
+                    prompt = prompt + "\nAdditional direction: " + extra
                 try:
-                    data = enhance_image(api_key, prompt, path)
+                    data = enhance_image(
+                        api_key, prompt, path,
+                        status_cb=status,
+                        should_cancel=self._cancel.is_set)
                     out_path = self._output_path(output_dir, path,
                                                  narrative["key"])
                     with open(out_path, 'wb') as f:
                         f.write(data)
                     saved_paths.append(out_path)
+                    self._last_result_path = out_path
                     self.after(0, lambda d=data: self._show_result_preview_from_bytes(d))
+                except CancelledError:
+                    cancelled = True
+                    break
                 except GeminiError as e:
-                    errors.append(f"{name}: {e}")
+                    errors.append(f"{name} [{narrative['name']}]: {e}")
                 except Exception as e:
-                    errors.append(f"{name}: {e}")
+                    errors.append(f"{name} [{narrative['name']}]: {e}")
                 done += 1
                 self.after(0, lambda d=done: self.progress.config(
                     value=d / total * 100))
 
-            self.after(0, lambda: self._finish(saved_paths, errors, output_dir))
+            self.after(0, lambda: self._finish(
+                saved_paths, errors, output_dir, cancelled))
 
         threading.Thread(target=run, daemon=True).start()
 
@@ -723,24 +868,31 @@ class App(_AppBase):
             n += 1
         return candidate
 
-    def _finish(self, saved_paths, errors, output_dir):
+    def _finish(self, saved_paths, errors, output_dir, cancelled=False):
         self.gen_btn.config(state="normal")
+        self.cancel_btn.config(state="disabled")
+        self._cancel.clear()
+
+        prefix = "Cancelled. " if cancelled else "Done. "
         if saved_paths:
             self.status_var.set(
-                f"Done. Saved {len(saved_paths)} image(s) to {output_dir}")
-            if self.open_after_var.get():
-                try:
-                    os.startfile(saved_paths[-1])  # noqa: Windows only
-                except Exception:
-                    pass
+                f"{prefix}Saved {len(saved_paths)} image(s) to {output_dir}")
+            if self.open_after_var.get() and not cancelled:
+                self._open_path(saved_paths[-1])
         else:
-            self.status_var.set("No images were produced.")
+            self.status_var.set(
+                "Cancelled." if cancelled else "No images were produced.")
 
-        if errors and saved_paths:
+        if cancelled:
+            messagebox.showinfo(
+                "Cancelled",
+                f"Stopped. Saved {len(saved_paths)} image(s) before cancelling."
+                + (("\n\nErrors:\n" + "\n".join(errors[:6])) if errors else ""))
+        elif errors and saved_paths:
             messagebox.showwarning(
                 "Completed with some errors",
                 f"Saved {len(saved_paths)} image(s).\n\n"
-                "Some renders failed:\n" + "\n".join(errors[:8]))
+                "Some jobs failed:\n" + "\n".join(errors[:8]))
         elif errors:
             messagebox.showerror(
                 "Failed",

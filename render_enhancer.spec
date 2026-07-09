@@ -15,6 +15,7 @@ a = Analysis(
         'PIL.ImageTk',
         'PIL.ImageOps',
         'requests',
+        'certifi',
         'tkinterdnd2',
     ],
     hookspath=[],
