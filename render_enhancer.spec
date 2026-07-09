@@ -8,7 +8,11 @@ a = Analysis(
     ['render_enhancer.py'],
     pathex=[],
     binaries=[],
-    datas=[('evoq_logo.png', '.')],
+    datas=[
+        ('evoq_logo.png', '.'),
+        ('assets/render_enhancer_icon.png', 'assets'),
+        ('assets/render_enhancer.ico', 'assets'),
+    ],
     hiddenimports=[
         'PIL',
         'PIL.Image',
@@ -50,5 +54,5 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=None,
+    icon='assets/render_enhancer.ico',
 )

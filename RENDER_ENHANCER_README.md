@@ -6,6 +6,12 @@ approved by a client. It uses Google's Gemini **"Nano Banana"** image model
 (`gemini-2.5-flash-image`) for image-to-image enhancement, keeping the original
 viewpoint, geometry and proportions while re-lighting and re-texturing the scene.
 
+The GUI is **bilingual (English / Français)** — switch languages any time with
+the **Language / Langue** selector in the top-right; your choice is remembered.
+
+![English UI](screenshots/render_enhancer_main.png)
+![Interface française](screenshots/render_enhancer_fr.png)
+
 ## The four narrative styles
 
 Tick **one or more** styles per run — each ticked style produces its own image
@@ -103,8 +109,25 @@ python render_enhancer.py
 `tkinterdnd2` is optional — without it the app still works, just without
 drag-and-drop.
 
+## App icon
+
+The executable ships with a custom icon (a modernist building in two-point
+perspective at sunset), stored at `assets/render_enhancer.ico`. To regenerate it
+(e.g. after tweaking the design), run:
+
+```sh
+python tools/make_icon.py
+```
+
+This rewrites `assets/render_enhancer.ico` and `assets/render_enhancer_icon.png`
+(the latter is used for the window / taskbar icon at runtime).
+
 ## Notes
 
+- The GUI is fully localised in English and Canadian French. The narrative
+  prompts sent to Gemini stay in English by design — the model is tuned for the
+  engineered English wording — while every on-screen label, message and style
+  name is translated.
 - The Gemini image model outputs roughly ~1K–2K resolution; the "8k" wording in
   the prompts is a stylistic cue to the model, not a literal output size.
 - If a request is safety-blocked or returns text instead of an image, the app

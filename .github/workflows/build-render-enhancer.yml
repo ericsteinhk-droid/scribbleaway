@@ -12,6 +12,7 @@ on:
       - render_enhancer.spec
       - requirements.txt
       - evoq_logo.png
+      - assets/**
       - .github/workflows/build-render-enhancer.yml
   workflow_dispatch:
 
