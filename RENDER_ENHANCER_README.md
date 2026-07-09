@@ -145,6 +145,14 @@ This rewrites `assets/render_enhancer.ico` and `assets/render_enhancer_icon.png`
   prompts sent to Gemini stay in English by design — the model is tuned for the
   engineered English wording — while every on-screen label, message and style
   name is translated.
+- The prompts deliberately avoid diffusion jargon such as "low denoising" (which
+  Nano Banana reads as "change as little as possible" and which flattens
+  materials). Instead they lock geometry, camera and openings while explicitly
+  licensing a full re-render of surfaces and lighting, and they describe real
+  masonry — running bond, level coursing aligned to openings, recessed weathered
+  mortar, per-unit variation, no tiling — so brick and stone read naturally
+  rather than as flat CGI texture. Source renders are uploaded at up to 3072 px
+  to give the model finer detail to work from.
 - The Gemini image model outputs roughly ~1K–2K resolution; the "8k" wording in
   the prompts is a stylistic cue to the model, not a literal output size.
 - If a request is safety-blocked or returns text instead of an image, the app

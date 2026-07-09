@@ -62,7 +62,7 @@ GEMINI_ENDPOINT = (
 )
 
 IMAGE_EXTS = {'.jpg', '.jpeg', '.png', '.webp', '.bmp'}
-MAX_UPLOAD_PX = 2048   # downscale huge renders before upload to stay within limits
+MAX_UPLOAD_PX = 3072   # downscale huge renders before upload (higher = finer texture detail)
 MAX_REF_PX = 1280      # material reference swatches need less resolution
 MAX_REFS = 3           # max material reference images per request
 REQUEST_TIMEOUT = 180  # seconds per image
@@ -89,24 +89,51 @@ CONFIG_PATH = os.path.join(os.path.expanduser("~"), ".evoq_render_enhancer.json"
 # ── Narrative prompt library ────────────────────────────────────────────────────
 # The prompt text stays in English (the model is tuned for it and the wording is
 # carefully engineered); only the display name/blurb are localised via I18N.
+#
+# Design note: these prompts deliberately AVOID diffusion jargon like
+# "low denoising", which Nano Banana reads as "change as little as possible" and
+# which suppresses material re-rendering. Instead they split what must be
+# preserved (geometry / camera / openings) from what should be fully re-rendered
+# (materials / lighting), and describe real masonry coursing so brick/stone read
+# naturally instead of as flat CGI texture.
+
+# Shared clause: lock the geometry, license full material/lighting re-rendering.
+_PRESERVE = (
+    "Preserve exactly, with zero deviation: the camera viewpoint and focal "
+    "length, all architectural geometry, massing and structural proportions, and "
+    "the position, size and shape of every window, door and opening. Do NOT move, "
+    "add or remove any building element. Within those fixed constraints, fully "
+    "re-render every surface material and all lighting to convincing photographic "
+    "realism — the result must look like a real photograph of this exact "
+    "building, not a preserved CAD or Enscape render.\n"
+)
+
+# Shared clause: how real masonry should be laid, to fix flat texture / coursing.
+_MASONRY = (
+    "Masonry realism: render all brick or stone as a real, laid wall in a natural "
+    "running bond — level, continuous bed joints of consistent course height that "
+    "align to sill and lintel levels, with soldier or lintel courses over openings "
+    "where appropriate. Mortar joints are slightly recessed and weathered. Give "
+    "believable brick-to-brick (or stone-to-stone) colour, tone and texture "
+    "variation with natural chips and imperfections. Completely eliminate any "
+    "repeating, mirrored or tiled texture pattern and any flat, plastic or CGI "
+    "sheen. "
+)
+
 NARRATIVES = [
     {
         "key": "golden_hour",
         "prompt": (
-            "[Image-to-Image with low denoising] Strict, non-negotiable adherence "
-            "to the original viewpoint, structural proportions, and all "
-            "architectural geometry of the attached render. This scene must be an "
-            "exact structural replica of the base image, bathed in clear, "
-            "low-angle morning golden hour sunlight, casting long, defined "
-            "shadows.\n"
-            "Material Focus: The warm light must emphasize the specific masonry, "
-            "making the rough texture and precise mortar joints highly tactile. "
-            "The metal facades and mullions exhibit complex, warm specular "
-            "highlights. Glass is transparent, revealing detailed, warm-lit "
-            "interiors and a reflection of the low sun.\n"
-            "Diverse Human Entourage: A total of no more than 5 human figures "
-            "provide scale. Crucially, all figures are distant and positioned only "
-            "in the mid-ground or background. The figures include diverse "
+            _PRESERVE +
+            "Lighting: clear, low-angle morning golden-hour sunlight raking across "
+            "the facade, casting long, well-defined shadows and warm highlights.\n"
+            "Materials: " + _MASONRY +
+            "The warm raking light makes the masonry texture and mortar joints "
+            "highly tactile. Metal facades and mullions show complex, warm specular "
+            "highlights. Glass is transparent, revealing detailed warm-lit interiors "
+            "and a soft reflection of the low sun.\n"
+            "Diverse Human Entourage: no more than 5 human figures for scale, all "
+            "distant and positioned only in the mid-ground or background — diverse "
             "individuals (e.g., a Black grandmother, a young child, and a few "
             "professionals of varying ages). Shot on a 50mm lens, professional "
             "architectural photography, hyper-realistic, 8k resolution."
@@ -115,64 +142,57 @@ NARRATIVES = [
     {
         "key": "soft_diffuse",
         "prompt": (
-            "[Image-to-Image with low denoising] Transform the attached Enscape "
-            "render into a convincing, hyper-realistic visualization while "
-            "maintaining precise, identical architectural geometry and "
-            "perspective. The lighting is soft, diffuse, and perfectly even under "
-            "an overcast sky, subtly defining form.\n"
-            "Material Focus: Material definition must be perfect. Detail the "
-            "specific masonry (e.g., brickwork) without dramatic shadow, focusing "
-            "on fine texture and accurate color. All metal finishes appear sleek "
-            "and matte, with accurate material transitions. Glass is exceptionally "
-            "transparent, with minimal, soft, cool-toned reflections, revealing "
-            "the true color and details of the interior spaces.\n"
-            "Diverse Human Entourage: A total of no more than 5 diverse human "
-            "figures provide accurate human scale. All figures must be located in "
-            "the mid-ground and background, never close to the camera. The figures "
-            "include diverse individuals (e.g., a few students and professionals). "
-            "Shot on a 35mm lens, high-fidelity architectural presentation, "
-            "photorealistic, 8k."
+            _PRESERVE +
+            "Lighting: soft, diffuse, perfectly even light under an overcast sky "
+            "that gently defines form without dramatic shadow.\n"
+            "Materials: " + _MASONRY +
+            "Under the even light, focus on fine, true material texture and "
+            "accurate colour. All metal finishes appear sleek and matte with "
+            "accurate material transitions. Glass is exceptionally transparent with "
+            "minimal, soft, cool-toned reflections, revealing the true colour and "
+            "details of the interior spaces.\n"
+            "Diverse Human Entourage: no more than 5 diverse human figures for "
+            "accurate scale, located only in the mid-ground and background, never "
+            "close to the camera (e.g., a few students and professionals). Shot on "
+            "a 35mm lens, high-fidelity architectural presentation, photorealistic, "
+            "8k."
         ),
     },
     {
         "key": "blue_hour",
         "prompt": (
-            "[Image-to-Image with low denoising] Generate a high-resolution, "
-            "photorealistic 'blue hour' rendering, retaining the exact viewpoint "
-            "and all architectural geometry of the attached model. The sky is a "
-            "deep twilight blue, with warm interior lighting radiating from every "
-            "window, contrasting with the cool ambient exterior light.\n"
-            "Material Focus: All masonry features a gradient: cooler on the "
-            "exterior face, warmed by proximity to interior light sources. The "
-            "metal framework is highly visible and crisp. Glass is intensely "
-            "transparent, providing clear, detailed views of the complex, warm-lit "
-            "interior programs.\n"
-            "Diverse Human Entourage: Strict maximum of 5 human figures. Introduce "
-            "a dynamic scene with these 5 diverse people positioned well away from "
-            "the viewer in the mid-ground and background, interacting with the "
-            "plaza or terrace at dusk. Professional night architectural "
+            _PRESERVE +
+            "Lighting: a deep twilight-blue 'blue hour' sky, with warm interior "
+            "lighting radiating from every window and contrasting with the cool "
+            "ambient exterior light.\n"
+            "Materials: " + _MASONRY +
+            "The masonry shows a gradient — cooler on exposed exterior faces, "
+            "warmed near interior light sources. The metal framework reads highly "
+            "visible and crisp. Glass is intensely transparent, providing clear, "
+            "detailed views into the complex, warm-lit interior programs.\n"
+            "Diverse Human Entourage: strict maximum of 5 diverse people positioned "
+            "well away from the viewer in the mid-ground and background, interacting "
+            "with the plaza or terrace at dusk. Professional night architectural "
             "photography, 8k resolution."
         ),
     },
     {
         "key": "post_rain",
         "prompt": (
-            "[Image-to-Image with low denoising] Create a hyper-realistic "
-            "visualization of the attached building model under dynamic post-rain "
-            "conditions. Strict maintenance of original viewpoint and identical "
-            "structural proportions. Soft, breaking sunlight is pushing through "
-            "retreating storm clouds, highlighting wet surfaces.\n"
-            "Material Focus: All masonry walls appear darker and damp, with "
-            "detailed water sheens. Metal elements and fixtures are highly "
-            "reflective. Glass is crisp, with clear, distorted reflections. "
-            "Surrounding ground surfaces are wet, featuring sharp, complex "
-            "reflections of the building and the pedestrians.\n"
-            "Diverse Human Entourage: Populate the scene with exactly 4 diverse "
-            "pedestrians navigating the wet pavement. These 4 figures must all be "
-            "positioned in the mid-ground and background, clear of the immediate "
-            "foreground. The diverse individuals (from varying age groups and "
-            "ethnicities) walk at different speeds. Extreme detail, photorealistic, "
-            "8k."
+            _PRESERVE +
+            "Lighting: dynamic post-rain conditions with soft, breaking sunlight "
+            "pushing through retreating storm clouds and highlighting wet "
+            "surfaces.\n"
+            "Materials: " + _MASONRY +
+            "The masonry walls read darker and damp with realistic water sheen. "
+            "Metal elements and fixtures are highly reflective. Glass is crisp with "
+            "clear, slightly distorted reflections. Surrounding ground surfaces are "
+            "wet, featuring sharp, complex reflections of the building and the "
+            "pedestrians.\n"
+            "Diverse Human Entourage: exactly 4 diverse pedestrians navigating the "
+            "wet pavement, all positioned in the mid-ground and background, clear of "
+            "the immediate foreground, walking at different speeds and of varying "
+            "age groups and ethnicities. Extreme detail, photorealistic, 8k."
         ),
     },
 ]
