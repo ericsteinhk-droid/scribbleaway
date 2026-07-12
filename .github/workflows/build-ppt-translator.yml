@@ -1,0 +1,44 @@
+name: Build PPT Translator
+
+on:
+  workflow_dispatch:   # manual trigger from the GitHub UI / mobile app
+  push:
+    branches:
+      - claude/powerpoint-french-english-translator-5iuq96
+      - main
+    paths:
+      - 'pptx_translator.py'
+      - 'pptx_translator.spec'
+      - '.github/workflows/build-ppt-translator.yml'
+
+permissions:
+  contents: write      # needed to create releases and upload assets
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Build PPT Translator.exe
+        run: pyinstaller pptx_translator.spec
+
+      - name: Publish exe as GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "ppt-translator-v1.0-run${{ github.run_number }}" `
+            "dist\PPT Translator.exe" `
+            --title "PPT Translator v1.0 (run ${{ github.run_number }})" `
+            --target "${{ github.sha }}" `
+            --notes "## PPT Translator v1.0`n`nTranslates a French PowerPoint (.pptx) to English via the Claude API while keeping images, graphics, fonts, format and layout identical. English font sizes are rescaled slightly to fill roughly the same space as the French original.`n`n**Features:**`n- Text edited in place — slides are never rebuilt`n- Bold / italic / colours / hyperlinks preserved mid-sentence`n- Tables and grouped shapes included`n- Do-not-translate glossary`n- Translation cache — re-runs resume without re-paying`n- Bilingual French/English review CSV`n`n**Requires:** an Anthropic API key (console.anthropic.com), entered in the app on first run."

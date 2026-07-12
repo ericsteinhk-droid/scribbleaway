@@ -52,7 +52,7 @@ exe = EXE(
     a.zipfiles,
     a.datas,
     [],
-    name='PPTXTranslator',
+    name='PPT Translator',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
