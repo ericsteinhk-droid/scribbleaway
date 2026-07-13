@@ -2,9 +2,12 @@
 
 A small Windows desktop app that turns architectural renders (e.g. Enscape
 output) into **hyper-photorealistic presentation images** to help get a design
-approved by a client. It uses Google's Gemini **"Nano Banana"** image model
-(`gemini-2.5-flash-image`) for image-to-image enhancement, keeping the original
-viewpoint, geometry and proportions while re-lighting and re-texturing the scene.
+approved by a client. It uses Google's Gemini **"Nano Banana Pro"** image model
+(Gemini 3 Pro Image, `gemini-3-pro-image-preview`) for image-to-image
+enhancement, keeping the original viewpoint, geometry and proportions while
+re-lighting and re-texturing the scene. Nano Banana Pro can output at **1K, 2K
+or 4K** (selectable in the app), which substantially improves fine material
+detail such as brick and stone over the original Nano Banana.
 
 The GUI is **bilingual (English / Français)** — switch languages any time with
 the **Language / Langue** selector in the top-right; your choice is remembered.
@@ -50,7 +53,8 @@ narrative for any run.
 4. Tick one or more narrative styles (or **All 4**). You can also tick
    **Custom prompt** and write your own full prompt — it runs as its own image,
    in addition to any built-in styles you ticked.
-5. Choose an output folder.
+5. Choose an output folder and an **Output resolution** (1K / 2K / 4K; 2K is a
+   good default — higher is sharper but slower and more costly per image).
 6. Click **Enhance Render(s)**. Use **Cancel** to stop a batch mid-run.
 
 Each result is saved as `<originalname>_<style>.png` in the output folder, and
@@ -130,39 +134,37 @@ drag-and-drop.
 
 ## Limitations & getting the best results
 
-This tool uses a general-purpose generative image model (Gemini "Nano Banana"),
-which **outputs at roughly 1 megapixel (~1024 px on the long edge)** regardless
-of input size. That single fact sets realistic expectations:
+The app uses **Nano Banana Pro (Gemini 3 Pro Image)**, which can output at 1K,
+2K or 4K. Choosing **2K or 4K** gives each brick far more pixels than the
+original Nano Banana's ~1K, so brick coursing and mortar joints on a full façade
+are much more achievable than before. Still, a few realities to keep in mind:
 
 **What it does well**
 - Relighting a render into a convincing narrative (golden hour, overcast, blue
   hour, post-rain) — sun angle, shadows, sky, ambience.
 - Mood, atmosphere, wet-ground reflections, glass reflections/transparency.
 - Adding believable, well-placed background entourage for scale.
-- A general lift from "CGI render" toward "photograph."
+- With 2K/4K output, sharp material detail including brick, stone and glazing.
 
-**What it cannot reliably do**
-- Crisp, construction-accurate **fine repetitive micro-texture across a whole
-  building** — most notably **brick coursing and mortar joints on a full
-  façade**. At ~1024 px output, a full elevation gives each brick only 2–3
-  pixels, which is far too few to draw a correct running bond. No prompt wording
-  can overcome this pixel budget; it is a limitation of single-shot generation
-  at this resolution, not of the prompt.
+**What to watch for**
+- **Use 2K or 4K** for material-critical shots; 1K will still be soft on a wide
+  façade. 4K is noticeably slower and costs more per image.
+- Even at 4K, a *very* wide elevation spreads pixels thin — for the most
+  demanding brick close-ups, framing tighter still helps.
+- Results vary run to run; generate a few and pick the best.
 
 **Tips to get the most out of it**
-- **Frame tighter.** A closer or cropped view (one bay, an entrance, a corner)
-  puts far more pixels on each brick, so material and coursing read much better
-  than on a wide whole-building shot. Enhance detail views separately from the
-  hero wide shot.
+- Pick **2K/4K** in *Output resolution* for hero and material-critical views.
+- **Frame tighter** for detail shots (one bay, an entrance, a corner) — more
+  pixels per brick means better coursing.
 - **Attach a material reference** (Material References panel) for accurate
   colour, finish and reflectivity of the specified brick/stone/glass.
-- Treat outputs as **presentation / mood imagery for client approval**, not as
+- Treat outputs as **presentation imagery for client approval**, not as
   construction-accurate material studies.
-- Generate a few variations and pick the best; results vary run to run.
 
-> Achieving crisp façade-scale brick would require a tiling pipeline (enhance
-> overlapping crops at full resolution, then stitch) or a dedicated upscaler.
-> That is out of scope for this version; ask if you want it explored later.
+> Note: Nano Banana Pro (`gemini-3-pro-image-preview`) is a preview model and
+> requires a Gemini API key with access to it. If your key lacks access the app
+> reports the error rather than silently downgrading to a lesser model.
 
 ## App icon
 
@@ -191,7 +193,7 @@ This rewrites `assets/render_enhancer.ico` and `assets/render_enhancer_icon.png`
   mortar, per-unit variation, no tiling — so brick and stone read naturally
   rather than as flat CGI texture. Source renders are uploaded at up to 3072 px
   to give the model finer detail to work from.
-- The Gemini image model outputs roughly ~1K–2K resolution; the "8k" wording in
+- Nano Banana Pro outputs at the selected 1K/2K/4K preset; the "8k" wording in
   the prompts is a stylistic cue to the model, not a literal output size.
 - If a request is safety-blocked or returns text instead of an image, the app
   reports the reason per file and continues with the rest of the batch.

@@ -66,12 +66,16 @@ UI_ACCENT    = "#2563eb"   # primary action / links
 UI_ACCENT_HI = "#1d4ed8"
 UI_LINK      = "#1a5276"
 
-# "Nano Banana" — Gemini 2.5 Flash Image. Try the stable id first, then preview.
-GEMINI_MODELS = ("gemini-2.5-flash-image", "gemini-2.5-flash-image-preview")
+# "Nano Banana Pro" — Gemini 3 Pro Image. Higher fidelity + 1K/2K/4K output.
+# Try a stable id first (may 404 while preview-only), then the preview id.
+# Only Pro models are listed so the app never silently falls back to a lesser model.
+GEMINI_MODELS = ("gemini-3-pro-image", "gemini-3-pro-image-preview")
 GEMINI_ENDPOINT = (
     "https://generativelanguage.googleapis.com/v1beta/models/"
     "{model}:generateContent"
 )
+IMAGE_SIZES = ("1K", "2K", "4K")  # Nano Banana Pro output resolution presets
+DEFAULT_IMAGE_SIZE = "2K"
 
 IMAGE_EXTS = {'.jpg', '.jpeg', '.png', '.webp', '.bmp'}
 MAX_UPLOAD_PX = 3072   # downscale huge renders before upload (higher = finer texture detail)
@@ -217,7 +221,7 @@ LANGUAGES = [("English", "en"), ("Français", "fr")]
 I18N = {
     "en": {
         "subtitle": "Render Enhancer — Rehaussement de rendus",
-        "powered_by": "Powered by Google Gemini “Nano Banana”",
+        "powered_by": "Powered by Google Gemini 3 Pro Image “Nano Banana Pro”",
         "language": "Language:",
         "src_frame": "Source Renders",
         "dnd_hint": "  —  drag renders here",
@@ -246,12 +250,14 @@ I18N = {
         "custom_hint": ("Write your own full prompt; it runs as its own image, "
                         "in addition to any styles ticked above."),
         "extra_label": "Extra instructions (optional):",
-        "api_frame": "Gemini API Key (Nano Banana)",
+        "api_frame": "Gemini API Key (Nano Banana Pro)",
         "show": "Show",
         "remember": "Remember key on this computer",
         "get_key": "Get a key…",
         "output_frame": "Output Folder",
         "browse": "Browse…",
+        "res_label": "Output resolution:",
+        "res_hint": "Higher = sharper detail, slower & costlier.",
         "open_after": "Open enhanced image when done",
         "preview_frame": "Preview  (click an image to open it)",
         "prev_selected": "Selected render",
@@ -311,7 +317,7 @@ I18N = {
     },
     "fr": {
         "subtitle": "Render Enhancer — Rehaussement de rendus",
-        "powered_by": "Propulsé par Google Gemini « Nano Banana »",
+        "powered_by": "Propulsé par Google Gemini 3 Pro Image « Nano Banana Pro »",
         "language": "Langue :",
         "src_frame": "Rendus source",
         "dnd_hint": "  —  glissez les rendus ici",
@@ -340,12 +346,14 @@ I18N = {
         "custom_hint": ("Rédigez votre propre invite complète ; elle produit sa "
                         "propre image, en plus des styles cochés ci-dessus."),
         "extra_label": "Instructions supplémentaires (facultatif) :",
-        "api_frame": "Clé API Gemini (Nano Banana)",
+        "api_frame": "Clé API Gemini (Nano Banana Pro)",
         "show": "Afficher",
         "remember": "Mémoriser la clé sur cet ordinateur",
         "get_key": "Obtenir une clé…",
         "output_frame": "Dossier de sortie",
         "browse": "Parcourir…",
+        "res_label": "Résolution de sortie :",
+        "res_hint": "Plus élevée = plus de détails, plus lent et coûteux.",
         "open_after": "Ouvrir l'image améliorée une fois terminé",
         "preview_frame": "Aperçu  (cliquez une image pour l'ouvrir)",
         "prev_selected": "Rendu sélectionné",
@@ -480,14 +488,15 @@ def _encode_image(path, max_px=MAX_UPLOAD_PX):
 
 
 def enhance_image(api_key, prompt, image_path, status_cb=None, should_cancel=None,
-                  messages=None, ref_paths=None):
+                  messages=None, ref_paths=None, image_size=DEFAULT_IMAGE_SIZE):
     """Call Gemini image model. Returns raw bytes of the enhanced image.
 
     Transient failures (429 / 5xx / network) are retried with exponential
     backoff. Passing should_cancel (a callable returning bool) lets a running
     batch be aborted between attempts. messages optionally supplies localised
     'retry_net' / 'retry_busy' templates for status_cb. ref_paths is an optional
-    list of material-reference image paths sent alongside the render.
+    list of material-reference image paths sent alongside the render. image_size
+    selects the Nano Banana Pro output resolution ("1K"/"2K"/"4K").
     """
     if not HAS_REQUESTS:
         raise GeminiError("The 'requests' library is not installed.")
@@ -510,9 +519,13 @@ def enhance_image(api_key, prompt, image_path, status_cb=None, should_cancel=Non
         rb64, rmime = _encode_image(ref, max_px=MAX_REF_PX)
         parts.append({"inline_data": {"mime_type": rmime, "data": rb64}})
 
+    gen_config = {"responseModalities": ["TEXT", "IMAGE"]}
+    if image_size:
+        # Preserve the render's aspect ratio (no aspectRatio key); only scale up.
+        gen_config["imageConfig"] = {"imageSize": image_size}
     body = {
         "contents": [{"role": "user", "parts": parts}],
-        "generationConfig": {"responseModalities": ["TEXT", "IMAGE"]},
+        "generationConfig": gen_config,
     }
     headers = {
         "Content-Type": "application/json",
@@ -675,6 +688,7 @@ class App(_AppBase):
         self.output_var = tk.StringVar(value=default_dir)
         self.open_after_var = tk.BooleanVar(value=True)
         self.custom_var = tk.BooleanVar(value=False)
+        self.res_var = tk.StringVar(value=DEFAULT_IMAGE_SIZE)
         self.status_var = tk.StringVar()
 
     def _apply_style(self):
@@ -1001,6 +1015,15 @@ class App(_AppBase):
             side="left", fill="x", expand=True)
         tk.Button(row, text=self.t("browse"),
                   command=self._browse_output).pack(side="left", padx=(4, 0))
+
+        res_row = tk.Frame(frame)
+        res_row.pack(fill="x", padx=6, pady=(0, 4))
+        tk.Label(res_row, text=self.t("res_label")).pack(side="left")
+        ttk.Combobox(res_row, textvariable=self.res_var, values=list(IMAGE_SIZES),
+                     state="readonly", width=6).pack(side="left", padx=(4, 8))
+        tk.Label(res_row, text=self.t("res_hint"), fg=UI_MUTED,
+                 font=("Segoe UI", 8)).pack(side="left")
+
         tk.Checkbutton(frame, text=self.t("open_after"),
                        variable=self.open_after_var).pack(
             anchor="w", padx=6, pady=(0, 4))
@@ -1081,10 +1104,13 @@ class App(_AppBase):
                 self._custom_text.delete("1.0", "end")
                 self._custom_text.insert("1.0", self._custom_prompt)
         self.custom_var.set(bool(self._cfg.get("custom_on")))
+        if self._cfg.get("image_size") in IMAGE_SIZES:
+            self.res_var.set(self._cfg["image_size"])
 
     def _persist_config(self):
         cfg = dict(self._cfg)
         cfg["lang"] = self._lang
+        cfg["image_size"] = self.res_var.get()
         cfg["narratives"] = [n["key"] for n in self._selected_narratives()
                              if n["key"] in NARRATIVE_BY_KEY]
         cfg["custom_on"] = bool(self.custom_var.get())
@@ -1332,6 +1358,7 @@ class App(_AppBase):
         self._persist_config()
         jobs = [(path, n) for path in images for n in narratives]
         refs = list(self._ref_order)
+        image_size = self.res_var.get() or DEFAULT_IMAGE_SIZE
         retry_msgs = {"retry_net": self.t("retry_net"),
                       "retry_busy": self.t("retry_busy")}
 
@@ -1367,7 +1394,8 @@ class App(_AppBase):
                         status_cb=status,
                         should_cancel=self._cancel.is_set,
                         messages=retry_msgs,
-                        ref_paths=refs)
+                        ref_paths=refs,
+                        image_size=image_size)
                     out_path = self._output_path(output_dir, path, narrative["key"])
                     with open(out_path, 'wb') as f:
                         f.write(data)
