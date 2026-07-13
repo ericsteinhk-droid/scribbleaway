@@ -621,7 +621,7 @@ class App(_AppBase):
     def __init__(self):
         super().__init__()
         self.title("EVOQ Render Enhancer")
-        self.minsize(720, 660)
+        self.minsize(720, 480)
         self._image_order = []
         self._image_set = set()
         self._ref_order = []
@@ -642,9 +642,21 @@ class App(_AppBase):
         self._set_window_icon()
         self._build_ui()
         self._restore_config()
+        self._set_initial_geometry()
         if HAS_DND:
             self.drop_target_register(DND_FILES)
             self.dnd_bind('<<Drop>>', self._handle_drop)
+
+    def _set_initial_geometry(self):
+        """Open at a comfortable size that fits the screen; the body scrolls."""
+        self.update_idletasks()
+        try:
+            sw, sh = self.winfo_screenwidth(), self.winfo_screenheight()
+        except Exception:
+            sw, sh = 1280, 800
+        w = min(960, max(760, sw - 120))
+        h = min(940, max(480, sh - 100))
+        self.geometry(f"{w}x{h}")
 
     # Persistent tk variables (created once so they survive UI rebuilds) ─────────
     def _init_vars(self):
@@ -757,8 +769,30 @@ class App(_AppBase):
     def _build_ui(self):
         pad = dict(padx=10, pady=5)
 
+        # Root layout: scrollable body (row 0) + fixed action bar (row 1) so the
+        # Enhance/Cancel buttons stay reachable on any screen size.
+        self.rowconfigure(0, weight=1)
+        self.rowconfigure(1, weight=0)
+        self.columnconfigure(0, weight=1)
+
+        canvas = tk.Canvas(self, bg=UI_BG, highlightthickness=0)
+        canvas.grid(row=0, column=0, sticky="nsew")
+        vbar = ttk.Scrollbar(self, orient="vertical", command=canvas.yview)
+        vbar.grid(row=0, column=1, sticky="ns")
+        canvas.configure(yscrollcommand=vbar.set)
+        body = tk.Frame(canvas)
+        body_id = canvas.create_window((0, 0), window=body, anchor="nw")
+        canvas.bind("<Configure>",
+                    lambda e: canvas.itemconfigure(body_id, width=e.width))
+        body.bind("<Configure>",
+                  lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
+        self._bind_wheel(canvas)
+
+        body.columnconfigure(0, weight=1)
+        body.columnconfigure(1, weight=1)
+
         # Header: logo + language selector
-        header = tk.Frame(self)
+        header = tk.Frame(body)
         header.grid(row=0, column=0, columnspan=2, sticky="ew", pady=(10, 0))
         header.columnconfigure(0, weight=1)
         logo_path = _resource_path('evoq_logo.png')
@@ -780,20 +814,17 @@ class App(_AppBase):
         lang_menu.pack(side="left")
         lang_menu.bind("<<ComboboxSelected>>", self._on_language)
 
-        title_box = tk.Frame(self)
+        title_box = tk.Frame(body)
         title_box.grid(row=1, column=0, columnspan=2, pady=(2, 6))
         tk.Label(title_box, text=self.t("subtitle"),
                  font=("Segoe UI", 12, "bold"), fg=UI_FG).pack()
         tk.Label(title_box, text=self.t("powered_by"),
                  font=("Segoe UI", 8), fg=UI_MUTED).pack()
 
-        left = tk.Frame(self)
+        left = tk.Frame(body)
         left.grid(row=2, column=0, sticky="nsew", **pad)
-        right = tk.Frame(self)
+        right = tk.Frame(body)
         right.grid(row=2, column=1, sticky="nsew", **pad)
-        self.columnconfigure(0, weight=1)
-        self.columnconfigure(1, weight=1)
-        self.rowconfigure(2, weight=1)
 
         self._build_image_panel(left)
         self._build_ref_panel(left)
@@ -802,16 +833,19 @@ class App(_AppBase):
         self._build_output_panel(left)
         self._build_preview_panel(right)
 
-        self.progress = ttk.Progressbar(self, length=440, mode="determinate")
-        self.progress.grid(row=3, column=0, columnspan=2, padx=10, pady=(6, 2),
-                           sticky="ew")
+        # Fixed bottom bar (progress + status + actions + copyright)
+        bar = tk.Frame(self)
+        bar.grid(row=1, column=0, columnspan=2, sticky="ew")
+        bar.columnconfigure(0, weight=1)
+        self.progress = ttk.Progressbar(bar, mode="determinate")
+        self.progress.grid(row=0, column=0, padx=10, pady=(6, 2), sticky="ew")
         if not self.status_var.get():
             self.status_var.set(self.t("ready"))
-        tk.Label(self, textvariable=self.status_var, anchor="w").grid(
-            row=4, column=0, columnspan=2, sticky="ew", padx=10)
+        tk.Label(bar, textvariable=self.status_var, anchor="w").grid(
+            row=1, column=0, sticky="ew", padx=10)
 
-        btn_bar = tk.Frame(self)
-        btn_bar.grid(row=5, column=0, columnspan=2, pady=(4, 4))
+        btn_bar = tk.Frame(bar)
+        btn_bar.grid(row=2, column=0, pady=(4, 4))
         self.gen_btn = tk.Button(btn_bar, text=self.t("enhance"),
                                  command=self._generate, width=26,
                                  font=("Segoe UI", 10, "bold"),
@@ -823,11 +857,23 @@ class App(_AppBase):
                                     command=self._request_cancel, state="disabled")
         self.cancel_btn.pack(side="left")
 
-        tk.Label(self, text=COPYRIGHT, anchor="center", fg=UI_MUTED,
+        tk.Label(bar, text=COPYRIGHT, anchor="center", fg=UI_MUTED,
                  font=("Segoe UI", 8)).grid(
-            row=6, column=0, columnspan=2, pady=(0, 8))
+            row=3, column=0, pady=(0, 8))
 
         self._refresh_count()
+
+    def _bind_wheel(self, canvas):
+        def _wheel(event):
+            if getattr(event, "num", None) == 4:
+                canvas.yview_scroll(-1, "units")
+            elif getattr(event, "num", None) == 5:
+                canvas.yview_scroll(1, "units")
+            elif event.delta:
+                canvas.yview_scroll(int(-event.delta / 120), "units")
+        canvas.bind_all("<MouseWheel>", _wheel)   # Windows / macOS
+        canvas.bind_all("<Button-4>", _wheel)     # Linux scroll up
+        canvas.bind_all("<Button-5>", _wheel)     # Linux scroll down
 
     def _build_image_panel(self, parent):
         title = self.t("src_frame") + (self.t("dnd_hint") if HAS_DND else "")

@@ -195,3 +195,7 @@ This rewrites `assets/render_enhancer.ico` and `assets/render_enhancer_icon.png`
   the prompts is a stylistic cue to the model, not a literal output size.
 - If a request is safety-blocked or returns text instead of an image, the app
   reports the reason per file and continues with the rest of the batch.
+- The window opens sized to your screen and the content area scrolls (mouse
+  wheel or scrollbar); the progress bar, status line and **Enhance / Cancel**
+  buttons stay pinned at the bottom so they are always reachable, even on small
+  laptop screens.
