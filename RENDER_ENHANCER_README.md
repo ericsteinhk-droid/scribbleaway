@@ -47,7 +47,9 @@ narrative for any run.
 3. *(Optional but recommended for material fidelity)* attach up to **3 material
    reference photos** — close-ups of the real brick, stone or glass — via
    **Material References → Add reference…**. See below.
-4. Tick one or more narrative styles (or **All 4**).
+4. Tick one or more narrative styles (or **All 4**). You can also tick
+   **Custom prompt** and write your own full prompt — it runs as its own image,
+   in addition to any built-in styles you ticked.
 5. Choose an output folder.
 6. Click **Enhance Render(s)**. Use **Cancel** to stop a batch mid-run.
 

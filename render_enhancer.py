@@ -52,7 +52,19 @@ except Exception:
 # ── Constants ─────────────────────────────────────────────────────────────────
 APP_VERSION = "v1.1"
 APP_DATE    = "July 2026"
-COPYRIGHT   = f"© Eric Stein, EVOQ Architecture  ·  {APP_VERSION}  ·  {APP_DATE}"
+COPYRIGHT   = f"© Eric Stein 2026  ·  {APP_VERSION}"
+
+# ── UI palette (bright, sleek) ──────────────────────────────────────────────────
+UI_BG        = "#f5f8fc"   # bright, near-white background
+UI_INPUT     = "#ffffff"   # entry/list/text fields
+UI_FG        = "#1f2a37"   # primary text
+UI_MUTED     = "#64748b"   # hints / secondary text
+UI_BORDER    = "#cbd5e1"   # subtle field borders
+UI_BTN       = "#e7edf5"   # secondary button
+UI_BTN_HOVER = "#d7e0ec"
+UI_ACCENT    = "#2563eb"   # primary action / links
+UI_ACCENT_HI = "#1d4ed8"
+UI_LINK      = "#1a5276"
 
 # "Nano Banana" — Gemini 2.5 Flash Image. Try the stable id first, then preview.
 GEMINI_MODELS = ("gemini-2.5-flash-image", "gemini-2.5-flash-image-preview")
@@ -205,6 +217,7 @@ LANGUAGES = [("English", "en"), ("Français", "fr")]
 I18N = {
     "en": {
         "subtitle": "Render Enhancer — Rehaussement de rendus",
+        "powered_by": "Powered by Google Gemini “Nano Banana”",
         "language": "Language:",
         "src_frame": "Source Renders",
         "dnd_hint": "  —  drag renders here",
@@ -230,6 +243,8 @@ I18N = {
         "narr_frame": "Narrative Styles  (tick one or more)",
         "narr_hint": "Each ticked style produces its own image per render.",
         "all4": "All 4",
+        "custom_hint": ("Write your own full prompt; it runs as its own image, "
+                        "in addition to any styles ticked above."),
         "extra_label": "Extra instructions (optional):",
         "api_frame": "Gemini API Key (Nano Banana)",
         "show": "Show",
@@ -264,6 +279,7 @@ I18N = {
                           "Deep twilight sky, warm glowing interiors, luminous depth."),
             "post_rain": ("Post-Rain Dramatic",
                           "Breaking storm light, wet reflective surfaces, drama."),
+            "custom": ("Custom prompt", ""),
         },
         # dialogs
         "dlg_missing_title": "Missing dependency",
@@ -275,6 +291,7 @@ I18N = {
         "err_title": "Error",
         "err_no_images": "Select at least one render to enhance.",
         "err_no_styles": "Tick at least one narrative style.",
+        "err_custom_empty": "Custom prompt is ticked but empty — write a prompt or untick it.",
         "err_no_key": "Enter your Gemini API key.",
         "err_no_output": "Choose a valid output folder.",
         "done_title": "Done",
@@ -294,6 +311,7 @@ I18N = {
     },
     "fr": {
         "subtitle": "Render Enhancer — Rehaussement de rendus",
+        "powered_by": "Propulsé par Google Gemini « Nano Banana »",
         "language": "Langue :",
         "src_frame": "Rendus source",
         "dnd_hint": "  —  glissez les rendus ici",
@@ -319,6 +337,8 @@ I18N = {
         "narr_frame": "Styles narratifs  (cochez-en un ou plusieurs)",
         "narr_hint": "Chaque style coché produit sa propre image par rendu.",
         "all4": "Les 4",
+        "custom_hint": ("Rédigez votre propre invite complète ; elle produit sa "
+                        "propre image, en plus des styles cochés ci-dessus."),
         "extra_label": "Instructions supplémentaires (facultatif) :",
         "api_frame": "Clé API Gemini (Nano Banana)",
         "show": "Afficher",
@@ -353,6 +373,7 @@ I18N = {
                           "Ciel crépusculaire profond, intérieurs chaleureux, profondeur lumineuse."),
             "post_rain": ("Après la pluie",
                           "Éclaircie dramatique, surfaces mouillées et réfléchissantes."),
+            "custom": ("Invite personnalisée", ""),
         },
         "dlg_missing_title": "Dépendance manquante",
         "dlg_missing_msg": ("La bibliothèque « requests » est requise. Installez-la avec :\n\n"
@@ -363,6 +384,7 @@ I18N = {
         "err_title": "Erreur",
         "err_no_images": "Sélectionnez au moins un rendu à améliorer.",
         "err_no_styles": "Cochez au moins un style narratif.",
+        "err_custom_empty": "L'invite personnalisée est cochée mais vide — rédigez-la ou décochez-la.",
         "err_no_key": "Saisissez votre clé API Gemini.",
         "err_no_output": "Choisissez un dossier de sortie valide.",
         "done_title": "Terminé",
@@ -611,10 +633,12 @@ class App(_AppBase):
         self._orig_path = None
         self._last_result_path = None
         self._cancel = threading.Event()
+        self._custom_prompt = ""
         self._cfg = load_config()
         self._lang = self._cfg.get("lang") if self._cfg.get("lang") in I18N else "en"
 
         self._init_vars()
+        self._apply_style()
         self._set_window_icon()
         self._build_ui()
         self._restore_config()
@@ -638,7 +662,65 @@ class App(_AppBase):
         default_dir = docs if os.path.isdir(docs) else os.path.expanduser("~")
         self.output_var = tk.StringVar(value=default_dir)
         self.open_after_var = tk.BooleanVar(value=True)
+        self.custom_var = tk.BooleanVar(value=False)
         self.status_var = tk.StringVar()
+
+    def _apply_style(self):
+        """A bright, flat, consistent look applied to classic tk + ttk widgets."""
+        self.configure(bg=UI_BG)
+        o = self.option_add
+        o('*Font', ('Segoe UI', 9))
+        o('*background', UI_BG)
+        o('*foreground', UI_FG)
+        o('*Label.background', UI_BG)
+        o('*Frame.background', UI_BG)
+        o('*Labelframe.background', UI_BG)
+        o('*Labelframe.foreground', UI_FG)
+        o('*Labelframe.font', ('Segoe UI', 9, 'bold'))
+        for cls in ('Checkbutton', 'Radiobutton'):
+            o(f'*{cls}.background', UI_BG)
+            o(f'*{cls}.foreground', UI_FG)
+            o(f'*{cls}.activeBackground', UI_BG)
+            o(f'*{cls}.selectColor', UI_INPUT)
+            o(f'*{cls}.highlightThickness', 0)
+        o('*Button.background', UI_BTN)
+        o('*Button.foreground', UI_FG)
+        o('*Button.activeBackground', UI_BTN_HOVER)
+        o('*Button.activeForeground', UI_FG)
+        o('*Button.relief', 'flat')
+        o('*Button.borderWidth', 0)
+        o('*Button.highlightThickness', 0)
+        o('*Button.padX', 10)
+        o('*Button.padY', 5)
+        o('*Button.cursor', 'hand2')
+        for w in ('Entry', 'Text'):
+            o(f'*{w}.background', UI_INPUT)
+            o(f'*{w}.foreground', UI_FG)
+            o(f'*{w}.relief', 'solid')
+            o(f'*{w}.borderWidth', 1)
+            o(f'*{w}.highlightThickness', 1)
+            o(f'*{w}.highlightColor', UI_ACCENT)
+            o(f'*{w}.highlightBackground', UI_BORDER)
+            o(f'*{w}.insertBackground', UI_FG)
+        o('*Listbox.background', UI_INPUT)
+        o('*Listbox.foreground', UI_FG)
+        o('*Listbox.relief', 'flat')
+        o('*Listbox.borderWidth', 0)
+        o('*Listbox.highlightThickness', 1)
+        o('*Listbox.highlightBackground', UI_BORDER)
+        o('*Listbox.selectBackground', UI_ACCENT)
+        o('*Listbox.selectForeground', '#ffffff')
+
+        style = ttk.Style(self)
+        try:
+            style.theme_use('clam')
+        except Exception:
+            pass
+        style.configure('TCombobox', fieldbackground=UI_INPUT,
+                        background=UI_BTN, foreground=UI_FG, arrowsize=14)
+        style.map('TCombobox', fieldbackground=[('readonly', UI_INPUT)])
+        style.configure('Horizontal.TProgressbar', background=UI_ACCENT,
+                        troughcolor='#e2e8f0', borderwidth=0, thickness=8)
 
     def t(self, key, **kw):
         s = I18N[self._lang].get(key, I18N["en"].get(key, key))
@@ -698,9 +780,12 @@ class App(_AppBase):
         lang_menu.pack(side="left")
         lang_menu.bind("<<ComboboxSelected>>", self._on_language)
 
-        tk.Label(self, text=self.t("subtitle"),
-                 font=("Segoe UI", 11, "bold")).grid(
-            row=1, column=0, columnspan=2, pady=(2, 6))
+        title_box = tk.Frame(self)
+        title_box.grid(row=1, column=0, columnspan=2, pady=(2, 6))
+        tk.Label(title_box, text=self.t("subtitle"),
+                 font=("Segoe UI", 12, "bold"), fg=UI_FG).pack()
+        tk.Label(title_box, text=self.t("powered_by"),
+                 font=("Segoe UI", 8), fg=UI_MUTED).pack()
 
         left = tk.Frame(self)
         left.grid(row=2, column=0, sticky="nsew", **pad)
@@ -729,13 +814,16 @@ class App(_AppBase):
         btn_bar.grid(row=5, column=0, columnspan=2, pady=(4, 4))
         self.gen_btn = tk.Button(btn_bar, text=self.t("enhance"),
                                  command=self._generate, width=26,
-                                 font=("Segoe UI", 10, "bold"))
+                                 font=("Segoe UI", 10, "bold"),
+                                 bg=UI_ACCENT, fg="#ffffff",
+                                 activebackground=UI_ACCENT_HI,
+                                 activeforeground="#ffffff", padx=12, pady=6)
         self.gen_btn.pack(side="left", padx=(0, 6))
         self.cancel_btn = tk.Button(btn_bar, text=self.t("cancel"), width=10,
                                     command=self._request_cancel, state="disabled")
         self.cancel_btn.pack(side="left")
 
-        tk.Label(self, text=COPYRIGHT, anchor="center", fg="#666",
+        tk.Label(self, text=COPYRIGHT, anchor="center", fg=UI_MUTED,
                  font=("Segoe UI", 8)).grid(
             row=6, column=0, columnspan=2, pady=(0, 8))
 
@@ -815,8 +903,22 @@ class App(_AppBase):
             tk.Checkbutton(frame, text=name, variable=self.narrative_vars[n["key"]],
                            font=("Segoe UI", 9, "bold")).pack(
                 anchor="w", padx=8, pady=(4, 0))
-            tk.Label(frame, text=blurb, fg="#555",
+            tk.Label(frame, text=blurb, fg=UI_MUTED,
                      font=("Segoe UI", 8)).pack(anchor="w", padx=28, pady=(0, 2))
+
+        # Custom prompt style
+        tk.Checkbutton(frame, text=self._style_text("custom")[0],
+                       variable=self.custom_var,
+                       font=("Segoe UI", 9, "bold")).pack(anchor="w", padx=8,
+                                                          pady=(4, 0))
+        tk.Label(frame, text=self.t("custom_hint"), fg=UI_MUTED,
+                 font=("Segoe UI", 8), wraplength=360, justify="left").pack(
+            anchor="w", padx=28, pady=(0, 2))
+        self._custom_text = tk.Text(frame, height=3, wrap="word",
+                                    font=("Segoe UI", 9))
+        self._custom_text.pack(fill="x", padx=28, pady=(0, 4))
+        if self._custom_prompt:
+            self._custom_text.insert("1.0", self._custom_prompt)
 
         extra_row = tk.Frame(frame)
         extra_row.pack(fill="x", padx=8, pady=(4, 6))
@@ -904,6 +1006,7 @@ class App(_AppBase):
         ready_texts = {I18N[l]["ready"] for l in I18N}
         was_idle = self.status_var.get() in ready_texts
         self._lang = code
+        self._custom_prompt = self._get_custom_prompt()  # preserve across rebuild
         sel = list(self._listbox.curselection())
         for w in self.winfo_children():
             w.destroy()
@@ -926,11 +1029,20 @@ class App(_AppBase):
                 var.set(key in saved)
         if self._cfg.get("output_dir") and os.path.isdir(self._cfg["output_dir"]):
             self.output_var.set(self._cfg["output_dir"])
+        if self._cfg.get("custom_prompt"):
+            self._custom_prompt = self._cfg["custom_prompt"]
+            if hasattr(self, "_custom_text"):
+                self._custom_text.delete("1.0", "end")
+                self._custom_text.insert("1.0", self._custom_prompt)
+        self.custom_var.set(bool(self._cfg.get("custom_on")))
 
     def _persist_config(self):
         cfg = dict(self._cfg)
         cfg["lang"] = self._lang
-        cfg["narratives"] = [n["key"] for n in self._selected_narratives()]
+        cfg["narratives"] = [n["key"] for n in self._selected_narratives()
+                             if n["key"] in NARRATIVE_BY_KEY]
+        cfg["custom_on"] = bool(self.custom_var.get())
+        cfg["custom_prompt"] = self._get_custom_prompt()
         cfg["output_dir"] = self.output_var.get().strip()
         if self.remember_key.get():
             cfg["api_key"] = self.api_var.get().strip()
@@ -947,8 +1059,18 @@ class App(_AppBase):
         for var in self.narrative_vars.values():
             var.set(value)
 
+    def _get_custom_prompt(self):
+        if hasattr(self, "_custom_text"):
+            return self._custom_text.get("1.0", "end").strip()
+        return self._custom_prompt
+
     def _selected_narratives(self):
-        return [n for n in NARRATIVES if self.narrative_vars[n["key"]].get()]
+        sel = [n for n in NARRATIVES if self.narrative_vars[n["key"]].get()]
+        if self.custom_var.get():
+            text = self._get_custom_prompt()
+            if text:
+                sel.append({"key": "custom", "prompt": text})
+        return sel
 
     def _on_select(self):
         self._refresh_count()
@@ -1150,7 +1272,9 @@ class App(_AppBase):
             messagebox.showerror(self.t("err_title"), self.t("err_no_images"))
             return
         if not narratives:
-            messagebox.showerror(self.t("err_title"), self.t("err_no_styles"))
+            key = ("err_custom_empty" if self.custom_var.get()
+                   else "err_no_styles")
+            messagebox.showerror(self.t("err_title"), self.t(key))
             return
         if not api_key:
             messagebox.showerror(self.t("err_title"), self.t("err_no_key"))
