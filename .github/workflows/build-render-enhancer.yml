@@ -1,0 +1,44 @@
+name: Build Render Enhancer (Windows)
+
+# Builds RenderEnhancer.exe on a Windows runner and uploads it as a
+# downloadable artifact, so a Windows machine is not needed to produce the exe.
+
+on:
+  push:
+    branches:
+      - claude/arch-rendering-enhancement-e3kemf
+    paths:
+      - render_enhancer.py
+      - render_enhancer.spec
+      - requirements.txt
+      - evoq_logo.png
+      - assets/**
+      - .github/workflows/build-render-enhancer.yml
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Build executable
+        run: pyinstaller render_enhancer.spec
+
+      - name: Upload executable
+        uses: actions/upload-artifact@v4
+        with:
+          name: RenderEnhancer-windows
+          path: dist/RenderEnhancer.exe
+          if-no-files-found: error
