@@ -113,15 +113,36 @@ CONFIG_PATH = os.path.join(os.path.expanduser("~"), ".evoq_render_enhancer.json"
 # (materials / lighting), and describe real masonry coursing so brick/stone read
 # naturally instead of as flat CGI texture.
 
-# Shared clause: lock the geometry, license full material/lighting re-rendering.
+# Shared clause: lock the CAMERA and geometry first and forcefully, then license
+# full material/lighting re-rendering. Camera drift (e.g. an aerial view being
+# re-shot at eye level) is the worst failure mode, so it is forbidden explicitly.
 _PRESERVE = (
-    "Preserve exactly, with zero deviation: the camera viewpoint and focal "
-    "length, all architectural geometry, massing and structural proportions, and "
-    "the position, size and shape of every window, door and opening. Do NOT move, "
-    "add or remove any building element. Within those fixed constraints, fully "
-    "re-render every surface material and all lighting to convincing photographic "
-    "realism — the result must look like a real photograph of this exact "
-    "building, not a preserved CAD or Enscape render.\n"
+    "TASK: photo-realistically re-render the ATTACHED image in place. This is an "
+    "edit of the existing image — NOT a new photograph, NOT a new camera, NOT a "
+    "re-composition of the scene.\n"
+    "CAMERA (absolutely non-negotiable): keep the EXACT same camera position, "
+    "height, angle, tilt, viewing direction, zoom and field of view as the "
+    "attached image. If the attached view is aerial, elevated, bird's-eye or "
+    "oblique, the output MUST stay aerial/elevated/oblique from the identical "
+    "vantage point — do NOT lower the camera to street or eye level, and do NOT "
+    "convert it into a ground-level hero shot. Do not reframe, recompose, rotate, "
+    "pan, zoom, crop or change the perspective in any way; every building edge "
+    "must align with the original. The output must overlay the input.\n"
+    "GEOMETRY (non-negotiable): keep all architectural geometry, massing, "
+    "proportions, storey/floor count and roofline, and the position, size and "
+    "shape of every window, balcony, door and opening exactly as drawn. Do not "
+    "add, remove, move, resize or restyle any building element.\n"
+    "Within those fixed constraints, fully re-render every surface material and "
+    "all lighting to convincing photographic realism — a real photograph of this "
+    "exact building from this exact viewpoint, not a CAD or Enscape render.\n"
+)
+
+# Shared rider: keep entourage from dragging the camera down to ground level.
+_ENTOURAGE_RIDER = (
+    " Keep all figures small, sparse and consistent with the existing camera: if "
+    "the view is aerial or distant, render them as tiny distant figures; never "
+    "place large figures in the foreground, and never move, lower, tilt or zoom "
+    "the camera to feature people."
 )
 
 # Shared clause: how real masonry should be laid, to fix flat texture / coursing.
@@ -151,8 +172,9 @@ NARRATIVES = [
             "Diverse Human Entourage: no more than 5 human figures for scale, all "
             "distant and positioned only in the mid-ground or background — diverse "
             "individuals (e.g., a Black grandmother, a young child, and a few "
-            "professionals of varying ages). Shot on a 50mm lens, professional "
-            "architectural photography, hyper-realistic, 8k resolution."
+            "professionals of varying ages)." + _ENTOURAGE_RIDER +
+            " Professional architectural photography, hyper-realistic, "
+            "photorealistic detail, keeping the original framing."
         ),
     },
     {
@@ -169,9 +191,10 @@ NARRATIVES = [
             "details of the interior spaces.\n"
             "Diverse Human Entourage: no more than 5 diverse human figures for "
             "accurate scale, located only in the mid-ground and background, never "
-            "close to the camera (e.g., a few students and professionals). Shot on "
-            "a 35mm lens, high-fidelity architectural presentation, photorealistic, "
-            "8k."
+            "close to the camera (e.g., a few students and professionals)."
+            + _ENTOURAGE_RIDER +
+            " High-fidelity architectural presentation, photorealistic, keeping "
+            "the original framing."
         ),
     },
     {
@@ -187,9 +210,10 @@ NARRATIVES = [
             "visible and crisp. Glass is intensely transparent, providing clear, "
             "detailed views into the complex, warm-lit interior programs.\n"
             "Diverse Human Entourage: strict maximum of 5 diverse people positioned "
-            "well away from the viewer in the mid-ground and background, interacting "
-            "with the plaza or terrace at dusk. Professional night architectural "
-            "photography, 8k resolution."
+            "well away from the viewer in the mid-ground and background at dusk."
+            + _ENTOURAGE_RIDER +
+            " Professional night architectural photography, keeping the original "
+            "framing."
         ),
     },
     {
@@ -205,10 +229,12 @@ NARRATIVES = [
             "clear, slightly distorted reflections. Surrounding ground surfaces are "
             "wet, featuring sharp, complex reflections of the building and the "
             "pedestrians.\n"
-            "Diverse Human Entourage: exactly 4 diverse pedestrians navigating the "
-            "wet pavement, all positioned in the mid-ground and background, clear of "
-            "the immediate foreground, walking at different speeds and of varying "
-            "age groups and ethnicities. Extreme detail, photorealistic, 8k."
+            "Diverse Human Entourage: exactly 4 diverse pedestrians on the wet "
+            "ground, all positioned in the mid-ground and background, clear of the "
+            "immediate foreground, of varying age groups and ethnicities."
+            + _ENTOURAGE_RIDER +
+            " Extreme material detail, photorealistic, keeping the original "
+            "framing."
         ),
     },
 ]

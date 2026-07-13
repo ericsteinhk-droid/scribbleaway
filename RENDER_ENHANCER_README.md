@@ -193,6 +193,12 @@ This rewrites `assets/render_enhancer.ico` and `assets/render_enhancer_icon.png`
   mortar, per-unit variation, no tiling — so brick and stone read naturally
   rather than as flat CGI texture. Source renders are uploaded at up to 3072 px
   to give the model finer detail to work from.
+- The prompts open with a forceful **camera lock**: the output must keep the
+  exact camera position, height, angle, zoom and field of view of the input, and
+  an aerial / bird's-eye / oblique view must stay aerial (it must not be re-shot
+  at eye level). Camera-defining cues that fought this — explicit lens focal
+  lengths and foreground "plaza life" — were removed, and entourage is kept
+  small, distant and never allowed to pull the camera down to ground level.
 - Nano Banana Pro outputs at the selected 1K/2K/4K preset; the "8k" wording in
   the prompts is a stylistic cue to the model, not a literal output size.
 - If a request is safety-blocked or returns text instead of an image, the app
