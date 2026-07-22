@@ -15,19 +15,27 @@ export async function shareOrDownload(blob: Blob, filename: string, mimeType: st
   if (Capacitor.isNativePlatform()) {
     const base64 = await blobToBase64(blob);
 
-    // Try External first, fall back to Cache
+    // Directory.External is Android-only (shared external storage); on iOS the
+    // write always throws, so pick the right primary target per platform and
+    // fall back to Cache (valid on both) if the primary write fails.
+    const isAndroid = Capacitor.getPlatform() === 'android';
+    const primary = isAndroid ? Directory.External : Directory.Cache;
+
     let uri: string;
     let directory: Directory;
     try {
-      const r = await Filesystem.writeFile({ path: filename, data: base64, directory: Directory.External });
+      const r = await Filesystem.writeFile({ path: filename, data: base64, directory: primary });
       uri = r.uri;
-      directory = Directory.External;
-    } catch (extErr) {
+      directory = primary;
+    } catch (primaryErr) {
+      if (primary === Directory.Cache) {
+        throw new Error('writeFile cache=' + (primaryErr instanceof Error ? primaryErr.message : String(primaryErr)));
+      }
       let r;
       try {
         r = await Filesystem.writeFile({ path: filename, data: base64, directory: Directory.Cache });
       } catch (cacheErr) {
-        throw new Error('writeFile ext=' + (extErr instanceof Error ? extErr.message : String(extErr))
+        throw new Error('writeFile primary=' + (primaryErr instanceof Error ? primaryErr.message : String(primaryErr))
           + ' cache=' + (cacheErr instanceof Error ? cacheErr.message : String(cacheErr)));
       }
       uri = r.uri;
