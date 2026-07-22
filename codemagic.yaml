@@ -84,7 +84,7 @@ workflows:
         submit_to_app_store: false   # flip to true when ready for public App Store release
       email:
         recipients:
-          - ericsteinhk@gmail.com
+          - estein@evoqarchitecture.com
         notify:
           success: true
           failure: true
