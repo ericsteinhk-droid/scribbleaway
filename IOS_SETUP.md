@@ -149,8 +149,9 @@ Assign them to a group and reference that group, or add them directly:
    - builds and signs the `.ipa`,
    - uploads it to **TestFlight**.
 5. On success/failure, an email goes to the address in `codemagic.yaml`
-   (currently `ericsteinhk@gmail.com` — change it there if you want a different
-   recipient). The `.ipa` is also downloadable from the Codemagic build page.
+   (currently `estein@evoqarchitecture.com` — change it there if you want a
+   different recipient). The `.ipa` is also downloadable from the Codemagic
+   build page.
 
 First builds take ~10–20 min. Expect to iterate once or twice on signing/env
 config — that's normal.
