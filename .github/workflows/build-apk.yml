@@ -4,7 +4,7 @@ on:
   workflow_dispatch:   # manual trigger from GitHub UI / mobile app
   push:
     branches:
-      - claude/web-app-features-KU9ZJ
+      - claude/scribbleaeay-ios-app-agu9fe
       - main
     paths:
       - 'rapports-de-visite/**'
@@ -21,7 +21,7 @@ jobs:
       - name: Checkout app branch
         uses: actions/checkout@v4
         with:
-          ref: claude/web-app-features-KU9ZJ
+          ref: claude/scribbleaeay-ios-app-agu9fe   # single source of truth — same branch the iOS (codemagic.yaml) build uses
 
       # ── Node.js ───────────────────────────────────────────────────────────
       - name: Set up Node.js 22
