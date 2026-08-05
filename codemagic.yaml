@@ -20,7 +20,7 @@ workflows:
         XCODE_WORKSPACE: "App.xcworkspace"
         XCODE_SCHEME: "App"
         BUNDLE_ID: "com.evoq.rapportsdevisite"
-      node: "20"   # major version; Codemagic's `n` resolves the latest 20.x LTS
+      node: "22"   # Capacitor 8 CLI requires Node >=22 (matches the Android build)
       # NOTE: signing is handled explicitly in the "Set up code signing" script
       # below (with --create) rather than the automatic `ios_signing` block,
       # because a fresh Apple account has no distribution certificate/profile
