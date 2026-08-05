@@ -71,6 +71,13 @@ workflows:
       - name: Sync Capacitor web assets to iOS
         script: cd rapports-de-visite && npx cap sync ios
 
+      - name: Install CocoaPods dependencies (generates App.xcworkspace)
+        script: |
+          cd rapports-de-visite/ios/App
+          pod install
+          echo "=== Contents of $(pwd) after pod install ==="
+          ls -la
+
       - name: Set up code signing — create certificate & profile if missing
         script: |
           keychain initialize
