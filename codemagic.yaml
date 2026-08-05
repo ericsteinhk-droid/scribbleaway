@@ -11,9 +11,6 @@ workflows:
       app_store_connect: evoq_asc
 
     environment:
-      ios_signing:
-        distribution_type: app_store   # change to 'ad_hoc' for direct device installs
-        bundle_identifier: com.evoq.rapportsdevisite
       # Loads the six VITE_FIREBASE_* variables. They MUST live in a Codemagic
       # variable group named exactly "firebase" (app → Environment variables).
       groups:
@@ -21,7 +18,12 @@ workflows:
       vars:
         XCODE_WORKSPACE: "App.xcworkspace"
         XCODE_SCHEME: "App"
+        BUNDLE_ID: "com.evoq.rapportsdevisite"
       node: 20.x
+      # NOTE: signing is handled explicitly in the "Set up code signing" script
+      # below (with --create) rather than the automatic `ios_signing` block,
+      # because a fresh Apple account has no distribution certificate/profile
+      # yet and the automatic path only *fetches* existing ones.
 
     scripts:
       - name: Install npm dependencies
@@ -67,6 +69,19 @@ workflows:
 
       - name: Sync Capacitor web assets to iOS
         script: cd rapports-de-visite && npx cap sync ios
+
+      - name: Set up code signing — create certificate & profile if missing
+        script: |
+          keychain initialize
+          # Create the iOS distribution certificate and App Store provisioning
+          # profile for the bundle id if they don't already exist (fresh Apple
+          # account). Uses the evoq_asc App Store Connect API key integration.
+          app-store-connect fetch-signing-files "$BUNDLE_ID" \
+            --type IOS_APP_STORE \
+            --create
+          keychain add-certificates
+          cd rapports-de-visite/ios/App
+          xcode-project use-profiles
 
       - name: Set build number from CM_BUILD_ID
         script: |
