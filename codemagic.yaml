@@ -81,7 +81,10 @@ workflows:
           # single-line base64 of a persistent RSA key, so the certificate is
           # created once and reused on every build. Decode it to a file to avoid
           # any newline mangling of multi-line secure variables.
-          echo "$CERTIFICATE_PRIVATE_KEY_B64" | base64 --decode > /tmp/cert_key.pem
+          # macOS base64 has no --decode flag; use openssl (portable). -A reads
+          # the whole single-line value at once.
+          printf '%s' "$CERTIFICATE_PRIVATE_KEY_B64" | openssl base64 -d -A > /tmp/cert_key.pem
+          echo "Decoded key: $(wc -c < /tmp/cert_key.pem) bytes; header: $(head -1 /tmp/cert_key.pem)"
           # Create/fetch the distribution certificate and App Store provisioning
           # profile for the bundle id. Credentials come from APP_STORE_CONNECT_*.
           app-store-connect fetch-signing-files "$BUNDLE_ID" \
