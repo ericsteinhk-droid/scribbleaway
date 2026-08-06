@@ -76,11 +76,15 @@ workflows:
       - name: Set up code signing — create certificate & profile if missing
         script: |
           keychain initialize
-          # Create the iOS distribution certificate and App Store provisioning
-          # profile for the bundle id if they don't already exist (fresh Apple
-          # account). Uses the evoq_asc App Store Connect API key integration.
+          # Create/fetch the iOS distribution certificate and App Store
+          # provisioning profile for the bundle id. Apple certificates require a
+          # private key: CERTIFICATE_PRIVATE_KEY (secure env var, "appstore"
+          # group) is a persistent RSA key so the same certificate is created
+          # once and reused on every build. Credentials come from the
+          # APP_STORE_CONNECT_* env vars.
           app-store-connect fetch-signing-files "$BUNDLE_ID" \
             --type IOS_APP_STORE \
+            --certificate-key @env:CERTIFICATE_PRIVATE_KEY \
             --create
           keychain add-certificates
           cd rapports-de-visite/ios/App
