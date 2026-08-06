@@ -17,7 +17,9 @@ workflows:
         - firebase
         - appstore
       vars:
-        XCODE_WORKSPACE: "App.xcworkspace"
+        # Capacitor 8 uses Swift Package Manager, not CocoaPods, so the iOS app
+        # is built from App.xcodeproj directly (there is no .xcworkspace).
+        XCODE_PROJECT: "App.xcodeproj"
         XCODE_SCHEME: "App"
         BUNDLE_ID: "com.evoq.rapportsdevisite"
       node: "22"   # Capacitor 8 CLI requires Node >=22 (matches the Android build)
@@ -71,13 +73,6 @@ workflows:
       - name: Sync Capacitor web assets to iOS
         script: cd rapports-de-visite && npx cap sync ios
 
-      - name: Install CocoaPods dependencies (generates App.xcworkspace)
-        script: |
-          cd rapports-de-visite/ios/App
-          pod install
-          echo "=== Contents of $(pwd) after pod install ==="
-          ls -la
-
       - name: Set up code signing — create certificate & profile if missing
         script: |
           keychain initialize
@@ -100,7 +95,7 @@ workflows:
         script: |
           cd rapports-de-visite/ios/App
           xcode-project build-ipa \
-            --workspace "$XCODE_WORKSPACE" \
+            --project "$XCODE_PROJECT" \
             --scheme "$XCODE_SCHEME"
 
     artifacts:
