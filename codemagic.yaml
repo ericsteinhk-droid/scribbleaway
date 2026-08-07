@@ -83,13 +83,17 @@ workflows:
           # any newline mangling of multi-line secure variables.
           # macOS base64 has no --decode flag; use openssl (portable). -A reads
           # the whole single-line value at once.
-          printf '%s' "$CERTIFICATE_PRIVATE_KEY_B64" | openssl base64 -d -A > /tmp/cert_key.pem
-          echo "Decoded key: $(wc -c < /tmp/cert_key.pem) bytes; header: $(head -1 /tmp/cert_key.pem)"
+          printf '%s' "$CERTIFICATE_PRIVATE_KEY_B64" | openssl base64 -d -A > /tmp/cert_key_pkcs1.pem
+          # Convert to PKCS#8 ("BEGIN PRIVATE KEY") and expose it through the
+          # CERTIFICATE_PRIVATE_KEY env var that fetch-signing-files auto-detects
+          # — avoids the @file:/@env: value reference that was being rejected.
+          openssl pkcs8 -topk8 -nocrypt -in /tmp/cert_key_pkcs1.pem -out /tmp/cert_key.pem
+          export CERTIFICATE_PRIVATE_KEY="$(cat /tmp/cert_key.pem)"
+          echo "Signing key ready: $(wc -c < /tmp/cert_key.pem) bytes; header: $(head -1 /tmp/cert_key.pem); env length: ${#CERTIFICATE_PRIVATE_KEY}"
           # Create/fetch the distribution certificate and App Store provisioning
           # profile for the bundle id. Credentials come from APP_STORE_CONNECT_*.
           app-store-connect fetch-signing-files "$BUNDLE_ID" \
             --type IOS_APP_STORE \
-            --certificate-key @file:/tmp/cert_key.pem \
             --create
           keychain add-certificates
           cd rapports-de-visite/ios/App
