@@ -84,15 +84,13 @@ workflows:
           KEYFILE="$KEYDIR/AuthKey_${APP_STORE_CONNECT_KEY_IDENTIFIER}.p8"
           printf '%s' "$APP_STORE_CONNECT_PRIVATE_KEY" > "$KEYFILE"
 
-          # Archive with automatic signing.
+          # Archive WITHOUT signing. This avoids needing an iOS *Development*
+          # provisioning profile (which would require registered devices).
+          # Distribution signing is applied at the export step below instead.
           xcodebuild -project App.xcodeproj -scheme App -configuration Release \
+            -destination 'generic/platform=iOS' \
             -archivePath "$PWD/build/App.xcarchive" \
-            -allowProvisioningUpdates \
-            -authenticationKeyPath "$KEYFILE" \
-            -authenticationKeyID "$APP_STORE_CONNECT_KEY_IDENTIFIER" \
-            -authenticationKeyIssuerID "$APP_STORE_CONNECT_ISSUER_ID" \
-            CODE_SIGN_STYLE=Automatic \
-            DEVELOPMENT_TEAM="S44WN29P62" \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
             archive
 
           # Export the App Store IPA.
