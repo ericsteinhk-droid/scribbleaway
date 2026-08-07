@@ -67,38 +67,57 @@ workflows:
       - name: Sync Capacitor web assets to iOS
         script: cd rapports-de-visite && npx cap sync ios
 
-      - name: Set up code signing — create certificate & profile if missing
-        script: |
-          keychain initialize
-          # Decode the persistent RSA key. It is PKCS#1 ("BEGIN RSA PRIVATE
-          # KEY") — the header form the signing tool expects. Expose it via the
-          # CERTIFICATE_PRIVATE_KEY env var, which fetch-signing-files reads.
-          printf '%s' "$CERTIFICATE_PRIVATE_KEY_B64" | openssl base64 -d -A > /tmp/cert_key.pem
-          export CERTIFICATE_PRIVATE_KEY="$(cat /tmp/cert_key.pem)"
-          echo "Signing key: $(wc -c < /tmp/cert_key.pem) bytes; header: $(head -1 /tmp/cert_key.pem)"
-          # Auth from APP_STORE_CONNECT_*; --create makes the distribution
-          # certificate and App Store profile for the bundle id if absent.
-          app-store-connect fetch-signing-files "$BUNDLE_ID" \
-            --type IOS_APP_STORE \
-            --create
-          keychain add-certificates
-          cd rapports-de-visite/ios/App
-          xcode-project use-profiles
-
       - name: Set build number from CM_BUILD_ID
         script: |
           cd rapports-de-visite/ios/App
           agvtool new-version -all $BUILD_NUMBER
 
-      - name: Build iOS IPA
+      - name: Archive & export IPA (Xcode automatic signing)
         script: |
           cd rapports-de-visite/ios/App
-          xcode-project build-ipa \
-            --project "$XCODE_PROJECT" \
-            --scheme "$XCODE_SCHEME"
+          # Give xcodebuild the App Store Connect API key so it can create the
+          # distribution certificate + provisioning profile on demand
+          # (-allowProvisioningUpdates). This bypasses codemagic's signing CLI,
+          # which rejected the certificate key.
+          KEYDIR="$HOME/.appstoreconnect/private_keys"
+          mkdir -p "$KEYDIR"
+          KEYFILE="$KEYDIR/AuthKey_${APP_STORE_CONNECT_KEY_IDENTIFIER}.p8"
+          printf '%s' "$APP_STORE_CONNECT_PRIVATE_KEY" > "$KEYFILE"
+
+          # Archive with automatic signing.
+          xcodebuild -project App.xcodeproj -scheme App -configuration Release \
+            -archivePath "$PWD/build/App.xcarchive" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$KEYFILE" \
+            -authenticationKeyID "$APP_STORE_CONNECT_KEY_IDENTIFIER" \
+            -authenticationKeyIssuerID "$APP_STORE_CONNECT_ISSUER_ID" \
+            CODE_SIGN_STYLE=Automatic \
+            DEVELOPMENT_TEAM="$APPLE_TEAM_ID" \
+            archive
+
+          # Export the App Store IPA.
+          cat > "$PWD/ExportOptions.plist" <<PLIST
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict>
+            <key>method</key><string>app-store-connect</string>
+            <key>teamID</key><string>${APPLE_TEAM_ID}</string>
+            <key>signingStyle</key><string>automatic</string>
+            <key>destination</key><string>export</string>
+          </dict></plist>
+          PLIST
+
+          xcodebuild -exportArchive \
+            -archivePath "$PWD/build/App.xcarchive" \
+            -exportPath "$PWD/build/ipa" \
+            -exportOptionsPlist "$PWD/ExportOptions.plist" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$KEYFILE" \
+            -authenticationKeyID "$APP_STORE_CONNECT_KEY_IDENTIFIER" \
+            -authenticationKeyIssuerID "$APP_STORE_CONNECT_ISSUER_ID"
 
     artifacts:
-      - rapports-de-visite/ios/App/build/ios/ipa/*.ipa
+      - rapports-de-visite/ios/App/build/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
 
     publishing:
