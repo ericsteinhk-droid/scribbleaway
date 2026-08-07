@@ -4,15 +4,24 @@ workflows:
     max_build_duration: 60
     instance_type: mac_mini_m2
 
+    # Binds the workflow to the "evoq_asc" App Store Connect integration
+    # (Apple Developer Portal integration in Codemagic). This is what powers
+    # automatic code signing below.
+    integrations:
+      app_store_connect: evoq_asc
+
     environment:
+      # Automatic code signing: Codemagic creates/fetches the distribution
+      # certificate and App Store provisioning profile for this bundle id using
+      # a key it manages internally (via the evoq_asc integration). No manual
+      # certificate private key needed.
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.evoq.rapportsdevisite
       # Variable groups (app → Environment variables):
       #   firebase  → the six VITE_FIREBASE_* values
-      #   appstore  → the App Store Connect API key, as three variables:
-      #               APP_STORE_CONNECT_ISSUER_ID
-      #               APP_STORE_CONNECT_KEY_IDENTIFIER
-      #               APP_STORE_CONNECT_PRIVATE_KEY   (full .p8 contents)
-      # The signing CLI and the App Store Connect publisher below read these
-      # env vars directly — no named "integration" to match.
+      #   appstore  → App Store Connect API key for the TestFlight publisher
+      #               (APP_STORE_CONNECT_ISSUER_ID / _KEY_IDENTIFIER / _PRIVATE_KEY)
       groups:
         - firebase
         - appstore
@@ -23,10 +32,6 @@ workflows:
         XCODE_SCHEME: "App"
         BUNDLE_ID: "com.evoq.rapportsdevisite"
       node: "22"   # Capacitor 8 CLI requires Node >=22 (matches the Android build)
-      # NOTE: signing is handled explicitly in the "Set up code signing" script
-      # below (with --create) rather than the automatic `ios_signing` block,
-      # because a fresh Apple account has no distribution certificate/profile
-      # yet and the automatic path only *fetches* existing ones.
 
     scripts:
       - name: Install npm dependencies
@@ -73,29 +78,11 @@ workflows:
       - name: Sync Capacitor web assets to iOS
         script: cd rapports-de-visite && npx cap sync ios
 
-      - name: Set up code signing — create certificate & profile if missing
+      - name: Apply code signing to the Xcode project
         script: |
-          keychain initialize
-          # Apple distribution certificates require a private key. It is stored
-          # as CERTIFICATE_PRIVATE_KEY_B64 (secure env var, "appstore" group): a
-          # single-line base64 of a persistent RSA key, so the certificate is
-          # created once and reused on every build. Decode it to a file to avoid
-          # any newline mangling of multi-line secure variables.
-          # macOS base64 has no --decode flag; use openssl (portable). -A reads
-          # the whole single-line value at once.
-          printf '%s' "$CERTIFICATE_PRIVATE_KEY_B64" | openssl base64 -d -A > /tmp/cert_key_pkcs1.pem
-          # Convert to PKCS#8 ("BEGIN PRIVATE KEY") and expose it through the
-          # CERTIFICATE_PRIVATE_KEY env var that fetch-signing-files auto-detects
-          # — avoids the @file:/@env: value reference that was being rejected.
-          openssl pkcs8 -topk8 -nocrypt -in /tmp/cert_key_pkcs1.pem -out /tmp/cert_key.pem
-          export CERTIFICATE_PRIVATE_KEY="$(cat /tmp/cert_key.pem)"
-          echo "Signing key ready: $(wc -c < /tmp/cert_key.pem) bytes; header: $(head -1 /tmp/cert_key.pem); env length: ${#CERTIFICATE_PRIVATE_KEY}"
-          # Create/fetch the distribution certificate and App Store provisioning
-          # profile for the bundle id. Credentials come from APP_STORE_CONNECT_*.
-          app-store-connect fetch-signing-files "$BUNDLE_ID" \
-            --type IOS_APP_STORE \
-            --create
-          keychain add-certificates
+          # Codemagic's automatic signing (ios_signing block + evoq_asc
+          # integration) has already created/fetched the certificate and
+          # provisioning profile. Apply them to the generated Xcode project.
           cd rapports-de-visite/ios/App
           xcode-project use-profiles
 
