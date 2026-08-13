@@ -19,6 +19,89 @@ function getOpenAIKey(): string {
   return (localStorage.getItem('rdv-openai-key') || '').trim();
 }
 
+// --- Garde-fou contre les hallucinations du correcteur IA -------------------
+// Le correcteur ne doit que corriger la langue, jamais ajouter de contenu. On
+// compare localement (sans appel IA) le texte corrigé au texte d'origine et on
+// signale toute divergence importante : chiffres inventés (le plus dangereux
+// sur un chantier), mots de contenu ajoutés, ou rallongement anormal. Une
+// divergence vient le plus souvent d'une dictée peu claire que le modèle a
+// « complétée » au lieu de simplement corriger. C'est une heuristique, pas une
+// garantie : elle sert à alerter l'usager, qui garde le dernier mot.
+
+function stripDiacritics(s: string): string {
+  return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
+function normalizeWords(s: string): string[] {
+  return stripDiacritics(s.toLowerCase())
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .split(/\s+/)
+    .filter(Boolean);
+}
+
+// Chiffres sous forme canonique (séparateurs retirés) : "3,50" et "3.50" → "350".
+function extractNumbers(s: string): string[] {
+  const matches = stripDiacritics(s.toLowerCase()).match(/\d+(?:[.,]\d+)*/g) || [];
+  return matches.map((n) => n.replace(/[.,]/g, ''));
+}
+
+function levenshtein(a: string, b: string): number {
+  const m = a.length, n = b.length;
+  if (!m) return n;
+  if (!n) return m;
+  let prev = Array.from({ length: n + 1 }, (_, i) => i);
+  for (let i = 1; i <= m; i++) {
+    const curr = [i];
+    for (let j = 1; j <= n; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      curr[j] = Math.min(prev[j] + 1, curr[j - 1] + 1, prev[j - 1] + cost);
+    }
+    prev = curr;
+  }
+  return prev[n];
+}
+
+// Un mot corrigé « correspond » à l'original si une correction d'orthographe
+// plausible (petite distance d'édition) le relie à un mot d'origine.
+function hasFuzzyMatch(word: string, pool: string[]): boolean {
+  const tol = word.length <= 6 ? 1 : 2;
+  return pool.some((w) => {
+    if (Math.abs(w.length - word.length) > tol) return false;
+    return levenshtein(word, w) <= tol;
+  });
+}
+
+interface FidelityResult {
+  ok: boolean;
+  novelWords: string[];
+  novelNumbers: string[];
+}
+
+function checkFidelity(original: string, corrected: string): FidelityResult {
+  const origWords = normalizeWords(original);
+  const corrWords = normalizeWords(corrected);
+
+  // Chiffres : doivent être préservés à l'identique. Un nombre inventé est
+  // l'hallucination la plus grave dans un rapport d'inspection.
+  const origNumbers = new Set(extractNumbers(original));
+  const novelNumbers = [...new Set(extractNumbers(corrected))].filter((n) => !origNumbers.has(n));
+
+  // Mots de contenu = longueur ≥ 4 (les petits mots grammaticaux — le, une,
+  // aux… — peuvent légitimement être ajoutés lors d'une correction).
+  const contentWords = corrWords.filter((w) => w.length >= 4 && !/^\d+$/.test(w));
+  const novelWords = [...new Set(contentWords.filter((w) => !hasFuzzyMatch(w, origWords)))];
+
+  const novelRatio = contentWords.length ? novelWords.length / contentWords.length : 0;
+  const expansion = origWords.length ? corrWords.length / origWords.length : 1;
+
+  const ok =
+    novelNumbers.length === 0 &&
+    !(novelRatio > 0.3 && novelWords.length >= 2) &&
+    !(expansion > 1.7 && origWords.length >= 8);
+
+  return { ok, novelWords, novelNumbers };
+}
+
 interface Props {
   initial?: Entry;
   storagePath: string;
@@ -45,6 +128,7 @@ export default function EntryForm({ initial, storagePath, onSubmit, onCancel, on
   // AI reformat state
   const [reformatting, setReformatting] = useState(false);
   const [pendingReformat, setPendingReformat] = useState<string | null>(null);
+  const [reformatWarning, setReformatWarning] = useState<string | null>(null);
 
   // Draft auto-save (new entries only)
   const draftTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -208,6 +292,7 @@ export default function EntryForm({ initial, storagePath, onSubmit, onCancel, on
     if (!content.trim()) return;
 
     setReformatting(true);
+    setReformatWarning(null);
     try {
       const resp = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
@@ -234,7 +319,25 @@ export default function EntryForm({ initial, storagePath, onSubmit, onCancel, on
       });
       if (!resp.ok) throw new Error(await resp.text());
       const data = await resp.json() as { content: { type: string; text: string }[] };
-      const text = data.content.find((b) => b.type === 'text')?.text ?? '';
+      const text = (data.content.find((b) => b.type === 'text')?.text ?? '').trim();
+      if (!text) { setError('Le correcteur IA n\'a renvoyé aucun texte.'); return; }
+
+      // Garde-fou : vérifier que la correction ne s'écarte pas du texte d'origine.
+      const fidelity = checkFidelity(content, text);
+      if (!fidelity.ok) {
+        const parts: string[] = [];
+        if (fidelity.novelNumbers.length > 0) {
+          parts.push(`chiffres absents du texte d'origine (${fidelity.novelNumbers.join(', ')})`);
+        }
+        if (fidelity.novelWords.length > 0) {
+          parts.push(`mots ajoutés (${fidelity.novelWords.slice(0, 6).join(', ')}${fidelity.novelWords.length > 6 ? '…' : ''})`);
+        }
+        setReformatWarning(
+          `La correction s'écarte du texte d'origine — ${parts.join(' ; ')}. ` +
+          `Le correcteur a peut-être interprété un passage peu clair. Vérifiez-la mot à mot avant de l'utiliser. ` +
+          `Si ce texte provient d'une dictée vocale, réenregistrez en parlant plus lentement, plus distinctement et plus près du microphone.`
+        );
+      }
       setPendingReformat(text);
     } catch {
       setError('Erreur lors du reformatage IA.');
@@ -365,18 +468,33 @@ export default function EntryForm({ initial, storagePath, onSubmit, onCancel, on
 
         {/* Reformat preview */}
         {pendingReformat && (
-          <div className="mt-2 bg-evoq-light dark:bg-evoq/10 border border-evoq/30 rounded-lg p-3">
-            <p className="text-xs font-medium text-evoq mb-1">Suggestion IA</p>
+          <div
+            className={`mt-2 rounded-lg p-3 border ${
+              reformatWarning
+                ? 'bg-amber-50 dark:bg-amber-950 border-amber-300 dark:border-amber-800'
+                : 'bg-evoq-light dark:bg-evoq/10 border-evoq/30'
+            }`}
+          >
+            {reformatWarning ? (
+              <div className="flex items-start gap-2 mb-2">
+                <svg className="w-4 h-4 mt-0.5 shrink-0 text-amber-600 dark:text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M5.07 19h13.86c1.54 0 2.5-1.67 1.73-3L13.73 4a2 2 0 00-3.46 0L3.34 16c-.77 1.33.19 3 1.73 3z" />
+                </svg>
+                <p className="text-xs font-medium text-amber-800 dark:text-amber-200">{reformatWarning}</p>
+              </div>
+            ) : (
+              <p className="text-xs font-medium text-evoq mb-1">Suggestion IA</p>
+            )}
             <p className="text-sm text-gray-800 dark:text-gray-200 mb-2 whitespace-pre-wrap">{pendingReformat}</p>
             <div className="flex gap-2">
               <button
                 type="button"
-                onClick={() => { setContent(pendingReformat); setPendingReformat(null); }}
-                className="text-xs font-medium text-evoq hover:underline"
+                onClick={() => { setContent(pendingReformat); setPendingReformat(null); setReformatWarning(null); }}
+                className={`text-xs font-medium hover:underline ${reformatWarning ? 'text-amber-700 dark:text-amber-300' : 'text-evoq'}`}
               >
-                Utiliser ce texte
+                {reformatWarning ? 'Utiliser malgré tout' : 'Utiliser ce texte'}
               </button>
-              <button type="button" onClick={() => setPendingReformat(null)} className="text-xs text-gray-400 hover:underline">Ignorer</button>
+              <button type="button" onClick={() => { setPendingReformat(null); setReformatWarning(null); }} className="text-xs text-gray-400 hover:underline">Ignorer</button>
             </div>
           </div>
         )}
