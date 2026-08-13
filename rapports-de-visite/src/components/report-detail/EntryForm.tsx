@@ -218,8 +218,12 @@ export default function EntryForm({ initial, storagePath, onSubmit, onCancel, on
           'anthropic-dangerous-direct-browser-access': 'true',
         },
         body: JSON.stringify({
-          model: 'claude-haiku-4-5-20251001',
-          max_tokens: 512,
+          model: 'claude-sonnet-5',
+          max_tokens: 1024,
+          // Correction grammaire/orthographe : tâche courte et bien définie —
+          // on désactive la réflexion pour garder une réponse rapide (Sonnet 5
+          // active la réflexion adaptative par défaut si le champ est omis).
+          thinking: { type: 'disabled' },
           messages: [
             {
               role: 'user',
