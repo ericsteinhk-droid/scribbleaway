@@ -52,7 +52,7 @@ except ImportError:
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
-APP_VERSION  = "v1.0"
+APP_VERSION  = "v1.1"
 APP_DATE     = "July 2026"
 COPYRIGHT    = f"© Eric Stein, EVOQ Architecture  ·  {APP_VERSION}  ·  {APP_DATE}"
 
@@ -350,18 +350,92 @@ def split_proportional(text: str, weights: list) -> list:
     return pieces
 
 
-def set_paragraph_text(paragraph, new_text: str) -> None:
-    """Replace a paragraph's text, redistributing across its existing runs so
+_CONTROL_WS_RE = re.compile(r"[ \t]*[\r\n\v\f]+[ \t]*")
+
+
+def normalize_ws(text: str) -> str:
+    """Fold stray line breaks in a translation down to a single space.
+
+    Each unit we send is one visual line, so a newline coming back is a model
+    artefact. Left in place it lands as a literal control character inside
+    <a:t>, which PowerPoint renders unpredictably — the real line breaks are
+    <a:br/> elements and must stay the only ones in the paragraph.
+    """
+    return _CONTROL_WS_RE.sub(" ", text.replace("\t", " "))
+
+
+def set_runs_text(runs: list, new_text: str) -> None:
+    """Replace the text of a group of runs, redistributing across them so
     per-run formatting (bold, italic, colour, hyperlinks) is preserved."""
-    runs = paragraph.runs
     if not runs:
         return
+    new_text = normalize_ws(new_text)
     if len(runs) == 1:
         runs[0].text = new_text
         return
     weights = [max(len(r.text), 1) for r in runs]
     for run, piece in zip(runs, split_proportional(new_text, weights)):
         run.text = piece
+
+
+def paragraph_lines(paragraph) -> list:
+    """Split a paragraph into visual lines at soft line breaks.
+
+    A PowerPoint paragraph may contain <a:br/> elements (Shift+Enter line
+    breaks) and <a:fld/> fields (slide numbers, dates). python-pptx's
+    `paragraph.runs` skips both, so joining run text welds the end of one
+    visual line onto the start of the next — a title and its subtitle become
+    one string. Each line is its own translation unit.
+    """
+    runs = list(paragraph.runs)
+    lines, current, idx = [], [], 0
+    for child in paragraph._p:
+        tag = child.tag
+        if tag == qn("a:r"):
+            if idx < len(runs):
+                current.append(runs[idx])
+            idx += 1
+        elif tag in (qn("a:br"), qn("a:fld")):
+            lines.append(current)
+            current = []
+    lines.append(current)
+    return [line for line in lines if line]
+
+
+def _run_size_pt(run):
+    size = run.font.size
+    return None if size is None else round(size.pt, 1)
+
+
+def split_by_font_size(runs: list) -> list:
+    """Group consecutive runs by font size.
+
+    Runs that differ only in bold/italic/colour stay together — that is
+    emphasis inside one sentence. A change of font size marks a distinct
+    content block (a 40 pt title sharing a paragraph with a 14 pt byline),
+    which must not be translated or re-split as a single sentence.
+    """
+    blocks, current, last = [], [], object()
+    for run in runs:
+        size = _run_size_pt(run)
+        if current and size != last:
+            blocks.append(current)
+            current = []
+        current.append(run)
+        last = size
+    if current:
+        blocks.append(current)
+    return blocks
+
+
+def iter_translation_units(text_frame):
+    """Yield (runs, text) for each independently translatable unit of text."""
+    for para in text_frame.paragraphs:
+        for line in paragraph_lines(para):
+            for block in split_by_font_size(line):
+                text = "".join(r.text for r in block)
+                if needs_translation(text):
+                    yield block, text
 
 
 def _scale_norm_autofit(text_frame, ratio: float) -> bool:
@@ -452,17 +526,15 @@ def translate_pptx(in_path, out_path, translator, use_cache=True,
     cache = TranslationCache(cache_path, translator.model,
                              getattr(translator, "glossary", ""))
 
-    # ---- collect: one entry per paragraph that needs translating ----
-    # entry = (slide_no, shape_name, text_frame, paragraph, french_text)
+    # ---- collect: one entry per translatable unit ----
+    # entry = (slide_no, shape_name, text_frame, runs, french_text)
     entries = []
     for idx, slide in enumerate(slides, 1):
         for shape, tf in iter_text_frames(slide.shapes):
             if not translate_tables and getattr(shape, "has_table", False):
                 continue
-            for para in tf.paragraphs:
-                text = "".join(r.text for r in para.runs)
-                if needs_translation(text):
-                    entries.append((idx, shape.name, tf, para, text))
+            for runs, text in iter_translation_units(tf):
+                entries.append((idx, shape.name, tf, runs, text))
 
     report(f"Found {len(entries)} text segments on {len(slides)} slides.",
            0, len(entries))
@@ -508,9 +580,9 @@ def translate_pptx(in_path, out_path, translator, use_cache=True,
     # ---- apply: rewrite runs in place, then resize per text frame ----
     frames = {}                # id(tf) -> (tf, orig_chars, new_chars)
     review_rows = []
-    for slide_no, shape_name, tf, para, fr in entries:
+    for slide_no, shape_name, tf, runs, fr in entries:
         en = translations.get(fr, fr)
-        set_paragraph_text(para, en)
+        set_runs_text(runs, en)
         review_rows.append((slide_no, shape_name, fr, en))
         key = id(tf)
         _, o, n = frames.get(key, (tf, 0, 0))

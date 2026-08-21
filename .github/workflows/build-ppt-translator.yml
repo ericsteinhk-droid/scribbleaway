@@ -37,8 +37,8 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release create "ppt-translator-v1.0-run${{ github.run_number }}" `
+          gh release create "ppt-translator-v1.1-run${{ github.run_number }}" `
             "dist\PPT Translator.exe" `
-            --title "PPT Translator v1.0 (run ${{ github.run_number }})" `
+            --title "PPT Translator v1.1 (run ${{ github.run_number }})" `
             --target "${{ github.sha }}" `
-            --notes "## PPT Translator v1.0`n`nTranslates a French PowerPoint (.pptx) to English via the Claude API while keeping images, graphics, fonts, format and layout identical. English font sizes are rescaled slightly to fill roughly the same space as the French original.`n`n**Features:**`n- Text edited in place — slides are never rebuilt`n- Bold / italic / colours / hyperlinks preserved mid-sentence`n- Tables and grouped shapes included`n- Do-not-translate glossary`n- Translation cache — re-runs resume without re-paying`n- Bilingual French/English review CSV`n`n**Requires:** an Anthropic API key (console.anthropic.com), entered in the app on first run."
+            --notes "## PPT Translator v1.1`n`nTranslates a French PowerPoint (.pptx) to English via the Claude API while keeping images, graphics, fonts, format and layout identical. English font sizes are rescaled slightly to fill roughly the same space as the French original.`n`n**Features:**`n- Text edited in place — slides are never rebuilt`n- Bold / italic / colours / hyperlinks preserved mid-sentence`n- Line breaks (Shift+Enter) respected — titles, subtitles and bylines sharing one text box are translated separately`n- Tables and grouped shapes included`n- Do-not-translate glossary`n- Translation cache — re-runs resume without re-paying`n- Bilingual French/English review CSV`n`n**Requires:** an Anthropic API key (console.anthropic.com), entered in the app on first run."
