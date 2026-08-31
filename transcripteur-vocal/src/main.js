@@ -36,6 +36,8 @@ let elapsed = 0
 let audioCtx = null
 let analyser = null
 let rafId = null
+let wakeLock = null   // empêche la mise en veille pendant l'enregistrement/la transcription
+let busy = false      // vrai tant qu'un enregistrement ou une transcription est en cours
 
 // ── Réglages (localStorage + repli sur clé injectée au build) ──────────────
 const LS = {
@@ -65,6 +67,28 @@ function setStatus (msg, kind = '') {
   statusEl.textContent = msg
   statusEl.className = 'status' + (kind ? ' ' + kind : '')
 }
+
+// ── Verrou de réveil ────────────────────────────────────────────────────────
+// Empêche l'écran de s'éteindre pendant un enregistrement ou une transcription :
+// écran éteint = JavaScript et réseau suspendus par Android, donc la tâche
+// s'arrête. Le verrou est relâché automatiquement quand la page passe en
+// arrière-plan ; on le reprend au retour tant que la tâche n'est pas finie.
+async function acquireWake () {
+  try {
+    if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen')
+  } catch (_) { /* non supporté : on continue sans */ }
+}
+async function releaseWake () {
+  try { if (wakeLock) { await wakeLock.release() } } catch (_) {}
+  wakeLock = null
+}
+function setBusy (on) {
+  busy = on
+  if (on) acquireWake(); else releaseWake()
+}
+document.addEventListener('visibilitychange', () => {
+  if (busy && document.visibilityState === 'visible' && !wakeLock) acquireWake()
+})
 
 // ── Minuterie ─────────────────────────────────────────────────────────────
 function fmt (sec) {
@@ -170,6 +194,7 @@ async function startRecording () {
   mediaRecorder.start()
   startTimer()
   startMeter(mediaStream)
+  setBusy(true) // garde l'écran allumé pendant la capture
 
   btnRecord.classList.add('recording')
   recordLabel.textContent = 'Arrêter'
@@ -183,6 +208,7 @@ function stopRecording () {
   mediaStream = null
   stopTimer()
   stopMeter()
+  setBusy(false)
   btnRecord.classList.remove('recording')
   recordLabel.textContent = 'Enregistrer'
 }
@@ -379,6 +405,7 @@ async function transcribe () {
 
   const model = getModel()
   btnTranscribe.disabled = true
+  setBusy(true) // garde l'écran allumé pendant toute la transcription
 
   try {
     // Découpage nécessaire si le fichier dépasse la taille OU la durée maximale.
@@ -410,6 +437,7 @@ async function transcribe () {
     setStatus('Échec de la requête : ' + detail, 'error')
   } finally {
     btnTranscribe.disabled = false
+    setBusy(false)
   }
 }
 
