@@ -11,7 +11,10 @@
   <div id="app">
     <header class="topbar">
       <h1>Transcripteur vocal</h1>
-      <button id="btn-settings" class="icon-btn" title="Réglages" aria-label="Réglages">⚙️</button>
+      <div class="topbar-actions">
+        <button id="btn-settings" class="icon-btn" title="Réglages" aria-label="Réglages">⚙️</button>
+        <button id="btn-exit" class="icon-btn" title="Quitter" aria-label="Quitter l'application">⏻</button>
+      </div>
     </header>
 
     <main class="content">
@@ -51,6 +54,24 @@
           <button id="btn-save" class="primary-btn" disabled>Enregistrer .txt</button>
         </div>
       </section>
+
+      <!-- Compte rendu (Claude) -->
+      <section class="card">
+        <div class="card-head">
+          <h2>Compte rendu</h2>
+          <span id="cr-status" class="status"></span>
+        </div>
+
+        <button id="btn-compte-rendu" class="primary-btn" disabled>Générer un compte rendu (Claude Opus)</button>
+
+        <textarea id="compte-rendu" class="transcript" placeholder="Un compte rendu structuré (résumé, points, décisions, actions à suivre) sera généré à partir de la transcription ci-dessus." spellcheck="true"></textarea>
+
+        <div class="actions">
+          <button id="btn-cr-copy" class="ghost-btn" disabled>Copier</button>
+          <button id="btn-cr-save" class="primary-btn" disabled>Enregistrer .txt</button>
+        </div>
+        <small class="privacy-note">Rappel : la transcription est envoyée à l'API Anthropic. Anonymisez les noms de personnes, de projets ou d'organisations sensibles au besoin.</small>
+      </section>
     </main>
 
     <!-- Panneau réglages -->
@@ -65,6 +86,12 @@
           <span>Clé API OpenAI</span>
           <input id="api-key" type="password" placeholder="sk-..." autocomplete="off" />
           <small>Stockée uniquement sur cet appareil. <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener">Obtenir une clé</a></small>
+        </label>
+
+        <label class="field">
+          <span>Clé API Anthropic (compte rendu)</span>
+          <input id="anthropic-key" type="password" placeholder="sk-ant-..." autocomplete="off" />
+          <small>Stockée uniquement sur cet appareil. Utilisée par Claude Opus pour le compte rendu. <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">Obtenir une clé</a></small>
         </label>
 
         <label class="field">

@@ -1,6 +1,7 @@
 import { Capacitor } from '@capacitor/core'
 import { Filesystem, Directory, Encoding } from '@capacitor/filesystem'
 import { Share } from '@capacitor/share'
+import { App } from '@capacitor/app'
 
 // ── Références DOM ────────────────────────────────────────────────────────
 const el = (id) => document.getElementById(id)
@@ -15,12 +16,20 @@ const transcriptEl = el('transcript')
 const statusEl = el('status')
 const btnCopy = el('btn-copy')
 const btnSave = el('btn-save')
+const btnExit = el('btn-exit')
+
+const btnCompteRendu = el('btn-compte-rendu')
+const compteRenduEl = el('compte-rendu')
+const crStatusEl = el('cr-status')
+const btnCrCopy = el('btn-cr-copy')
+const btnCrSave = el('btn-cr-save')
 
 const settingsOverlay = el('settings-overlay')
 const btnSettings = el('btn-settings')
 const btnCloseSettings = el('btn-close-settings')
 const btnSaveSettings = el('btn-save-settings')
 const apiKeyInput = el('api-key')
+const anthropicKeyInput = el('anthropic-key')
 const modelSelect = el('model')
 const promptHintInput = el('prompt-hint')
 
@@ -42,18 +51,24 @@ let busy = false      // vrai tant qu'un enregistrement ou une transcription est
 // ── Réglages (localStorage + repli sur clé injectée au build) ──────────────
 const LS = {
   key: 'tv_api_key',
+  anthropicKey: 'tv_anthropic_key',
   model: 'tv_model',
   hint: 'tv_prompt_hint'
 }
 const BUILD_KEY = import.meta.env.VITE_OPENAI_API_KEY || ''
+const BUILD_ANTHROPIC_KEY = import.meta.env.VITE_ANTHROPIC_API_KEY || ''
 
 function loadSettings () {
   apiKeyInput.value = localStorage.getItem(LS.key) || ''
+  anthropicKeyInput.value = localStorage.getItem(LS.anthropicKey) || ''
   modelSelect.value = localStorage.getItem(LS.model) || 'gpt-4o-transcribe'
   promptHintInput.value = localStorage.getItem(LS.hint) || ''
 }
 function getApiKey () {
   return (localStorage.getItem(LS.key) || BUILD_KEY || '').trim()
+}
+function getAnthropicKey () {
+  return (localStorage.getItem(LS.anthropicKey) || BUILD_ANTHROPIC_KEY || '').trim()
 }
 function getModel () {
   return localStorage.getItem(LS.model) || 'gpt-4o-transcribe'
@@ -445,6 +460,7 @@ function finishTranscript (text, segments) {
   const hadText = text.trim().length > 0
   btnCopy.disabled = !hadText
   btnSave.disabled = !hadText
+  btnCompteRendu.disabled = !hadText
   if (!hadText) { setStatus('Aucune parole détectée.', 'error'); return }
   setStatus(segments && segments > 1
     ? `Transcription terminée (${segments} segments recollés).`
@@ -458,6 +474,7 @@ transcriptEl.addEventListener('input', () => {
   const has = transcriptEl.value.trim().length > 0
   btnCopy.disabled = !has
   btnSave.disabled = !has
+  btnCompteRendu.disabled = !has
 })
 
 // ── Copier ──────────────────────────────────────────────────────────────
@@ -479,10 +496,9 @@ function stamp () {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}_${p(d.getHours())}${p(d.getMinutes())}`
 }
 
-async function saveTxt () {
-  const text = transcriptEl.value
+async function saveTextFile (text, baseName, status) {
   if (!text.trim()) return
-  const filename = `transcription_${stamp()}.txt`
+  const filename = `${baseName}_${stamp()}.txt`
 
   if (Capacitor.isNativePlatform()) {
     try {
@@ -494,20 +510,14 @@ async function saveTxt () {
         recursive: true
       })
       const { uri } = await Filesystem.getUri({ directory: Directory.Documents, path: filename })
-      setStatus(`Enregistré : Documents/${filename}`, 'ok')
+      status(`Enregistré : Documents/${filename}`, 'ok')
       try {
-        await Share.share({
-          title: 'Transcription',
-          text: 'Transcription vocale',
-          url: uri,
-          dialogTitle: 'Partager la transcription'
-        })
+        await Share.share({ url: uri, dialogTitle: 'Partager le fichier' })
       } catch (_) { /* partage annulé — le fichier est déjà sauvegardé */ }
     } catch (err) {
-      setStatus('Impossible d’enregistrer le fichier.', 'error')
+      status('Impossible d’enregistrer le fichier.', 'error')
     }
   } else {
-    // Repli navigateur : téléchargement.
     const blob = new Blob([text], { type: 'text/plain;charset=utf-8' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
@@ -517,11 +527,102 @@ async function saveTxt () {
     a.click()
     a.remove()
     URL.revokeObjectURL(url)
-    setStatus(`Téléchargé : ${filename}`, 'ok')
+    status(`Téléchargé : ${filename}`, 'ok')
   }
 }
 
-btnSave.addEventListener('click', saveTxt)
+btnSave.addEventListener('click', () => saveTextFile(transcriptEl.value, 'transcription', setStatus))
+
+// ── Compte rendu (Claude Opus, API Anthropic) ──────────────────────────────
+function setCrStatus (msg, kind = '') {
+  crStatusEl.textContent = msg
+  crStatusEl.className = 'status' + (kind ? ' ' + kind : '')
+}
+
+async function generateCompteRendu () {
+  const key = getAnthropicKey()
+  if (!key) {
+    setCrStatus('Ajoutez votre clé API Anthropic dans les réglages ⚙️.', 'error')
+    loadSettings(); settingsOverlay.hidden = false
+    return
+  }
+  const transcript = transcriptEl.value.trim()
+  if (!transcript) { setCrStatus('Aucune transcription à résumer.', 'error'); return }
+
+  btnCompteRendu.disabled = true
+  setBusy(true) // garde l'écran allumé pendant la génération
+  setCrStatus('Génération du compte rendu par Claude Opus…', 'working')
+
+  const system = "Tu rédiges des comptes rendus de réunion clairs et professionnels en français canadien. " +
+    "Tu restes strictement fidèle à la transcription fournie : tu n'inventes rien et tu ne supposes aucun fait absent. " +
+    "Si une information (date, participant, décision, échéance) n'apparaît pas, ne l'invente pas et n'ajoute pas de section vide."
+  const user = "À partir de la transcription ci-dessous, rédige un compte rendu structuré en Markdown avec, lorsque le contenu s'y prête :\n" +
+    "- **Sujet**\n- **Résumé** (3 à 5 phrases)\n- **Points discutés** (puces)\n- **Décisions**\n- **Actions à suivre** (responsable et échéance si mentionnés)\n- **Suivis / questions en suspens**\n\n" +
+    "Omets toute section sans contenu.\n\nTRANSCRIPTION :\n\n" + transcript
+
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'x-api-key': key,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true',
+        'content-type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: 'claude-opus-5',
+        max_tokens: 6000,
+        system,
+        messages: [{ role: 'user', content: user }]
+      })
+    })
+    if (!resp.ok) {
+      let detail = ''
+      try { const j = await resp.json(); detail = j.error?.message || '' } catch (_) {}
+      if (resp.status === 401) setCrStatus('Clé API Anthropic invalide.', 'error')
+      else setCrStatus(`Erreur ${resp.status}${detail ? ' : ' + detail : ''}`, 'error')
+      return
+    }
+    const data = await resp.json()
+    const text = (data.content || [])
+      .filter(b => b.type === 'text')
+      .map(b => b.text)
+      .join('\n')
+      .trim()
+    compteRenduEl.value = text
+    const has = text.length > 0
+    btnCrCopy.disabled = !has
+    btnCrSave.disabled = !has
+    setCrStatus(has ? 'Compte rendu généré.' : 'Réponse vide.', has ? 'ok' : 'error')
+  } catch (err) {
+    const detail = (err && err.message) ? err.message : 'erreur inconnue'
+    setCrStatus('Échec de la requête : ' + detail, 'error')
+  } finally {
+    btnCompteRendu.disabled = false
+    setBusy(false)
+  }
+}
+
+btnCompteRendu.addEventListener('click', generateCompteRendu)
+
+compteRenduEl.addEventListener('input', () => {
+  const has = compteRenduEl.value.trim().length > 0
+  btnCrCopy.disabled = !has
+  btnCrSave.disabled = !has
+})
+
+btnCrCopy.addEventListener('click', async () => {
+  try {
+    await navigator.clipboard.writeText(compteRenduEl.value)
+    setCrStatus('Copié dans le presse-papiers.', 'ok')
+  } catch (_) {
+    compteRenduEl.select()
+    document.execCommand('copy')
+    setCrStatus('Copié.', 'ok')
+  }
+})
+
+btnCrSave.addEventListener('click', () => saveTextFile(compteRenduEl.value, 'compte_rendu', setCrStatus))
 
 // ── Réglages ────────────────────────────────────────────────────────────
 btnSettings.addEventListener('click', () => { loadSettings(); settingsOverlay.hidden = false })
@@ -529,10 +630,25 @@ btnCloseSettings.addEventListener('click', () => { settingsOverlay.hidden = true
 settingsOverlay.addEventListener('click', (e) => { if (e.target === settingsOverlay) settingsOverlay.hidden = true })
 btnSaveSettings.addEventListener('click', () => {
   localStorage.setItem(LS.key, apiKeyInput.value.trim())
+  localStorage.setItem(LS.anthropicKey, anthropicKeyInput.value.trim())
   localStorage.setItem(LS.model, modelSelect.value)
   localStorage.setItem(LS.hint, promptHintInput.value.trim())
   settingsOverlay.hidden = true
   setStatus('Réglages enregistrés.', 'ok')
+})
+
+// ── Bouton de sortie ────────────────────────────────────────────────────────
+btnExit.addEventListener('click', async () => {
+  if (busy) {
+    const ok = confirm('Un enregistrement ou une transcription est en cours. Quitter quand même ?')
+    if (!ok) return
+  }
+  if (Capacitor.isNativePlatform()) {
+    try { await App.exitApp(); return } catch (_) {}
+  }
+  // Repli navigateur.
+  try { window.close() } catch (_) {}
+  setStatus('Vous pouvez fermer l’application.', '')
 })
 
 // ── Démarrage ─────────────────────────────────────────────────────────────
