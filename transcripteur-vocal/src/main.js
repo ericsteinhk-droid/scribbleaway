@@ -2,7 +2,6 @@ import { Capacitor } from '@capacitor/core'
 import { Filesystem, Directory, Encoding } from '@capacitor/filesystem'
 import { Share } from '@capacitor/share'
 import { App } from '@capacitor/app'
-import { Document, Packer, Paragraph, TextRun, HeadingLevel } from 'docx'
 
 // ── Références DOM ────────────────────────────────────────────────────────
 const el = (id) => document.getElementById(id)
@@ -20,19 +19,11 @@ const btnSave = el('btn-save')
 const btnShare = el('btn-share')
 const btnExit = el('btn-exit')
 
-const btnCompteRendu = el('btn-compte-rendu')
-const compteRenduEl = el('compte-rendu')
-const crStatusEl = el('cr-status')
-const btnCrCopy = el('btn-cr-copy')
-const btnCrSave = el('btn-cr-save')
-const btnCrWord = el('btn-cr-word')
-
 const settingsOverlay = el('settings-overlay')
 const btnSettings = el('btn-settings')
 const btnCloseSettings = el('btn-close-settings')
 const btnSaveSettings = el('btn-save-settings')
 const apiKeyInput = el('api-key')
-const anthropicKeyInput = el('anthropic-key')
 const modelSelect = el('model')
 const promptHintInput = el('prompt-hint')
 
@@ -54,24 +45,18 @@ let busy = false      // vrai tant qu'un enregistrement ou une transcription est
 // ── Réglages (localStorage + repli sur clé injectée au build) ──────────────
 const LS = {
   key: 'tv_api_key',
-  anthropicKey: 'tv_anthropic_key',
   model: 'tv_model',
   hint: 'tv_prompt_hint'
 }
 const BUILD_KEY = import.meta.env.VITE_OPENAI_API_KEY || ''
-const BUILD_ANTHROPIC_KEY = import.meta.env.VITE_ANTHROPIC_API_KEY || ''
 
 function loadSettings () {
   apiKeyInput.value = localStorage.getItem(LS.key) || ''
-  anthropicKeyInput.value = localStorage.getItem(LS.anthropicKey) || ''
   modelSelect.value = localStorage.getItem(LS.model) || 'gpt-4o-transcribe'
   promptHintInput.value = localStorage.getItem(LS.hint) || ''
 }
 function getApiKey () {
   return (localStorage.getItem(LS.key) || BUILD_KEY || '').trim()
-}
-function getAnthropicKey () {
-  return (localStorage.getItem(LS.anthropicKey) || BUILD_ANTHROPIC_KEY || '').trim()
 }
 function getModel () {
   return localStorage.getItem(LS.model) || 'gpt-4o-transcribe'
@@ -464,7 +449,6 @@ function finishTranscript (text, segments) {
   btnCopy.disabled = !hadText
   btnSave.disabled = !hadText
   btnShare.disabled = !hadText
-  btnCompteRendu.disabled = !hadText
   if (!hadText) { setStatus('Aucune parole détectée.', 'error'); return }
   setStatus(segments && segments > 1
     ? `Transcription terminée (${segments} segments recollés).`
@@ -479,7 +463,6 @@ transcriptEl.addEventListener('input', () => {
   btnCopy.disabled = !has
   btnSave.disabled = !has
   btnShare.disabled = !has
-  btnCompteRendu.disabled = !has
 })
 
 // ── Exporter la transcription vers une autre appli (Copilot, Claude…) ───────
@@ -553,197 +536,12 @@ async function saveTextFile (text, baseName, status) {
 
 btnSave.addEventListener('click', () => saveTextFile(transcriptEl.value, 'transcription', setStatus))
 
-// ── Compte rendu (Claude Opus, API Anthropic) ──────────────────────────────
-function setCrStatus (msg, kind = '') {
-  crStatusEl.textContent = msg
-  crStatusEl.className = 'status' + (kind ? ' ' + kind : '')
-}
-
-async function generateCompteRendu () {
-  const key = getAnthropicKey()
-  if (!key) {
-    setCrStatus('Ajoutez votre clé API Anthropic dans les réglages ⚙️.', 'error')
-    loadSettings(); settingsOverlay.hidden = false
-    return
-  }
-  const transcript = transcriptEl.value.trim()
-  if (!transcript) { setCrStatus('Aucune transcription à résumer.', 'error'); return }
-
-  btnCompteRendu.disabled = true
-  setBusy(true) // garde l'écran allumé pendant la génération
-  setCrStatus('Génération du compte rendu par Claude Opus…', 'working')
-
-  const system = "Tu rédiges des comptes rendus de réunion clairs et professionnels en français canadien. " +
-    "Tu restes strictement fidèle à la transcription fournie : tu n'inventes rien et tu ne supposes aucun fait absent. " +
-    "Si une information (date, participant, décision, échéance) n'apparaît pas, ne l'invente pas et n'ajoute pas de section vide."
-  const user = "À partir de la transcription ci-dessous, rédige un compte rendu structuré en Markdown avec, lorsque le contenu s'y prête :\n" +
-    "- **Sujet**\n- **Résumé** (3 à 5 phrases)\n- **Points discutés** (puces)\n- **Décisions**\n- **Actions à suivre** (responsable et échéance si mentionnés)\n- **Suivis / questions en suspens**\n\n" +
-    "Omets toute section sans contenu.\n\nTRANSCRIPTION :\n\n" + transcript
-
-  try {
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'x-api-key': key,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true',
-        'content-type': 'application/json'
-      },
-      body: JSON.stringify({
-        model: 'claude-opus-5',
-        max_tokens: 6000,
-        system,
-        messages: [{ role: 'user', content: user }]
-      })
-    })
-    if (!resp.ok) {
-      let detail = ''
-      try { const j = await resp.json(); detail = j.error?.message || '' } catch (_) {}
-      if (resp.status === 401) setCrStatus('Clé API Anthropic invalide.', 'error')
-      else setCrStatus(`Erreur ${resp.status}${detail ? ' : ' + detail : ''}`, 'error')
-      return
-    }
-    const data = await resp.json()
-    const text = (data.content || [])
-      .filter(b => b.type === 'text')
-      .map(b => b.text)
-      .join('\n')
-      .trim()
-    compteRenduEl.value = text
-    const has = text.length > 0
-    btnCrCopy.disabled = !has
-    btnCrSave.disabled = !has
-    btnCrWord.disabled = !has
-    setCrStatus(has ? 'Compte rendu généré.' : 'Réponse vide.', has ? 'ok' : 'error')
-  } catch (err) {
-    const detail = (err && err.message) ? err.message : 'erreur inconnue'
-    setCrStatus('Échec de la requête : ' + detail, 'error')
-  } finally {
-    btnCompteRendu.disabled = false
-    setBusy(false)
-  }
-}
-
-btnCompteRendu.addEventListener('click', generateCompteRendu)
-
-compteRenduEl.addEventListener('input', () => {
-  const has = compteRenduEl.value.trim().length > 0
-  btnCrCopy.disabled = !has
-  btnCrSave.disabled = !has
-  btnCrWord.disabled = !has
-})
-
-btnCrCopy.addEventListener('click', async () => {
-  try {
-    await navigator.clipboard.writeText(compteRenduEl.value)
-    setCrStatus('Copié dans le presse-papiers.', 'ok')
-  } catch (_) {
-    compteRenduEl.select()
-    document.execCommand('copy')
-    setCrStatus('Copié.', 'ok')
-  }
-})
-
-btnCrSave.addEventListener('click', () => saveTextFile(compteRenduEl.value, 'compte_rendu', setCrStatus))
-
-// ── Export Word (.docx) du compte rendu, puis envoi (courriel via partage) ──
-// Convertit le Markdown produit par Claude en paragraphes Word stylés.
-function mdRuns (text) {
-  const runs = []
-  const parts = text.split('**')            // segments gras entre **
-  for (let i = 0; i < parts.length; i++) {
-    if (parts[i] === '') continue
-    runs.push(new TextRun({ text: parts[i], bold: i % 2 === 1 }))
-  }
-  return runs.length ? runs : [new TextRun({ text: '' })]
-}
-
-function markdownToParagraphs (md) {
-  const paras = []
-  for (const raw of md.replace(/\r/g, '').split('\n')) {
-    const line = raw.trimEnd()
-    if (line.trim() === '') { paras.push(new Paragraph({ text: '' })); continue }
-    let m
-    if ((m = line.match(/^###\s+(.*)/))) { paras.push(new Paragraph({ heading: HeadingLevel.HEADING_3, children: mdRuns(m[1]) })); continue }
-    if ((m = line.match(/^##\s+(.*)/)))  { paras.push(new Paragraph({ heading: HeadingLevel.HEADING_2, children: mdRuns(m[1]) })); continue }
-    if ((m = line.match(/^#\s+(.*)/)))   { paras.push(new Paragraph({ heading: HeadingLevel.HEADING_1, children: mdRuns(m[1]) })); continue }
-    if ((m = line.match(/^[-*]\s+(.*)/))) { paras.push(new Paragraph({ bullet: { level: 0 }, children: mdRuns(m[1]) })); continue }
-    if ((m = line.match(/^\d+[.)]\s+(.*)/))) { paras.push(new Paragraph({ numbering: undefined, bullet: { level: 0 }, children: mdRuns(m[1]) })); continue }
-    paras.push(new Paragraph({ children: mdRuns(line) }))
-  }
-  return paras
-}
-
-async function blobToBase64 (blob) {
-  const bytes = new Uint8Array(await blob.arrayBuffer())
-  let bin = ''
-  const chunk = 0x8000
-  for (let i = 0; i < bytes.length; i += chunk) {
-    bin += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk))
-  }
-  return btoa(bin)
-}
-
-async function exportCompteRenduWord () {
-  const md = compteRenduEl.value.trim()
-  if (!md) return
-  btnCrWord.disabled = true
-  setCrStatus('Génération du document Word…', 'working')
-  try {
-    const dateStr = new Date().toLocaleDateString('fr-CA', { year: 'numeric', month: 'long', day: 'numeric' })
-    const doc = new Document({
-      sections: [{
-        children: [
-          new Paragraph({ heading: HeadingLevel.TITLE, children: [new TextRun('Compte rendu')] }),
-          new Paragraph({ children: [new TextRun({ text: dateStr, italics: true, color: '666666' })] }),
-          new Paragraph({ text: '' }),
-          ...markdownToParagraphs(md)
-        ]
-      }]
-    })
-    const blob = await Packer.toBlob(doc)
-    const filename = `compte_rendu_${stamp()}.docx`
-
-    if (Capacitor.isNativePlatform()) {
-      const base64 = await blobToBase64(blob)
-      await Filesystem.writeFile({ path: filename, data: base64, directory: Directory.Documents, recursive: true })
-      const { uri } = await Filesystem.getUri({ directory: Directory.Documents, path: filename })
-      setCrStatus(`Document créé : Documents/${filename}`, 'ok')
-      try {
-        await Share.share({
-          title: 'Compte rendu',
-          text: 'Compte rendu de réunion (document Word ci-joint).',
-          url: uri,
-          dialogTitle: 'Envoyer par courriel'
-        })
-      } catch (_) { /* partage annulé — le fichier est déjà enregistré */ }
-    } else {
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = filename
-      document.body.appendChild(a)
-      a.click()
-      a.remove()
-      URL.revokeObjectURL(url)
-      setCrStatus(`Téléchargé : ${filename}`, 'ok')
-    }
-  } catch (err) {
-    setCrStatus('Impossible de générer le document Word.', 'error')
-  } finally {
-    btnCrWord.disabled = false
-  }
-}
-
-btnCrWord.addEventListener('click', exportCompteRenduWord)
-
 // ── Réglages ────────────────────────────────────────────────────────────
 btnSettings.addEventListener('click', () => { loadSettings(); settingsOverlay.hidden = false })
 btnCloseSettings.addEventListener('click', () => { settingsOverlay.hidden = true })
 settingsOverlay.addEventListener('click', (e) => { if (e.target === settingsOverlay) settingsOverlay.hidden = true })
 btnSaveSettings.addEventListener('click', () => {
   localStorage.setItem(LS.key, apiKeyInput.value.trim())
-  localStorage.setItem(LS.anthropicKey, anthropicKeyInput.value.trim())
   localStorage.setItem(LS.model, modelSelect.value)
   localStorage.setItem(LS.hint, promptHintInput.value.trim())
   settingsOverlay.hidden = true

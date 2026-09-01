@@ -37,7 +37,6 @@ jobs:
         working-directory: transcripteur-vocal
         env:
           VITE_OPENAI_API_KEY: ${{ secrets.VITE_OPENAI_API_KEY }}
-          VITE_ANTHROPIC_API_KEY: ${{ secrets.VITE_ANTHROPIC_API_KEY }}
         run: npm run build
 
       # ── Projet Android (Capacitor) ────────────────────────────────────────
