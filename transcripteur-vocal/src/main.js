@@ -2,6 +2,7 @@ import { Capacitor } from '@capacitor/core'
 import { Filesystem, Directory, Encoding } from '@capacitor/filesystem'
 import { Share } from '@capacitor/share'
 import { App } from '@capacitor/app'
+import { Document, Packer, Paragraph, TextRun, HeadingLevel } from 'docx'
 
 // ── Références DOM ────────────────────────────────────────────────────────
 const el = (id) => document.getElementById(id)
@@ -16,6 +17,7 @@ const transcriptEl = el('transcript')
 const statusEl = el('status')
 const btnCopy = el('btn-copy')
 const btnSave = el('btn-save')
+const btnShare = el('btn-share')
 const btnExit = el('btn-exit')
 
 const btnCompteRendu = el('btn-compte-rendu')
@@ -23,6 +25,7 @@ const compteRenduEl = el('compte-rendu')
 const crStatusEl = el('cr-status')
 const btnCrCopy = el('btn-cr-copy')
 const btnCrSave = el('btn-cr-save')
+const btnCrWord = el('btn-cr-word')
 
 const settingsOverlay = el('settings-overlay')
 const btnSettings = el('btn-settings')
@@ -460,6 +463,7 @@ function finishTranscript (text, segments) {
   const hadText = text.trim().length > 0
   btnCopy.disabled = !hadText
   btnSave.disabled = !hadText
+  btnShare.disabled = !hadText
   btnCompteRendu.disabled = !hadText
   if (!hadText) { setStatus('Aucune parole détectée.', 'error'); return }
   setStatus(segments && segments > 1
@@ -474,7 +478,23 @@ transcriptEl.addEventListener('input', () => {
   const has = transcriptEl.value.trim().length > 0
   btnCopy.disabled = !has
   btnSave.disabled = !has
+  btnShare.disabled = !has
   btnCompteRendu.disabled = !has
+})
+
+// ── Exporter la transcription vers une autre appli (Copilot, Claude…) ───────
+btnShare.addEventListener('click', async () => {
+  const text = transcriptEl.value.trim()
+  if (!text) return
+  if (Capacitor.isNativePlatform()) {
+    try {
+      await Share.share({ title: 'Transcription', text, dialogTitle: 'Exporter la transcription vers…' })
+    } catch (_) { /* partage annulé */ }
+  } else if (navigator.share) {
+    try { await navigator.share({ text }) } catch (_) {}
+  } else {
+    try { await navigator.clipboard.writeText(text); setStatus('Copié — collez-le dans Copilot ou Claude.', 'ok') } catch (_) {}
+  }
 })
 
 // ── Copier ──────────────────────────────────────────────────────────────
@@ -593,6 +613,7 @@ async function generateCompteRendu () {
     const has = text.length > 0
     btnCrCopy.disabled = !has
     btnCrSave.disabled = !has
+    btnCrWord.disabled = !has
     setCrStatus(has ? 'Compte rendu généré.' : 'Réponse vide.', has ? 'ok' : 'error')
   } catch (err) {
     const detail = (err && err.message) ? err.message : 'erreur inconnue'
@@ -609,6 +630,7 @@ compteRenduEl.addEventListener('input', () => {
   const has = compteRenduEl.value.trim().length > 0
   btnCrCopy.disabled = !has
   btnCrSave.disabled = !has
+  btnCrWord.disabled = !has
 })
 
 btnCrCopy.addEventListener('click', async () => {
@@ -623,6 +645,97 @@ btnCrCopy.addEventListener('click', async () => {
 })
 
 btnCrSave.addEventListener('click', () => saveTextFile(compteRenduEl.value, 'compte_rendu', setCrStatus))
+
+// ── Export Word (.docx) du compte rendu, puis envoi (courriel via partage) ──
+// Convertit le Markdown produit par Claude en paragraphes Word stylés.
+function mdRuns (text) {
+  const runs = []
+  const parts = text.split('**')            // segments gras entre **
+  for (let i = 0; i < parts.length; i++) {
+    if (parts[i] === '') continue
+    runs.push(new TextRun({ text: parts[i], bold: i % 2 === 1 }))
+  }
+  return runs.length ? runs : [new TextRun({ text: '' })]
+}
+
+function markdownToParagraphs (md) {
+  const paras = []
+  for (const raw of md.replace(/\r/g, '').split('\n')) {
+    const line = raw.trimEnd()
+    if (line.trim() === '') { paras.push(new Paragraph({ text: '' })); continue }
+    let m
+    if ((m = line.match(/^###\s+(.*)/))) { paras.push(new Paragraph({ heading: HeadingLevel.HEADING_3, children: mdRuns(m[1]) })); continue }
+    if ((m = line.match(/^##\s+(.*)/)))  { paras.push(new Paragraph({ heading: HeadingLevel.HEADING_2, children: mdRuns(m[1]) })); continue }
+    if ((m = line.match(/^#\s+(.*)/)))   { paras.push(new Paragraph({ heading: HeadingLevel.HEADING_1, children: mdRuns(m[1]) })); continue }
+    if ((m = line.match(/^[-*]\s+(.*)/))) { paras.push(new Paragraph({ bullet: { level: 0 }, children: mdRuns(m[1]) })); continue }
+    if ((m = line.match(/^\d+[.)]\s+(.*)/))) { paras.push(new Paragraph({ numbering: undefined, bullet: { level: 0 }, children: mdRuns(m[1]) })); continue }
+    paras.push(new Paragraph({ children: mdRuns(line) }))
+  }
+  return paras
+}
+
+async function blobToBase64 (blob) {
+  const bytes = new Uint8Array(await blob.arrayBuffer())
+  let bin = ''
+  const chunk = 0x8000
+  for (let i = 0; i < bytes.length; i += chunk) {
+    bin += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk))
+  }
+  return btoa(bin)
+}
+
+async function exportCompteRenduWord () {
+  const md = compteRenduEl.value.trim()
+  if (!md) return
+  btnCrWord.disabled = true
+  setCrStatus('Génération du document Word…', 'working')
+  try {
+    const dateStr = new Date().toLocaleDateString('fr-CA', { year: 'numeric', month: 'long', day: 'numeric' })
+    const doc = new Document({
+      sections: [{
+        children: [
+          new Paragraph({ heading: HeadingLevel.TITLE, children: [new TextRun('Compte rendu')] }),
+          new Paragraph({ children: [new TextRun({ text: dateStr, italics: true, color: '666666' })] }),
+          new Paragraph({ text: '' }),
+          ...markdownToParagraphs(md)
+        ]
+      }]
+    })
+    const blob = await Packer.toBlob(doc)
+    const filename = `compte_rendu_${stamp()}.docx`
+
+    if (Capacitor.isNativePlatform()) {
+      const base64 = await blobToBase64(blob)
+      await Filesystem.writeFile({ path: filename, data: base64, directory: Directory.Documents, recursive: true })
+      const { uri } = await Filesystem.getUri({ directory: Directory.Documents, path: filename })
+      setCrStatus(`Document créé : Documents/${filename}`, 'ok')
+      try {
+        await Share.share({
+          title: 'Compte rendu',
+          text: 'Compte rendu de réunion (document Word ci-joint).',
+          url: uri,
+          dialogTitle: 'Envoyer par courriel'
+        })
+      } catch (_) { /* partage annulé — le fichier est déjà enregistré */ }
+    } else {
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = filename
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      URL.revokeObjectURL(url)
+      setCrStatus(`Téléchargé : ${filename}`, 'ok')
+    }
+  } catch (err) {
+    setCrStatus('Impossible de générer le document Word.', 'error')
+  } finally {
+    btnCrWord.disabled = false
+  }
+}
+
+btnCrWord.addEventListener('click', exportCompteRenduWord)
 
 // ── Réglages ────────────────────────────────────────────────────────────
 btnSettings.addEventListener('click', () => { loadSettings(); settingsOverlay.hidden = false })

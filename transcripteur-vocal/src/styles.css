@@ -157,7 +157,8 @@ html, body {
 }
 .transcript:focus { outline: 2px solid var(--accent-strong); border-color: transparent; }
 
-.actions { display: flex; gap: 12px; }
+.actions { display: flex; gap: 12px; flex-wrap: wrap; }
+.actions > button { min-width: 120px; }
 
 .primary-btn {
   flex: 1;
