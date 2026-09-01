@@ -2,6 +2,8 @@ import { Capacitor } from '@capacitor/core'
 import { Filesystem, Directory, Encoding } from '@capacitor/filesystem'
 import { Share } from '@capacitor/share'
 import { App } from '@capacitor/app'
+import { SplashScreen } from '@capacitor/splash-screen'
+import brandSplashUrl from './brand-splash.webp'
 
 // ── Références DOM ────────────────────────────────────────────────────────
 const el = (id) => document.getElementById(id)
@@ -563,6 +565,21 @@ btnExit.addEventListener('click', async () => {
   try { window.close() } catch (_) {}
   setStatus('Vous pouvez fermer l’application.', '')
 })
+
+// ── Écran de démarrage intégré (logo EVOQ garanti) ─────────────────────────
+;(function initBrandSplash () {
+  const splash = document.getElementById('brand-splash')
+  const imgEl = document.getElementById('brand-splash-img')
+  if (imgEl) imgEl.src = brandSplashUrl
+  // Masque le splash natif dès que le WebView est prêt (notre splash prend le relais).
+  try { const p = SplashScreen.hide(); if (p && p.catch) p.catch(() => {}) } catch (_) {}
+  // Affiche notre splash de marque ~1,6 s, puis fondu.
+  setTimeout(() => {
+    if (!splash) return
+    splash.classList.add('hide')
+    setTimeout(() => splash.remove(), 600)
+  }, 1600)
+})()
 
 // ── Démarrage ─────────────────────────────────────────────────────────────
 loadSettings()

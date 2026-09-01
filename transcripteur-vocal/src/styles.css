@@ -216,6 +216,25 @@ html, body {
 .ghost-btn:disabled { opacity: 0.4; cursor: not-allowed; box-shadow: none; }
 .ghost-btn:not(:disabled):active { transform: translate(2px, 2px); box-shadow: none; }
 
+/* Écran de démarrage intégré (garantit l'affichage du logo EVOQ) */
+#brand-splash {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: #fac520;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.5s ease;
+}
+#brand-splash.hide { opacity: 0; pointer-events: none; }
+#brand-splash img {
+  width: min(94vw, 520px);
+  max-height: 94vh;
+  height: auto;
+  object-fit: contain;
+}
+
 /* Pulsation de l'écran pendant l'enregistrement (cadre rouge clignotant) */
 .rec-pulse {
   position: fixed;
