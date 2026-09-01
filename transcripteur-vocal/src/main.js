@@ -198,6 +198,7 @@ async function startRecording () {
   startTimer()
   startMeter(mediaStream)
   setBusy(true) // garde l'écran allumé pendant la capture
+  document.body.classList.add('recording') // pulsation de l'écran
 
   btnRecord.classList.add('recording')
   recordLabel.textContent = 'Arrêter'
@@ -212,6 +213,7 @@ function stopRecording () {
   stopTimer()
   stopMeter()
   setBusy(false)
+  document.body.classList.remove('recording')
   btnRecord.classList.remove('recording')
   recordLabel.textContent = 'Enregistrer'
 }
