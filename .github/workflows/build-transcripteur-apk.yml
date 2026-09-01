@@ -48,12 +48,16 @@ jobs:
         working-directory: transcripteur-vocal
         run: npx cap sync android
 
-      # ── Icône de l'app (« Onde sonore ») ──────────────────────────────────
-      # Remplace les mipmaps par défaut par nos densités et bascule l'icône
-      # adaptative sur un fond dégradé (drawable) + notre avant-plan d'onde.
-      - name: Apply app icons
+      # ── Icône + écran de démarrage ────────────────────────────────────────
+      # Remplace les mipmaps par défaut par nos densités (icône « Onde sonore »)
+      # et l'écran de démarrage par notre illustration pop-art (WebP unique).
+      - name: Apply app icons and splash
         working-directory: transcripteur-vocal
-        run: cp -R android-res/. android/app/src/main/res/
+        run: |
+          # Supprime les splash.png par défaut pour que @drawable/splash pointe
+          # sur notre splash.webp unique (sinon ressource « splash » dupliquée).
+          find android/app/src/main/res -name 'splash.png' -delete
+          cp -R android-res/. android/app/src/main/res/
 
       # ── Android SDK ───────────────────────────────────────────────────────
       - name: Set up Android SDK

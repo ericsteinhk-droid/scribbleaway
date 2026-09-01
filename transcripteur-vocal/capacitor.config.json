@@ -6,11 +6,20 @@
     "androidScheme": "https"
   },
   "android": {
-    "backgroundColor": "#0f172a"
+    "backgroundColor": "#fff6e0"
   },
   "plugins": {
     "CapacitorHttp": {
       "enabled": true
+    },
+    "SplashScreen": {
+      "launchShowDuration": 1600,
+      "launchAutoHide": true,
+      "backgroundColor": "#fac520",
+      "androidScaleType": "CENTER_INSIDE",
+      "showSpinner": false,
+      "splashFullScreen": true,
+      "splashImmersive": false
     }
   }
 }

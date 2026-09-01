@@ -41,6 +41,12 @@ jobs:
         working-directory: transcripteur-vocal
         run: npx cap sync android
 
+      - name: Apply app icons and splash
+        working-directory: transcripteur-vocal
+        run: |
+          find android/app/src/main/res -name 'splash.png' -delete
+          cp -R android-res/. android/app/src/main/res/
+
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
 
