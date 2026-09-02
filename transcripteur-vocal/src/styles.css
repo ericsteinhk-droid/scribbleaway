@@ -258,10 +258,27 @@ body.recording .rec-pulse { animation: recpulse 1.3s ease-in-out infinite; }
   transition: opacity 0.5s ease;
 }
 #brand-splash.hide { opacity: 0; pointer-events: none; }
-/* Version pro : logo EVOQ + sous-titre ; version pop : illustration. */
-.splash-pop { display: none; width: min(94vw, 520px); max-height: 94vh; height: auto; object-fit: contain; }
-.splash-pro { display: flex; flex-direction: column; align-items: center; gap: 18px; padding: 24px; }
+/* Version pro : logo EVOQ + sous-titre ; version pop : illustration.
+   La description est commune aux deux, donc hors des deux variantes. */
+.splash-inner {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 20px; padding: 24px; max-width: 560px;
+}
+.splash-pop { display: none; width: min(90vw, 480px); max-height: 70vh; height: auto; object-fit: contain; }
+.splash-pro { display: flex; flex-direction: column; align-items: center; gap: 18px; }
 .splash-pro .splash-logo { width: min(66vw, 320px); height: auto; }
 .splash-pro .splash-sub { font-size: 15px; color: var(--muted); font-weight: 500; letter-spacing: 0.02em; }
+.splash-tag {
+  margin: 0; text-align: center; font-size: 14px; line-height: 1.55;
+  color: var(--muted); letter-spacing: 0.01em;
+  /* Largeur bornée + répartition équilibrée : évite une dernière ligne
+     orpheline, quelle que soit la graisse du thème. */
+  max-width: 32ch;
+  text-wrap: balance;
+}
+/* « procès-verbaux » ne doit pas se couper sur son trait d'union. */
+.splash-tag .nb { white-space: nowrap; }
 :root[data-theme="pop"] .splash-pop { display: block; }
 :root[data-theme="pop"] .splash-pro { display: none; }
+/* Sur le fond jaune, le gris atténué manque de contraste. */
+:root[data-theme="pop"] .splash-tag { color: var(--ink); font-weight: 600; }

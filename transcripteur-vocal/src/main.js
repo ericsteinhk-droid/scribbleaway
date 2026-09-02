@@ -967,12 +967,12 @@ applyTheme(getTheme()) // applique le thème choisi le plus tôt possible
   if (logo) logo.src = evoqLogoUrl
   // Masque le splash natif dès que le WebView est prêt (notre splash prend le relais).
   try { const p = SplashScreen.hide(); if (p && p.catch) p.catch(() => {}) } catch (_) {}
-  // Affiche notre splash de marque ~1,6 s, puis fondu.
+  // ~2,2 s : le temps de lire la description, sans retarder l'usage.
   setTimeout(() => {
     if (!splash) return
     splash.classList.add('hide')
     setTimeout(() => splash.remove(), 600)
-  }, 1600)
+  }, 2200)
 })()
 
 // ── Démarrage ─────────────────────────────────────────────────────────────
