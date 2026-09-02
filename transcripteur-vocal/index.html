@@ -98,6 +98,15 @@
         </label>
 
         <label class="field">
+          <span>Enregistrements longs (plus de 23 min)</span>
+          <select id="long-mode">
+            <option value="switch">Une seule requête avec whisper-1 (défaut)</option>
+            <option value="chunk">Découper avec le modèle choisi</option>
+          </select>
+          <small>Les modèles gpt-4o-transcribe refusent au-delà de ~23 min par requête. L'envoi unique évite le découpage et le décodage de l'audio ; le découpage garde le modèle choisi, mais sollicite davantage l'appareil.</small>
+        </label>
+
+        <label class="field">
           <span>Amorce / contexte (facultatif)</span>
           <textarea id="prompt-hint" rows="3" placeholder="Noms propres, jargon, régionalismes à privilégier…"></textarea>
           <small>Aide le modèle à orthographier correctement les termes attendus.</small>

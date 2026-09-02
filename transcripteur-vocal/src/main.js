@@ -30,6 +30,7 @@ const apiKeyInput = el('api-key')
 const modelSelect = el('model')
 const promptHintInput = el('prompt-hint')
 const themeSelect = el('theme')
+const longModeSelect = el('long-mode')
 
 // ── État ──────────────────────────────────────────────────────────────────
 let mediaRecorder = null
@@ -53,7 +54,8 @@ const LS = {
   key: 'tv_api_key',
   model: 'tv_model',
   hint: 'tv_prompt_hint',
-  theme: 'tv_theme'
+  theme: 'tv_theme',
+  longMode: 'tv_long_mode'
 }
 const BUILD_KEY = import.meta.env.VITE_OPENAI_API_KEY || ''
 
@@ -62,6 +64,7 @@ function loadSettings () {
   modelSelect.value = localStorage.getItem(LS.model) || 'gpt-4o-transcribe'
   promptHintInput.value = localStorage.getItem(LS.hint) || ''
   themeSelect.value = getTheme()
+  longModeSelect.value = getLongMode()
 }
 function getApiKey () {
   return (localStorage.getItem(LS.key) || BUILD_KEY || '').trim()
@@ -80,6 +83,11 @@ function getModel () {
 }
 function getPromptHint () {
   return localStorage.getItem(LS.hint) || ''
+}
+// 'switch' : bascule vers un modèle sans limite de durée (une seule requête).
+// 'chunk'  : découpe avec le modèle choisi (meilleure qualité, plus exigeant).
+function getLongMode () {
+  return localStorage.getItem(LS.longMode) === 'chunk' ? 'chunk' : 'switch'
 }
 
 // ── Statut ──────────────────────────────────────────────────────────────
@@ -362,6 +370,27 @@ const MAX_DIRECT_SECONDS = 1380 // sous la limite de 1400 s de gpt-4o-transcribe
 const TARGET_RATE = 16000
 const CHUNK_SECONDS = 600 // 10 min → WAV mono 16 kHz ≈ 19 Mo par segment
 
+// Limites de durée par modèle. Les modèles gpt-4o-transcribe refusent au-delà
+// de 1400 s par requête (constaté dans l'erreur 400 renvoyée par l'API) ;
+// whisper-1 n'impose aucune limite de durée, seulement les 25 Mo par requête.
+// Conséquence pratique : un enregistrement long mais compact (moins de 24 Mo)
+// peut partir en une seule requête avec whisper-1, ce qui évite complètement le
+// décodage et le découpage — donc le principal risque de saturation mémoire.
+const MODEL_MAX_SECONDS = {
+  'gpt-4o-transcribe': MAX_DIRECT_SECONDS,
+  'gpt-4o-mini-transcribe': MAX_DIRECT_SECONDS,
+  'whisper-1': Infinity
+}
+const LONG_AUDIO_MODEL = 'whisper-1'
+
+function maxSecondsFor (model) {
+  const v = MODEL_MAX_SECONDS[model]
+  return v === undefined ? MAX_DIRECT_SECONDS : v
+}
+function modelHandlesAnyDuration (model) {
+  return maxSecondsFor(model) === Infinity
+}
+
 // ── Fiabilité réseau : délai d'attente + relances ──────────────────────────
 // Une requête sans délai d'attente peut rester suspendue indéfiniment (le statut
 // se figeait alors sur « Transcription du segment N… »). Les pannes passagères
@@ -566,25 +595,48 @@ async function transcribe () {
   setBusy(true) // garde l'écran allumé pendant toute la transcription
 
   try {
-    // Découpage nécessaire si le fichier dépasse la taille OU la durée maximale.
     const tooBig = recordedBlob.size > SIZE_LIMIT
-    const tooLong = audioDuration > MAX_DIRECT_SECONDS
-    if (tooBig || tooLong) {
+    let sendModel = model
+    let note = ''
+
+    // Trop long pour le modèle choisi, mais assez petit pour une seule requête :
+    // on bascule vers un modèle sans limite de durée plutôt que de décoder et
+    // découper le fichier. Découpage conservé si l'utilisateur le préfère.
+    if (!tooBig && audioDuration > maxSecondsFor(model) &&
+        modelHandlesAnyDuration(LONG_AUDIO_MODEL) && getLongMode() === 'switch') {
+      sendModel = LONG_AUDIO_MODEL
+      note = ` (${LONG_AUDIO_MODEL})`
+      setStatus(`Audio de ${fmt(Math.round(audioDuration))} : envoi en une seule requête avec ${LONG_AUDIO_MODEL}, car ${model} est limité à ${Math.round(maxSecondsFor(model) / 60)} min.`, 'working')
+      await sleep(1200) // laisse le message se lire
+    }
+
+    // Découpage nécessaire si le fichier dépasse la taille OU la durée maximale
+    // du modèle réellement utilisé.
+    if (tooBig || audioDuration > maxSecondsFor(sendModel)) {
       await transcribeByChunks(key, model)
       return
     }
 
     // Sinon : envoi direct (rapide, format d'origine conservé).
     setStatus('Transcription en cours…', 'working')
-    const r = await requestTranscription(key, model, recordedBlob, `audio.${extFor(recordedMime)}`)
+    const r = await requestTranscription(key, sendModel, recordedBlob, `audio.${extFor(recordedMime)}`)
     if (r.ok) {
       transcriptEl.value = r.text
-      finishTranscript(r.text)
+      finishTranscript(r.text, 0, note)
       return
     }
-    // Filet de sécurité : durée inconnue à l'avance mais rejetée par l'API →
-    // on bascule automatiquement en découpage.
+    // Filet de sécurité : durée inconnue à l'avance mais rejetée par l'API.
     if (r.status === 400 && isDurationError(r.detail)) {
+      // D'abord un modèle sans limite de durée, si le fichier tient en une requête.
+      if (!tooBig && !modelHandlesAnyDuration(sendModel) && getLongMode() === 'switch') {
+        setStatus(`Durée refusée par ${sendModel} : nouvel essai avec ${LONG_AUDIO_MODEL}…`, 'working')
+        const r2 = await requestTranscription(key, LONG_AUDIO_MODEL, recordedBlob, `audio.${extFor(recordedMime)}`)
+        if (r2.ok) {
+          transcriptEl.value = r2.text
+          finishTranscript(r2.text, 0, ` (${LONG_AUDIO_MODEL})`)
+          return
+        }
+      }
       await transcribeByChunks(key, model)
       return
     }
@@ -598,7 +650,7 @@ async function transcribe () {
   }
 }
 
-function finishTranscript (text, segments) {
+function finishTranscript (text, segments, note = '') {
   const hadText = text.trim().length > 0
   btnCopy.disabled = !hadText
   btnSave.disabled = !hadText
@@ -606,7 +658,7 @@ function finishTranscript (text, segments) {
   if (!hadText) { setStatus('Aucune parole détectée.', 'error'); return }
   setStatus(segments && segments > 1
     ? `Transcription terminée (${segments} segments recollés).`
-    : 'Transcription terminée.', 'ok')
+    : `Transcription terminée${note}.`, 'ok')
 }
 
 btnTranscribe.addEventListener('click', transcribe)
@@ -698,6 +750,7 @@ btnSaveSettings.addEventListener('click', () => {
   localStorage.setItem(LS.key, apiKeyInput.value.trim())
   localStorage.setItem(LS.model, modelSelect.value)
   localStorage.setItem(LS.hint, promptHintInput.value.trim())
+  localStorage.setItem(LS.longMode, longModeSelect.value === 'chunk' ? 'chunk' : 'switch')
   localStorage.setItem(LS.theme, themeSelect.value === 'pop' ? 'pop' : 'pro')
   applyTheme(themeSelect.value)
   settingsOverlay.hidden = true
