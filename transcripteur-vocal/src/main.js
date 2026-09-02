@@ -4,6 +4,7 @@ import { Share } from '@capacitor/share'
 import { App } from '@capacitor/app'
 import { SplashScreen } from '@capacitor/splash-screen'
 import brandSplashUrl from './brand-splash.webp'
+import evoqLogoUrl from './evoq-logo.png'
 
 // ── Références DOM ────────────────────────────────────────────────────────
 const el = (id) => document.getElementById(id)
@@ -28,6 +29,7 @@ const btnSaveSettings = el('btn-save-settings')
 const apiKeyInput = el('api-key')
 const modelSelect = el('model')
 const promptHintInput = el('prompt-hint')
+const themeSelect = el('theme')
 
 // ── État ──────────────────────────────────────────────────────────────────
 let mediaRecorder = null
@@ -48,7 +50,8 @@ let busy = false      // vrai tant qu'un enregistrement ou une transcription est
 const LS = {
   key: 'tv_api_key',
   model: 'tv_model',
-  hint: 'tv_prompt_hint'
+  hint: 'tv_prompt_hint',
+  theme: 'tv_theme'
 }
 const BUILD_KEY = import.meta.env.VITE_OPENAI_API_KEY || ''
 
@@ -56,9 +59,19 @@ function loadSettings () {
   apiKeyInput.value = localStorage.getItem(LS.key) || ''
   modelSelect.value = localStorage.getItem(LS.model) || 'gpt-4o-transcribe'
   promptHintInput.value = localStorage.getItem(LS.hint) || ''
+  themeSelect.value = getTheme()
 }
 function getApiKey () {
   return (localStorage.getItem(LS.key) || BUILD_KEY || '').trim()
+}
+function getTheme () {
+  return localStorage.getItem(LS.theme) === 'pop' ? 'pop' : 'pro'
+}
+function applyTheme (theme) {
+  const t = theme === 'pop' ? 'pop' : 'pro'
+  document.documentElement.setAttribute('data-theme', t)
+  const meta = document.querySelector('meta[name="theme-color"]')
+  if (meta) meta.setAttribute('content', t === 'pop' ? '#fac520' : '#ffffff')
 }
 function getModel () {
   return localStorage.getItem(LS.model) || 'gpt-4o-transcribe'
@@ -548,9 +561,13 @@ btnSaveSettings.addEventListener('click', () => {
   localStorage.setItem(LS.key, apiKeyInput.value.trim())
   localStorage.setItem(LS.model, modelSelect.value)
   localStorage.setItem(LS.hint, promptHintInput.value.trim())
+  localStorage.setItem(LS.theme, themeSelect.value === 'pop' ? 'pop' : 'pro')
+  applyTheme(themeSelect.value)
   settingsOverlay.hidden = true
   setStatus('Réglages enregistrés.', 'ok')
 })
+// Aperçu immédiat du thème quand on change le sélecteur.
+themeSelect.addEventListener('change', () => applyTheme(themeSelect.value))
 
 // ── Bouton de sortie ────────────────────────────────────────────────────────
 btnExit.addEventListener('click', async () => {
@@ -567,10 +584,14 @@ btnExit.addEventListener('click', async () => {
 })
 
 // ── Écran de démarrage intégré (logo EVOQ garanti) ─────────────────────────
+applyTheme(getTheme()) // applique le thème choisi le plus tôt possible
+
 ;(function initBrandSplash () {
   const splash = document.getElementById('brand-splash')
-  const imgEl = document.getElementById('brand-splash-img')
-  if (imgEl) imgEl.src = brandSplashUrl
+  const pop = document.getElementById('splash-pop-img')
+  const logo = document.getElementById('splash-logo-img')
+  if (pop) pop.src = brandSplashUrl
+  if (logo) logo.src = evoqLogoUrl
   // Masque le splash natif dès que le WebView est prêt (notre splash prend le relais).
   try { const p = SplashScreen.hide(); if (p && p.catch) p.catch(() => {}) } catch (_) {}
   // Affiche notre splash de marque ~1,6 s, puis fondu.

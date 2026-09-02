@@ -1,20 +1,79 @@
+/* ==========================================================================
+   Thèmes : « pro » (professionnel, défaut) et « pop » (pop-art, optionnel).
+   Tout ce qui diffère passe par des variables ; [data-theme="pop"] surcharge.
+   ========================================================================== */
 :root {
-  /* Palette pop-art tirée de l'écran de démarrage */
-  --yellow: #fac520;
-  --yellow-deep: #eab000;
-  --red: #e63329;
-  --blue: #1e8fe0;
-  --blue-deep: #1477c4;
-  --ink: #141414;
-  --paper: #fff6e0;
+  /* Thème professionnel (défaut) — inspiré de « Rapports de visite » */
+  --bg: #f5f7f9;
   --card: #ffffff;
-  --muted: #6f675a;
-  --ok: #1f9d52;
-  --pop: 4px 4px 0 var(--ink);
-  --pop-sm: 2px 2px 0 var(--ink);
-  --radius: 18px;
+  --ink: #111827;
+  --muted: #6b7280;
+  --accent: #00a99e;         /* sarcelle EVOQ */
+  --accent-strong: #008f86;
+  --on-accent: #ffffff;
+  --danger: #dc2626;
+  --ok: #059669;
+  --link: #008f86;
+
+  --border-w: 1px;
+  --border-col: #e5e7eb;
+  --btn-border: transparent;         /* bordure des boutons pleins */
+  --card-shadow: 0 1px 3px rgba(16,24,40,.08), 0 1px 2px rgba(16,24,40,.05);
+  --btn-shadow: none;
+  --btn-shadow-active: none;
+  --btn-press: scale(0.985);
+  --radius: 14px;
+
+  --header-bg: #ffffff;
+  --header-shadow: 0 1px 2px rgba(16,24,40,.06);
+  --title-col: #111827;
+  --icon-col: #6b7280;
+
+  --record-bg: #00a99e;
+  --record-on-bg: #dc2626;   /* en cours d'enregistrement */
+  --record-ink: #ffffff;
+
+  --input-border: #d1d5db;
+  --pulse-col: #dc2626;
+  --splash-bg: #ffffff;
+
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+:root[data-theme="pop"] {
+  --bg: #fff6e0;
+  --card: #ffffff;
+  --ink: #141414;
+  --muted: #6f675a;
+  --accent: #1e8fe0;
+  --accent-strong: #1477c4;
+  --on-accent: #ffffff;
+  --danger: #e63329;
+  --ok: #1f9d52;
+  --link: #1477c4;
+
+  --border-w: 3px;
+  --border-col: #141414;
+  --btn-border: #141414;
+  --card-shadow: 4px 4px 0 #141414;
+  --btn-shadow: 4px 4px 0 #141414;
+  --btn-shadow-active: 1px 1px 0 #141414;
+  --btn-press: translate(3px, 3px);
+  --radius: 18px;
+
+  --header-bg: #fac520;
+  --header-shadow: none;
+  --title-col: #141414;
+  --icon-col: #141414;
+
+  --record-bg: #e63329;
+  --record-on-bg: #141414;
+  --record-ink: #ffffff;
+
+  --input-border: #141414;
+  --pulse-col: #e63329;
+  --splash-bg: #fac520;
 }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -22,48 +81,39 @@
 html, body {
   margin: 0;
   padding: 0;
-  background: var(--paper);
+  background: var(--bg);
   color: var(--ink);
-  font-family: -apple-system, "Segoe UI", Roboto, system-ui, sans-serif;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   height: 100%;
 }
 
-#app {
-  display: flex;
-  flex-direction: column;
-  min-height: 100vh;
-}
+#app { display: flex; flex-direction: column; min-height: 100vh; }
 
 .topbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: calc(14px + var(--safe-top)) 18px 14px;
-  background: var(--yellow);
-  border-bottom: 3px solid var(--ink);
+  padding: calc(14px + var(--safe-top)) 16px 14px;
+  background: var(--header-bg);
+  border-bottom: var(--border-w) solid var(--border-col);
+  box-shadow: var(--header-shadow);
   position: sticky;
   top: 0;
   z-index: 5;
 }
-.topbar h1 {
-  font-size: 20px;
-  font-weight: 800;
-  margin: 0;
-  color: var(--ink);
-  letter-spacing: 0.01em;
-}
+.topbar h1 { font-size: 18px; font-weight: 700; margin: 0; color: var(--title-col); letter-spacing: 0.01em; }
 .topbar-actions { display: flex; align-items: center; gap: 4px; }
 
 .icon-btn {
   background: transparent;
   border: none;
-  color: var(--ink);
+  color: var(--icon-col);
   font-size: 22px;
   cursor: pointer;
-  padding: 4px 8px;
-  border-radius: 10px;
+  padding: 6px 8px;
+  border-radius: 999px;
 }
-.icon-btn:active { background: rgba(0,0,0,0.12); }
+.icon-btn:active { background: rgba(0,0,0,0.10); }
 
 .content {
   flex: 1;
@@ -71,7 +121,7 @@ html, body {
   padding-bottom: calc(28px + var(--safe-bottom));
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 16px;
   max-width: 720px;
   width: 100%;
   margin: 0 auto;
@@ -79,229 +129,130 @@ html, body {
 
 .card {
   background: var(--card);
-  border: 3px solid var(--ink);
+  border: var(--border-w) solid var(--border-col);
   border-radius: var(--radius);
   padding: 18px;
-  box-shadow: var(--pop);
+  box-shadow: var(--card-shadow);
 }
 
-.card-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  margin-bottom: 14px;
-}
+.card-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 14px; }
 .card-head h2 {
-  font-size: 14px;
-  font-weight: 800;
-  margin: 0;
-  color: var(--ink);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+  font-size: 13px; font-weight: 700; margin: 0; color: var(--muted);
+  text-transform: uppercase; letter-spacing: 0.06em;
 }
 
 /* Recorder */
 .recorder { text-align: center; }
-.timer {
-  font-size: 46px;
-  font-weight: 800;
-  color: var(--ink);
-  font-variant-numeric: tabular-nums;
-  letter-spacing: 0.02em;
-  margin-bottom: 14px;
-}
+.timer { font-size: 46px; font-weight: 800; color: var(--ink); font-variant-numeric: tabular-nums; letter-spacing: 0.02em; margin-bottom: 14px; }
 .level-meter {
-  height: 10px;
-  background: #fff;
-  border: 2px solid var(--ink);
-  border-radius: 999px;
-  overflow: hidden;
-  margin: 0 auto 22px;
-  max-width: 320px;
+  height: 8px; background: color-mix(in srgb, var(--ink) 8%, transparent);
+  border: var(--border-w) solid var(--border-col);
+  border-radius: 999px; overflow: hidden; margin: 0 auto 22px; max-width: 320px;
 }
-.level-bar {
-  height: 100%;
-  width: 0%;
-  background: linear-gradient(90deg, var(--blue), var(--red) 70%, var(--yellow));
-  transition: width 0.08s linear;
-}
+.level-bar { height: 100%; width: 0%; background: var(--accent); transition: width 0.08s linear; }
 
 .record-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  background: var(--red);
-  color: #fff;
-  border: 3px solid var(--ink);
-  font-size: 18px;
-  font-weight: 800;
-  padding: 14px 34px;
-  border-radius: 999px;
-  cursor: pointer;
-  box-shadow: var(--pop);
+  display: inline-flex; align-items: center; gap: 10px;
+  background: var(--record-bg); color: var(--record-ink);
+  border: var(--border-w) solid var(--btn-border);
+  font-size: 17px; font-weight: 700; padding: 14px 32px; border-radius: 999px;
+  cursor: pointer; box-shadow: var(--btn-shadow);
   transition: transform 0.05s, box-shadow 0.05s, background 0.2s;
 }
-.record-btn:active { transform: translate(3px, 3px); box-shadow: 1px 1px 0 var(--ink); }
-.record-btn.recording { background: var(--ink); color: #fff; }
-.rec-dot {
-  width: 13px; height: 13px; border-radius: 50%;
-  background: currentColor;
-}
-.record-btn.recording .rec-dot { background: var(--red); animation: pulse 1s infinite; }
+.record-btn:active { transform: var(--btn-press); box-shadow: var(--btn-shadow-active); }
+.record-btn.recording { background: var(--record-on-bg); }
+.rec-dot { width: 12px; height: 12px; border-radius: 50%; background: currentColor; }
+.record-btn.recording .rec-dot { background: #fff; animation: pulse 1s infinite; }
 @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.25; } }
 
 .import-row { margin-top: 18px; }
-.link-btn {
-  color: var(--blue-deep);
-  font-size: 14px;
-  font-weight: 700;
-  cursor: pointer;
-  text-decoration: none;
-}
+.link-btn { color: var(--link); font-size: 14px; font-weight: 600; cursor: pointer; text-decoration: none; }
 .link-btn:active { opacity: 0.7; }
 
 #playback { width: 100%; margin-top: 16px; }
 
 /* Transcript */
 .transcript {
-  width: 100%;
-  min-height: 200px;
-  resize: vertical;
-  background: #fff;
-  color: var(--ink);
-  border: 3px solid var(--ink);
-  border-radius: 12px;
-  padding: 14px;
-  font-size: 16px;
-  line-height: 1.55;
-  font-family: inherit;
-  margin: 14px 0;
+  width: 100%; min-height: 200px; resize: vertical;
+  background: var(--card); color: var(--ink);
+  border: var(--border-w) solid var(--border-col); border-radius: 12px;
+  padding: 14px; font-size: 16px; line-height: 1.55; font-family: inherit; margin: 14px 0;
 }
-.transcript:focus { outline: 3px solid var(--blue); outline-offset: 1px; }
+.transcript:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
 
 .actions { display: flex; gap: 12px; flex-wrap: wrap; }
 .actions > button { min-width: 120px; }
 
 .primary-btn {
-  flex: 1;
-  background: var(--blue);
-  color: #fff;
-  border: 3px solid var(--ink);
-  font-size: 16px;
-  font-weight: 800;
-  padding: 14px;
-  border-radius: 12px;
-  cursor: pointer;
-  width: 100%;
-  box-shadow: var(--pop);
-  transition: transform 0.05s, box-shadow 0.05s;
+  flex: 1; background: var(--accent); color: var(--on-accent);
+  border: var(--border-w) solid var(--btn-border);
+  font-size: 16px; font-weight: 700; padding: 14px; border-radius: 12px;
+  cursor: pointer; width: 100%; box-shadow: var(--btn-shadow);
+  transition: transform 0.05s, box-shadow 0.05s, background 0.2s;
 }
-.primary-btn:disabled { opacity: 0.4; cursor: not-allowed; box-shadow: none; }
-.primary-btn:not(:disabled):active { transform: translate(3px, 3px); box-shadow: 1px 1px 0 var(--ink); }
+.primary-btn:disabled { opacity: 0.45; cursor: not-allowed; box-shadow: none; }
+.primary-btn:not(:disabled):active { transform: var(--btn-press); box-shadow: var(--btn-shadow-active); }
+.primary-btn:not(:disabled):hover { background: var(--accent-strong); }
 
 .ghost-btn {
-  flex: 1;
-  background: #fff;
-  color: var(--ink);
-  border: 3px solid var(--ink);
-  font-size: 16px;
-  font-weight: 700;
-  padding: 14px;
-  border-radius: 12px;
-  cursor: pointer;
-  box-shadow: var(--pop-sm);
-  transition: transform 0.05s, box-shadow 0.05s;
+  flex: 1; background: var(--card); color: var(--ink);
+  border: var(--border-w) solid var(--border-col);
+  font-size: 16px; font-weight: 600; padding: 14px; border-radius: 12px;
+  cursor: pointer; transition: transform 0.05s, background 0.15s;
 }
-.ghost-btn:disabled { opacity: 0.4; cursor: not-allowed; box-shadow: none; }
-.ghost-btn:not(:disabled):active { transform: translate(2px, 2px); box-shadow: none; }
-
-/* Écran de démarrage intégré (garantit l'affichage du logo EVOQ) */
-#brand-splash {
-  position: fixed;
-  inset: 0;
-  z-index: 100;
-  background: #fac520;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: opacity 0.5s ease;
-}
-#brand-splash.hide { opacity: 0; pointer-events: none; }
-#brand-splash img {
-  width: min(94vw, 520px);
-  max-height: 94vh;
-  height: auto;
-  object-fit: contain;
-}
-
-/* Pulsation de l'écran pendant l'enregistrement (cadre rouge clignotant) */
-.rec-pulse {
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: 40;
-  opacity: 0;
-  box-shadow: inset 0 0 0 5px var(--red);
-}
-body.recording .rec-pulse { animation: recpulse 1.15s ease-in-out infinite; }
-@keyframes recpulse {
-  0%, 100% { opacity: 0.18; box-shadow: inset 0 0 0 4px var(--red); }
-  50%      { opacity: 0.92; box-shadow: inset 0 0 46px 10px rgba(230,51,41,0.5), inset 0 0 0 7px var(--red); }
-}
-@media (prefers-reduced-motion: reduce) {
-  body.recording .rec-pulse { animation: none; opacity: 0.55; }
-}
+.ghost-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.ghost-btn:not(:disabled):active { transform: var(--btn-press); }
 
 .privacy-note { display: block; margin-top: 14px; font-size: 12px; color: var(--muted); line-height: 1.45; }
 
 .status { font-size: 13px; font-weight: 600; color: var(--muted); }
-.status.working { color: var(--blue-deep); }
-.status.error { color: var(--red); }
+.status.working { color: var(--accent-strong); }
+.status.error { color: var(--danger); }
 .status.ok { color: var(--ok); }
 
-/* Settings overlay */
-.overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(20,20,20,0.55);
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  z-index: 20;
+/* Pulsation de l'écran pendant l'enregistrement */
+.rec-pulse { position: fixed; inset: 0; pointer-events: none; z-index: 40; opacity: 0; box-shadow: inset 0 0 0 4px var(--pulse-col); }
+body.recording .rec-pulse { animation: recpulse 1.3s ease-in-out infinite; }
+@keyframes recpulse {
+  0%, 100% { opacity: 0.12; box-shadow: inset 0 0 0 3px var(--pulse-col); }
+  50%      { opacity: 0.7; box-shadow: inset 0 0 32px 6px color-mix(in srgb, var(--pulse-col) 40%, transparent), inset 0 0 0 5px var(--pulse-col); }
 }
-/* L'attribut `hidden` doit l'emporter sur `display: flex` ci-dessus,
-   sinon le panneau de réglages ne se ferme jamais. */
+@media (prefers-reduced-motion: reduce) { body.recording .rec-pulse { animation: none; opacity: 0.5; } }
+
+/* Overlay réglages */
+.overlay { position: fixed; inset: 0; background: rgba(17,24,39,0.5); display: flex; align-items: flex-end; justify-content: center; z-index: 20; }
 .overlay[hidden] { display: none; }
 .sheet {
-  background: var(--paper);
-  width: 100%;
-  max-width: 720px;
-  border-top: 3px solid var(--ink);
-  border-radius: 22px 22px 0 0;
-  padding: 20px 18px calc(24px + var(--safe-bottom));
-  max-height: 90vh;
-  overflow-y: auto;
-  animation: slideup 0.2s ease;
+  background: var(--bg); width: 100%; max-width: 720px;
+  border-top: var(--border-w) solid var(--border-col);
+  border-radius: 20px 20px 0 0; padding: 20px 18px calc(24px + var(--safe-bottom));
+  max-height: 90vh; overflow-y: auto; animation: slideup 0.2s ease;
 }
 @keyframes slideup { from { transform: translateY(100%); } to { transform: translateY(0); } }
-
-.sheet .card-head h2 { font-size: 18px; letter-spacing: 0.02em; }
+.sheet .card-head h2 { font-size: 18px; letter-spacing: 0.01em; color: var(--ink); text-transform: none; }
 
 .field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 18px; }
-.field > span { font-size: 14px; font-weight: 700; }
+.field > span { font-size: 14px; font-weight: 600; }
 .field input, .field select, .field textarea {
-  background: #fff;
-  color: var(--ink);
-  border: 2px solid var(--ink);
-  border-radius: 10px;
-  padding: 12px;
-  font-size: 15px;
-  font-family: inherit;
+  background: var(--card); color: var(--ink);
+  border: 1px solid var(--input-border); border-radius: 10px;
+  padding: 12px; font-size: 15px; font-family: inherit;
 }
-.field input:focus, .field select:focus, .field textarea:focus {
-  outline: 3px solid var(--blue);
-  outline-offset: 1px;
-}
+.field input:focus, .field select:focus, .field textarea:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
 .field small { color: var(--muted); font-size: 12px; }
-.field small a { color: var(--blue-deep); font-weight: 700; }
+.field small a { color: var(--link); font-weight: 600; }
+
+/* Écran de démarrage intégré */
+#brand-splash {
+  position: fixed; inset: 0; z-index: 100; background: var(--splash-bg);
+  display: flex; align-items: center; justify-content: center;
+  transition: opacity 0.5s ease;
+}
+#brand-splash.hide { opacity: 0; pointer-events: none; }
+/* Version pro : logo EVOQ + sous-titre ; version pop : illustration. */
+.splash-pop { display: none; width: min(94vw, 520px); max-height: 94vh; height: auto; object-fit: contain; }
+.splash-pro { display: flex; flex-direction: column; align-items: center; gap: 18px; padding: 24px; }
+.splash-pro .splash-logo { width: min(66vw, 320px); height: auto; }
+.splash-pro .splash-sub { font-size: 15px; color: var(--muted); font-weight: 500; letter-spacing: 0.02em; }
+:root[data-theme="pop"] .splash-pop { display: block; }
+:root[data-theme="pop"] .splash-pro { display: none; }
