@@ -240,6 +240,11 @@ body.recording .rec-pulse { animation: recpulse 1.3s ease-in-out infinite; }
 }
 .field input:focus, .field select:focus, .field textarea:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
 .field small { color: var(--muted); font-size: 12px; }
+.field-static {
+  margin: 0; padding: 12px; font-size: 15px; font-weight: 600;
+  background: color-mix(in srgb, var(--ink) 5%, transparent);
+  border: 1px solid var(--input-border); border-radius: 10px;
+}
 .field small a { color: var(--link); font-weight: 600; }
 
 /* Écran de démarrage intégré */

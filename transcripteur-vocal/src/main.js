@@ -27,10 +27,8 @@ const btnSettings = el('btn-settings')
 const btnCloseSettings = el('btn-close-settings')
 const btnSaveSettings = el('btn-save-settings')
 const apiKeyInput = el('api-key')
-const modelSelect = el('model')
 const promptHintInput = el('prompt-hint')
 const themeSelect = el('theme')
-const longModeSelect = el('long-mode')
 
 // ── État ──────────────────────────────────────────────────────────────────
 let mediaRecorder = null
@@ -50,21 +48,22 @@ let wakeLock = null   // empêche la mise en veille pendant l'enregistrement/la 
 let busy = false      // vrai tant qu'un enregistrement ou une transcription est en cours
 
 // ── Réglages (localStorage + repli sur clé injectée au build) ──────────────
+// Un seul modèle : le plus précis pour le français québécois. Les modèles moins
+// coûteux (whisper-1, gpt-4o-mini-transcribe) ont été retirés volontairement —
+// la qualité de transcription primait sur la consommation de ressources.
+const MODEL = 'gpt-4o-transcribe'
+
 const LS = {
   key: 'tv_api_key',
-  model: 'tv_model',
   hint: 'tv_prompt_hint',
-  theme: 'tv_theme',
-  longMode: 'tv_long_mode'
+  theme: 'tv_theme'
 }
 const BUILD_KEY = import.meta.env.VITE_OPENAI_API_KEY || ''
 
 function loadSettings () {
   apiKeyInput.value = localStorage.getItem(LS.key) || ''
-  modelSelect.value = localStorage.getItem(LS.model) || 'gpt-4o-transcribe'
   promptHintInput.value = localStorage.getItem(LS.hint) || ''
   themeSelect.value = getTheme()
-  longModeSelect.value = getLongMode()
 }
 function getApiKey () {
   return (localStorage.getItem(LS.key) || BUILD_KEY || '').trim()
@@ -78,16 +77,8 @@ function applyTheme (theme) {
   const meta = document.querySelector('meta[name="theme-color"]')
   if (meta) meta.setAttribute('content', t === 'pop' ? '#fac520' : '#ffffff')
 }
-function getModel () {
-  return localStorage.getItem(LS.model) || 'gpt-4o-transcribe'
-}
 function getPromptHint () {
   return localStorage.getItem(LS.hint) || ''
-}
-// 'switch' : bascule vers un modèle sans limite de durée (une seule requête).
-// 'chunk'  : découpe avec le modèle choisi (meilleure qualité, plus exigeant).
-function getLongMode () {
-  return localStorage.getItem(LS.longMode) === 'chunk' ? 'chunk' : 'switch'
 }
 
 // ── Statut ──────────────────────────────────────────────────────────────
@@ -370,26 +361,6 @@ const MAX_DIRECT_SECONDS = 1380 // sous la limite de 1400 s de gpt-4o-transcribe
 const TARGET_RATE = 16000
 const CHUNK_SECONDS = 600 // 10 min → WAV mono 16 kHz ≈ 19 Mo par segment
 
-// Limites de durée par modèle. Les modèles gpt-4o-transcribe refusent au-delà
-// de 1400 s par requête (constaté dans l'erreur 400 renvoyée par l'API) ;
-// whisper-1 n'impose aucune limite de durée, seulement les 25 Mo par requête.
-// Conséquence pratique : un enregistrement long mais compact (moins de 24 Mo)
-// peut partir en une seule requête avec whisper-1, ce qui évite complètement le
-// décodage et le découpage — donc le principal risque de saturation mémoire.
-const MODEL_MAX_SECONDS = {
-  'gpt-4o-transcribe': MAX_DIRECT_SECONDS,
-  'gpt-4o-mini-transcribe': MAX_DIRECT_SECONDS,
-  'whisper-1': Infinity
-}
-const LONG_AUDIO_MODEL = 'whisper-1'
-
-function maxSecondsFor (model) {
-  const v = MODEL_MAX_SECONDS[model]
-  return v === undefined ? MAX_DIRECT_SECONDS : v
-}
-function modelHandlesAnyDuration (model) {
-  return maxSecondsFor(model) === Infinity
-}
 
 // ── Fiabilité réseau : délai d'attente + relances ──────────────────────────
 // Une requête sans délai d'attente peut rester suspendue indéfiniment (le statut
@@ -479,24 +450,31 @@ function errorText (r) {
   return `Erreur ${r.status}${r.detail ? ' : ' + r.detail : ''}`
 }
 
-// Décode n'importe quel format supporté puis rééchantillonne en mono 16 kHz.
-async function decodeToMono16k (blob) {
+// Décode l'audio dans son format d'origine. decodeAudioData détache le tampon
+// source, qui est donc libéré dès le décodage terminé.
+async function decodeAudio (blob) {
   const arrayBuf = await blob.arrayBuffer()
   const AC = window.AudioContext || window.webkitAudioContext
   const tmpCtx = new AC()
-  let decoded
   try {
-    decoded = await tmpCtx.decodeAudioData(arrayBuf)
+    return await tmpCtx.decodeAudioData(arrayBuf)
   } finally {
     tmpCtx.close()
   }
-  const frames = Math.ceil(decoded.duration * TARGET_RATE)
+}
+
+// Rééchantillonne un seul segment en mono 16 kHz. On rend segment par segment
+// plutôt que le fichier entier : le rendu complet d'un enregistrement de 32 min
+// occupait ~120 Mo supplémentaires en plus du tampon décodé, ce qui exposait
+// l'appli à une fermeture forcée par Android. Un segment de 10 min en occupe ~38.
+async function renderSegment (decoded, startSec, durSec) {
+  const frames = Math.max(1, Math.round(durSec * TARGET_RATE))
   const offline = new OfflineAudioContext(1, frames, TARGET_RATE)
   const src = offline.createBufferSource()
   src.buffer = decoded
   src.connect(offline.destination)
-  src.start()
-  return offline.startRendering() // AudioBuffer mono 16 kHz
+  src.start(0, startSec, durSec)
+  return offline.startRendering() // AudioBuffer mono 16 kHz du segment
 }
 
 function writeWavString (view, offset, str) {
@@ -533,36 +511,45 @@ function encodeWavRange (buffer, startSample, endSample) {
   return new Blob([ab], { type: 'audio/wav' })
 }
 
-// L'erreur 400 de dépassement de durée (variable selon le modèle).
+// L'erreur 400 de dépassement de durée renvoyée par l'API.
 function isDurationError (detail) {
   return /longer than|duration|too long|maximum/i.test(detail || '')
 }
 
 // Décode, découpe en segments et transcrit chacun. Renvoie true si terminé.
-async function transcribeByChunks (key, model) {
+async function transcribeByChunks (key) {
   setStatus('Préparation du découpage (décodage audio)…', 'working')
-  let rendered
+  let decoded
   try {
-    rendered = await decodeToMono16k(recordedBlob)
+    decoded = await decodeAudio(recordedBlob)
   } catch (_) {
     setStatus('Impossible de décoder cet audio pour le découper. Essayez un autre format.', 'error')
     return false
   }
 
-  const total = rendered.length
-  const chunkLen = CHUNK_SECONDS * TARGET_RATE
-  const numChunks = Math.ceil(total / chunkLen)
+  const totalSec = decoded.duration
+  const numChunks = Math.max(1, Math.ceil(totalSec / CHUNK_SECONDS))
   const parts = []
 
   for (let c = 0; c < numChunks; c++) {
-    const start = c * chunkLen
-    const end = Math.min(total, start + chunkLen)
-    const wav = encodeWavRange(rendered, start, end)
+    const startSec = c * CHUNK_SECONDS
+    const durSec = Math.min(CHUNK_SECONDS, totalSec - startSec)
     const label = `Segment ${c + 1}/${numChunks}`
+    setStatus(`Préparation du segment ${c + 1}/${numChunks}…`, 'working')
+    let seg
+    try {
+      seg = await renderSegment(decoded, startSec, durSec)
+    } catch (_) {
+      setStatus(`${label} — impossible de préparer ce segment (mémoire insuffisante ?).`, 'error')
+      if (parts.length) { transcriptEl.value = parts.join(' '); finishTranscript(transcriptEl.value) }
+      return false
+    }
+    const wav = encodeWavRange(seg, 0, seg.length)
+    seg = null // libère le segment rééchantillonné avant l'envoi
     setStatus(`Transcription du segment ${c + 1}/${numChunks}…`, 'working')
     // On passe la fin du segment précédent comme contexte pour la continuité.
     const tail = parts.length ? parts[parts.length - 1].slice(-200) : ''
-    const r = await requestTranscription(key, model, wav, `segment_${c + 1}.wav`, tail, label)
+    const r = await requestTranscription(key, MODEL, wav, `segment_${c + 1}.wav`, tail, label)
     if (!r.ok) {
       setStatus(`${label} — ${errorText(r)}`, 'error')
       if (parts.length) { transcriptEl.value = parts.join(' '); finishTranscript(transcriptEl.value) }
@@ -590,54 +577,31 @@ async function transcribe () {
     return
   }
 
-  const model = getModel()
   btnTranscribe.disabled = true
   setBusy(true) // garde l'écran allumé pendant toute la transcription
 
   try {
+    // Découpage nécessaire si l'audio dépasse la taille OU la durée maximale
+    // acceptée par requête (24 Mo / 1380 s).
     const tooBig = recordedBlob.size > SIZE_LIMIT
-    let sendModel = model
-    let note = ''
-
-    // Trop long pour le modèle choisi, mais assez petit pour une seule requête :
-    // on bascule vers un modèle sans limite de durée plutôt que de décoder et
-    // découper le fichier. Découpage conservé si l'utilisateur le préfère.
-    if (!tooBig && audioDuration > maxSecondsFor(model) &&
-        modelHandlesAnyDuration(LONG_AUDIO_MODEL) && getLongMode() === 'switch') {
-      sendModel = LONG_AUDIO_MODEL
-      note = ` (${LONG_AUDIO_MODEL})`
-      setStatus(`Audio de ${fmt(Math.round(audioDuration))} : envoi en une seule requête avec ${LONG_AUDIO_MODEL}, car ${model} est limité à ${Math.round(maxSecondsFor(model) / 60)} min.`, 'working')
-      await sleep(1200) // laisse le message se lire
-    }
-
-    // Découpage nécessaire si le fichier dépasse la taille OU la durée maximale
-    // du modèle réellement utilisé.
-    if (tooBig || audioDuration > maxSecondsFor(sendModel)) {
-      await transcribeByChunks(key, model)
+    const tooLong = audioDuration > MAX_DIRECT_SECONDS
+    if (tooBig || tooLong) {
+      await transcribeByChunks(key)
       return
     }
 
     // Sinon : envoi direct (rapide, format d'origine conservé).
     setStatus('Transcription en cours…', 'working')
-    const r = await requestTranscription(key, sendModel, recordedBlob, `audio.${extFor(recordedMime)}`)
+    const r = await requestTranscription(key, MODEL, recordedBlob, `audio.${extFor(recordedMime)}`)
     if (r.ok) {
       transcriptEl.value = r.text
-      finishTranscript(r.text, 0, note)
+      finishTranscript(r.text)
       return
     }
-    // Filet de sécurité : durée inconnue à l'avance mais rejetée par l'API.
+    // Filet de sécurité : durée inconnue à l'avance mais rejetée par l'API →
+    // on bascule automatiquement en découpage.
     if (r.status === 400 && isDurationError(r.detail)) {
-      // D'abord un modèle sans limite de durée, si le fichier tient en une requête.
-      if (!tooBig && !modelHandlesAnyDuration(sendModel) && getLongMode() === 'switch') {
-        setStatus(`Durée refusée par ${sendModel} : nouvel essai avec ${LONG_AUDIO_MODEL}…`, 'working')
-        const r2 = await requestTranscription(key, LONG_AUDIO_MODEL, recordedBlob, `audio.${extFor(recordedMime)}`)
-        if (r2.ok) {
-          transcriptEl.value = r2.text
-          finishTranscript(r2.text, 0, ` (${LONG_AUDIO_MODEL})`)
-          return
-        }
-      }
-      await transcribeByChunks(key, model)
+      await transcribeByChunks(key)
       return
     }
     setStatus(errorText(r), 'error')
@@ -650,7 +614,7 @@ async function transcribe () {
   }
 }
 
-function finishTranscript (text, segments, note = '') {
+function finishTranscript (text, segments) {
   const hadText = text.trim().length > 0
   btnCopy.disabled = !hadText
   btnSave.disabled = !hadText
@@ -658,7 +622,7 @@ function finishTranscript (text, segments, note = '') {
   if (!hadText) { setStatus('Aucune parole détectée.', 'error'); return }
   setStatus(segments && segments > 1
     ? `Transcription terminée (${segments} segments recollés).`
-    : `Transcription terminée${note}.`, 'ok')
+    : 'Transcription terminée.', 'ok')
 }
 
 btnTranscribe.addEventListener('click', transcribe)
@@ -748,9 +712,7 @@ btnCloseSettings.addEventListener('click', () => { settingsOverlay.hidden = true
 settingsOverlay.addEventListener('click', (e) => { if (e.target === settingsOverlay) settingsOverlay.hidden = true })
 btnSaveSettings.addEventListener('click', () => {
   localStorage.setItem(LS.key, apiKeyInput.value.trim())
-  localStorage.setItem(LS.model, modelSelect.value)
   localStorage.setItem(LS.hint, promptHintInput.value.trim())
-  localStorage.setItem(LS.longMode, longModeSelect.value === 'chunk' ? 'chunk' : 'switch')
   localStorage.setItem(LS.theme, themeSelect.value === 'pop' ? 'pop' : 'pro')
   applyTheme(themeSelect.value)
   settingsOverlay.hidden = true

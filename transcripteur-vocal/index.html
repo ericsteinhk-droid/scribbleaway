@@ -88,23 +88,11 @@
           </select>
         </label>
 
-        <label class="field">
+        <div class="field">
           <span>Modèle de transcription</span>
-          <select id="model">
-            <option value="gpt-4o-transcribe">gpt-4o-transcribe (meilleure qualité)</option>
-            <option value="gpt-4o-mini-transcribe">gpt-4o-mini-transcribe (rapide)</option>
-            <option value="whisper-1">whisper-1 (compatible, horodatage)</option>
-          </select>
-        </label>
-
-        <label class="field">
-          <span>Enregistrements longs (plus de 23 min)</span>
-          <select id="long-mode">
-            <option value="switch">Une seule requête avec whisper-1 (défaut)</option>
-            <option value="chunk">Découper avec le modèle choisi</option>
-          </select>
-          <small>Les modèles gpt-4o-transcribe refusent au-delà de ~23 min par requête. L'envoi unique évite le découpage et le décodage de l'audio ; le découpage garde le modèle choisi, mais sollicite davantage l'appareil.</small>
-        </label>
+          <p class="field-static">gpt-4o-transcribe</p>
+          <small>Le modèle le plus précis pour le français québécois, utilisé systématiquement. L'API limitant la durée par requête, les enregistrements de plus de 23 min sont découpés en segments puis recollés.</small>
+        </div>
 
         <label class="field">
           <span>Amorce / contexte (facultatif)</span>
