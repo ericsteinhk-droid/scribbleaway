@@ -194,6 +194,10 @@ html, body {
 .primary-btn:not(:disabled):active { transform: var(--btn-press); box-shadow: var(--btn-shadow-active); }
 .primary-btn:not(:disabled):hover { background: var(--accent-strong); }
 
+/* Bouton de reprise : visible seulement après un segment en échec. */
+.resume-btn { margin-top: 10px; background: var(--danger); }
+.resume-btn:not(:disabled):hover { background: var(--danger); filter: brightness(0.92); }
+
 .ghost-btn {
   flex: 1; background: var(--card); color: var(--ink);
   border: var(--border-w) solid var(--border-col);

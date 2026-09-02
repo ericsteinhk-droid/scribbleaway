@@ -15,6 +15,7 @@ const levelBar = el('level-bar')
 const playback = el('playback')
 const fileInput = el('file-input')
 const btnTranscribe = el('btn-transcribe')
+const btnResume = el('btn-resume')
 const transcriptEl = el('transcript')
 const statusEl = el('status')
 const btnCopy = el('btn-copy')
@@ -56,7 +57,9 @@ const MODEL = 'gpt-4o-transcribe'
 const LS = {
   key: 'tv_api_key',
   hint: 'tv_prompt_hint',
-  theme: 'tv_theme'
+  theme: 'tv_theme',
+  draft: 'tv_draft',        // dernier texte de transcription
+  recMeta: 'tv_rec_meta'    // métadonnées de l'enregistrement mis en cache
 }
 const BUILD_KEY = import.meta.env.VITE_OPENAI_API_KEY || ''
 
@@ -86,6 +89,115 @@ function setStatus (msg, kind = '') {
   if (!statusEl) return
   statusEl.textContent = msg
   statusEl.className = 'status' + (kind ? ' ' + kind : '')
+}
+
+// ── Persistance ─────────────────────────────────────────────────────────────
+// Android peut tuer le processus à tout moment (mémoire, arrière-plan
+// prolongé). Sans sauvegarde, la transcription en cours et l'enregistrement
+// étaient perdus. Le texte va dans localStorage, l'audio dans le cache de
+// l'appli, écrit au fil de la capture pour ne pas dépendre d'un arrêt propre.
+const REC_PATH = 'transcripteur_enregistrement.dat'
+const REC_DIR = Directory.Cache
+
+let draftTimer = null
+
+function saveDraft (text) {
+  try { localStorage.setItem(LS.draft, text) } catch (_) { /* quota : on continue */ }
+}
+function scheduleDraftSave () {
+  clearTimeout(draftTimer)
+  draftTimer = setTimeout(() => saveDraft(transcriptEl.value), 400)
+}
+function restoreDraft () {
+  let t = ''
+  try { t = localStorage.getItem(LS.draft) || '' } catch (_) {}
+  if (!t.trim()) return false
+  transcriptEl.value = t
+  btnCopy.disabled = false
+  btnSave.disabled = false
+  btnShare.disabled = false
+  return true
+}
+
+function blobToBase64 (blob) {
+  return new Promise((resolve, reject) => {
+    const fr = new FileReader()
+    fr.onload = () => { const s = String(fr.result); resolve(s.slice(s.indexOf(',') + 1)) }
+    fr.onerror = () => reject(fr.error || new Error('lecture du bloc impossible'))
+    fr.readAsDataURL(blob)
+  })
+}
+function base64ToBytes (b64) {
+  const bin = atob(b64 || '')
+  const u8 = new Uint8Array(bin.length)
+  for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i)
+  return u8
+}
+
+// File d'attente : les écritures se suivent dans l'ordre des tranches et une
+// écriture qui échoue n'interrompt jamais la capture. Le plugin Filesystem
+// fournit la même API sur Android et dans un navigateur, donc un seul chemin
+// de code sert aux deux.
+let recWrites = Promise.resolve()
+
+function startRecordingCache () {
+  recWrites = (async () => {
+    try { await Filesystem.deleteFile({ path: REC_PATH, directory: REC_DIR }) } catch (_) {}
+  })()
+  try {
+    localStorage.setItem(LS.recMeta, JSON.stringify({ mime: recordedMime, seconds: 0, partial: true }))
+  } catch (_) {}
+}
+function persistSlice (blob) {
+  recWrites = recWrites.then(async () => {
+    const data = await blobToBase64(blob)
+    await Filesystem.appendFile({ path: REC_PATH, data, directory: REC_DIR })
+  }).catch(() => { /* la persistance est un filet, pas une dépendance */ })
+}
+function finishRecordingCache (seconds, size) {
+  recWrites = recWrites.then(() => {
+    try {
+      localStorage.setItem(LS.recMeta, JSON.stringify({ mime: recordedMime, seconds, size, partial: false }))
+    } catch (_) {}
+  }).catch(() => {})
+}
+async function clearRecordingCache () {
+  try { localStorage.removeItem(LS.recMeta) } catch (_) {}
+  try { await Filesystem.deleteFile({ path: REC_PATH, directory: REC_DIR }) } catch (_) {}
+}
+
+// Récupère au démarrage l'audio laissé en cache par une session interrompue.
+async function restoreRecording () {
+  let meta = null
+  try { meta = JSON.parse(localStorage.getItem(LS.recMeta) || 'null') } catch (_) {}
+  if (!meta) return false
+  try {
+    const res = await Filesystem.readFile({ path: REC_PATH, directory: REC_DIR })
+    const bytes = base64ToBytes(res.data)
+    if (!bytes.length) { await clearRecordingCache(); return false }
+    recordedMime = meta.mime || 'audio/webm'
+    recordedBlob = new Blob([bytes], { type: recordedMime })
+    audioDuration = Number(meta.seconds) || 0
+    playback.src = URL.createObjectURL(recordedBlob)
+    playback.hidden = false
+    btnTranscribe.disabled = false
+    if (audioDuration) {
+      timerEl.textContent = fmt(Math.round(audioDuration))
+    } else {
+      // Durée inconnue (arrêt brutal) : on la lit dans les métadonnées du média.
+      playback.addEventListener('loadedmetadata', () => {
+        const d = playback.duration
+        if (isFinite(d) && d > 0) { audioDuration = d; timerEl.textContent = fmt(Math.round(d)) }
+      }, { once: true })
+    }
+    const kb = Math.round(recordedBlob.size / 1024)
+    setStatus(meta.partial
+      ? `Enregistrement interrompu récupéré (${kb} Ko). Appuyez sur « Transcrire ».`
+      : `Enregistrement précédent récupéré (${kb} Ko). Appuyez sur « Transcrire ».`, 'ok')
+    return true
+  } catch (_) {
+    return false
+  }
 }
 
 // ── Garde-fou global ────────────────────────────────────────────────────────
@@ -233,10 +345,17 @@ async function startRecording () {
   recordedMime = mediaRecorder.mimeType || mime || 'audio/webm'
   chunks = []
   recordError = ''
+  hideResume()
+  startRecordingCache() // l'audio est écrit sur disque au fil de la capture
 
-  mediaRecorder.ondataavailable = (e) => { if (e.data && e.data.size) chunks.push(e.data) }
+  mediaRecorder.ondataavailable = (e) => {
+    if (!e.data || !e.data.size) return
+    chunks.push(e.data)
+    persistSlice(e.data)
+  }
   mediaRecorder.onstop = () => {
     recordedBlob = new Blob(chunks, { type: recordedMime })
+    finishRecordingCache(audioDuration, recordedBlob.size)
     // audioDuration a été figée par stopTimer() sur l'horloge réelle.
     const url = URL.createObjectURL(recordedBlob)
     playback.src = url
@@ -316,6 +435,8 @@ fileInput.addEventListener('change', () => {
   recordedBlob = f
   recordedMime = f.type || 'audio/mpeg'
   audioDuration = 0
+  hideResume()
+  clearRecordingCache() // le fichier importé remplace l'enregistrement en cache
   playback.src = URL.createObjectURL(f)
   playback.hidden = false
   btnTranscribe.disabled = false
@@ -516,32 +637,61 @@ function isDurationError (detail) {
   return /longer than|duration|too long|maximum/i.test(detail || '')
 }
 
+// ── Reprise après un segment en échec ──────────────────────────────────────
+// Sans reprise, une erreur sur le segment 3 d'un enregistrement de 4 segments
+// obligeait à tout recommencer, décodage compris. On garde l'audio décodé et
+// l'index du segment fautif pour redémarrer exactement là.
+let chunkResume = null // { decoded, parts, next, numChunks, blob }
+
+function showResume (next, numChunks) {
+  btnResume.textContent = `Reprendre au segment ${next + 1}/${numChunks}`
+  btnResume.hidden = false
+  btnResume.disabled = false
+}
+function hideResume () {
+  chunkResume = null
+  btnResume.hidden = true
+}
+
 // Décode, découpe en segments et transcrit chacun. Renvoie true si terminé.
-async function transcribeByChunks (key) {
-  setStatus('Préparation du découpage (décodage audio)…', 'working')
-  let decoded
-  try {
-    decoded = await decodeAudio(recordedBlob)
-  } catch (_) {
-    setStatus('Impossible de décoder cet audio pour le découper. Essayez un autre format.', 'error')
-    return false
+// `resume` permet de repartir d'un segment donné avec l'audio déjà décodé.
+async function transcribeByChunks (key, resume = null) {
+  let decoded = resume && resume.decoded
+  const parts = resume ? resume.parts.slice() : []
+  const startIndex = resume ? resume.next : 0
+
+  if (!decoded) {
+    setStatus('Préparation du découpage (décodage audio)…', 'working')
+    try {
+      decoded = await decodeAudio(recordedBlob)
+    } catch (_) {
+      setStatus('Impossible de décoder cet audio pour le découper. Essayez un autre format.', 'error')
+      return false
+    }
   }
 
   const totalSec = decoded.duration
   const numChunks = Math.max(1, Math.ceil(totalSec / CHUNK_SECONDS))
-  const parts = []
 
-  for (let c = 0; c < numChunks; c++) {
+  for (let c = startIndex; c < numChunks; c++) {
     const startSec = c * CHUNK_SECONDS
     const durSec = Math.min(CHUNK_SECONDS, totalSec - startSec)
     const label = `Segment ${c + 1}/${numChunks}`
     setStatus(`Préparation du segment ${c + 1}/${numChunks}…`, 'working')
+    // Point de reprise si ce segment échoue : audio décodé conservé, texte déjà
+    // obtenu conservé, index du segment fautif mémorisé.
+    const failAt = (msg) => {
+      chunkResume = { decoded, parts, next: c, numChunks, blob: recordedBlob }
+      setStatus(msg, 'error')
+      if (parts.length) { transcriptEl.value = parts.join(' '); saveDraft(transcriptEl.value); enableExports() }
+      showResume(c, numChunks)
+    }
+
     let seg
     try {
       seg = await renderSegment(decoded, startSec, durSec)
     } catch (_) {
-      setStatus(`${label} — impossible de préparer ce segment (mémoire insuffisante ?).`, 'error')
-      if (parts.length) { transcriptEl.value = parts.join(' '); finishTranscript(transcriptEl.value) }
+      failAt(`${label} — impossible de préparer ce segment (mémoire insuffisante ?).`)
       return false
     }
     const wav = encodeWavRange(seg, 0, seg.length)
@@ -551,17 +701,19 @@ async function transcribeByChunks (key) {
     const tail = parts.length ? parts[parts.length - 1].slice(-200) : ''
     const r = await requestTranscription(key, MODEL, wav, `segment_${c + 1}.wav`, tail, label)
     if (!r.ok) {
-      setStatus(`${label} — ${errorText(r)}`, 'error')
-      if (parts.length) { transcriptEl.value = parts.join(' '); finishTranscript(transcriptEl.value) }
+      failAt(`${label} — ${errorText(r)}`)
       return false
     }
     if (r.text) parts.push(r.text)
     transcriptEl.value = parts.join(' ')
+    saveDraft(transcriptEl.value) // à chaque segment, contre un arrêt du processus
   }
 
   const full = parts.join(' ')
   transcriptEl.value = full
+  hideResume()
   finishTranscript(full, numChunks)
+  clearRecordingCache() // le texte est sauvegardé ; l'audio en cache n'a plus d'utilité
   return true
 }
 
@@ -578,6 +730,7 @@ async function transcribe () {
   }
 
   btnTranscribe.disabled = true
+  hideResume()
   setBusy(true) // garde l'écran allumé pendant toute la transcription
 
   try {
@@ -596,6 +749,7 @@ async function transcribe () {
     if (r.ok) {
       transcriptEl.value = r.text
       finishTranscript(r.text)
+      clearRecordingCache()
       return
     }
     // Filet de sécurité : durée inconnue à l'avance mais rejetée par l'API →
@@ -614,12 +768,17 @@ async function transcribe () {
   }
 }
 
+function enableExports () {
+  const has = transcriptEl.value.trim().length > 0
+  btnCopy.disabled = !has
+  btnSave.disabled = !has
+  btnShare.disabled = !has
+}
+
 function finishTranscript (text, segments) {
-  const hadText = text.trim().length > 0
-  btnCopy.disabled = !hadText
-  btnSave.disabled = !hadText
-  btnShare.disabled = !hadText
-  if (!hadText) { setStatus('Aucune parole détectée.', 'error'); return }
+  enableExports()
+  saveDraft(text)
+  if (!text.trim()) { setStatus('Aucune parole détectée.', 'error'); return }
   setStatus(segments && segments > 1
     ? `Transcription terminée (${segments} segments recollés).`
     : 'Transcription terminée.', 'ok')
@@ -627,12 +786,45 @@ function finishTranscript (text, segments) {
 
 btnTranscribe.addEventListener('click', transcribe)
 
-// Réactiver les boutons quand l'utilisateur écrit/corrige manuellement.
+// Reprise après un segment en échec : on repart du segment fautif, sans
+// redécoder l'audio et sans perdre le texte déjà obtenu.
+btnResume.addEventListener('click', async () => {
+  if (!chunkResume) { hideResume(); return }
+  const key = getApiKey()
+  if (!key) {
+    setStatus('Ajoutez votre clé API OpenAI dans les réglages ⚙️.', 'error')
+    settingsOverlay.hidden = false
+    return
+  }
+  if (chunkResume.blob !== recordedBlob) {
+    hideResume()
+    setStatus('L’audio a changé depuis l’interruption : relancez « Transcrire ».', 'error')
+    return
+  }
+  // Si le texte affiché a été corrigé entre-temps, on le prend comme base.
+  const shown = transcriptEl.value.trim()
+  const known = chunkResume.parts.join(' ').trim()
+  const parts = shown && shown !== known ? [shown] : chunkResume.parts
+  const resume = { decoded: chunkResume.decoded, parts, next: chunkResume.next }
+
+  btnResume.disabled = true
+  btnTranscribe.disabled = true
+  setBusy(true)
+  try {
+    await transcribeByChunks(key, resume)
+  } catch (err) {
+    setStatus('Échec de la reprise : ' + ((err && err.message) || 'erreur inconnue'), 'error')
+  } finally {
+    btnTranscribe.disabled = false
+    setBusy(false)
+    if (chunkResume) btnResume.disabled = false
+  }
+})
+
+// Réactiver les boutons et sauvegarder quand l'utilisateur corrige le texte.
 transcriptEl.addEventListener('input', () => {
-  const has = transcriptEl.value.trim().length > 0
-  btnCopy.disabled = !has
-  btnSave.disabled = !has
-  btnShare.disabled = !has
+  enableExports()
+  scheduleDraftSave()
 })
 
 // ── Exporter la transcription vers une autre appli (Copilot, Claude…) ───────
@@ -756,8 +948,15 @@ applyTheme(getTheme()) // applique le thème choisi le plus tôt possible
 
 // ── Démarrage ─────────────────────────────────────────────────────────────
 loadSettings()
+
+// Restaure ce qu'une session interrompue aurait laissé : d'abord le texte
+// (immédiat), puis l'audio en cache (lecture disque, donc asynchrone).
+const restoredDraft = restoreDraft()
 if (!getApiKey()) {
   setStatus('Configurez votre clé API OpenAI dans les réglages ⚙️ pour commencer.')
+} else if (restoredDraft) {
+  setStatus('Transcription précédente restaurée. Corrigez, enregistrez ou exportez-la.', 'ok')
 } else {
   setStatus('Prêt. Appuyez sur « Enregistrer ».')
 }
+restoreRecording().catch(() => {})
