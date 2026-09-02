@@ -1,4 +1,4 @@
-import { Capacitor } from '@capacitor/core'
+import { Capacitor, registerPlugin } from '@capacitor/core'
 import { Filesystem, Directory, Encoding } from '@capacitor/filesystem'
 import { Share } from '@capacitor/share'
 import { App } from '@capacitor/app'
@@ -234,9 +234,38 @@ async function releaseWake () {
   try { if (wakeLock) { await wakeLock.release() } } catch (_) {}
   wakeLock = null
 }
-function setBusy (on) {
+
+// ── Service de premier plan ─────────────────────────────────────────────────
+// Le verrou d'écran ne couvre pas la mise en arrière-plan : Android met alors
+// le processus en cache et gèle le WebView, ce qui coupe la capture et suspend
+// les requêtes. Ce plugin natif local lance un service de premier plan (avec
+// notification et verrou processeur partiel) pendant la tâche. Toute défaillance
+// est ignorée : la tâche continue comme avant, simplement moins protégée.
+const ForegroundTask = registerPlugin('ForegroundTask')
+
+async function startForegroundTask (kind) {
+  if (!Capacitor.isNativePlatform()) return
+  try {
+    await ForegroundTask.start({
+      kind,
+      text: kind === 'record' ? 'Enregistrement en cours…' : 'Transcription en cours…'
+    })
+  } catch (_) {}
+}
+async function stopForegroundTask () {
+  if (!Capacitor.isNativePlatform()) return
+  try { await ForegroundTask.stop() } catch (_) {}
+}
+
+function setBusy (on, kind = 'transcribe') {
   busy = on
-  if (on) acquireWake(); else releaseWake()
+  if (on) {
+    acquireWake()
+    startForegroundTask(kind)
+  } else {
+    releaseWake()
+    stopForegroundTask()
+  }
 }
 document.addEventListener('visibilitychange', () => {
   if (busy && document.visibilityState === 'visible' && !wakeLock) acquireWake()
@@ -389,7 +418,7 @@ async function startRecording () {
   mediaRecorder.start(5000)
   startTimer()
   startMeter(mediaStream)
-  setBusy(true) // garde l'écran allumé pendant la capture
+  setBusy(true, 'record') // écran allumé + service de premier plan (micro)
   document.body.classList.add('recording') // pulsation de l'écran
 
   btnRecord.classList.add('recording')

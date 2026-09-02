@@ -48,6 +48,14 @@ jobs:
         working-directory: transcripteur-vocal
         run: npx cap sync android
 
+      # ── Sources natives (service de premier plan) ─────────────────────────
+      # MainActivity n'ajoute qu'un registerPlugin avant super.onCreate() ;
+      # TaskService + ForegroundTaskPlugin empêchent Android de geler le
+      # processus pendant un enregistrement ou une transcription.
+      - name: Apply native sources
+        working-directory: transcripteur-vocal
+        run: cp -R android-src/. android/
+
       # ── Icône + écran de démarrage ────────────────────────────────────────
       # Remplace les mipmaps par défaut par nos densités (icône « Onde sonore »)
       # et l'écran de démarrage par notre illustration pop-art (WebP unique).
@@ -70,18 +78,24 @@ jobs:
           distribution: temurin
           java-version: '21'
 
-      # ── Permissions micro dans le manifeste ───────────────────────────────
-      - name: Patch AndroidManifest — add audio permissions
+      # ── Permissions et service dans le manifeste ──────────────────────────
+      - name: Patch AndroidManifest — permissions and foreground service
         working-directory: transcripteur-vocal/android
         run: |
-          sed -i 's|<uses-permission android:name="android.permission.INTERNET" />|<uses-permission android:name="android.permission.INTERNET" />\n    <uses-permission android:name="android.permission.RECORD_AUDIO" />\n    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />|' \
-            app/src/main/AndroidManifest.xml
+          M=app/src/main/AndroidManifest.xml
+          sed -i 's|<uses-permission android:name="android.permission.INTERNET" />|<uses-permission android:name="android.permission.INTERNET" />\n    <uses-permission android:name="android.permission.RECORD_AUDIO" />\n    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />\n    <uses-permission android:name="android.permission.WAKE_LOCK" />\n    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />\n    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />\n    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />\n    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />|' \
+            "$M"
+          sed -i 's|</application>|    <service\n            android:name=".TaskService"\n            android:exported="false"\n            android:foregroundServiceType="microphone\|dataSync" />\n    </application>|' \
+            "$M"
+          echo "── Manifeste résultant ──"
+          cat "$M"
 
-      # NOTE : aucun patch de MainActivity. Le BridgeWebChromeClient par défaut
-      # de Capacitor gère déjà onPermissionRequest pour le micro (il demande
-      # RECORD_AUDIO à l'exécution puis accorde l'accès au WebView). Recréer un
-      # BridgeWebChromeClient dans onResume appelait registerForActivityResult
-      # après l'état STARTED → IllegalStateException, plantage au démarrage.
+      # NOTE : MainActivity (fourni dans android-src) se limite à
+      # registerPlugin() avant super.onCreate(). Une version antérieure
+      # recréait un BridgeWebChromeClient dans onResume ; son constructeur
+      # appelle registerForActivityResult, interdit après l'état STARTED →
+      # IllegalStateException et plantage au démarrage. Le client par défaut de
+      # Capacitor gère déjà onPermissionRequest pour le micro.
 
       # ── Build Gradle ─────────────────────────────────────────────────────
       - name: Make gradlew executable
@@ -91,6 +105,40 @@ jobs:
       - name: Build debug APK
         working-directory: transcripteur-vocal/android
         run: ./gradlew assembleDebug --no-daemon
+
+      # ── Test de démarrage (barrière avant publication) ────────────────────
+      # Le seul bogue vraiment coûteux de ce projet a été un plantage natif au
+      # démarrage, invisible à la compilation. On installe donc l'APK sur un
+      # émulateur, on lance l'activité et on échoue si le processus est mort ou
+      # si logcat contient une exception fatale. Rien n'est publié sans cela.
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Smoke test — app must launch without crashing
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          force-avd-creation: false
+          emulator-options: -no-snapshot -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect
+          disable-animations: true
+          script: |
+            adb install -r transcripteur-vocal/android/app/build/outputs/apk/debug/app-debug.apk
+            adb logcat -c
+            adb shell am start -n com.evoq.transcripteur/.MainActivity
+            sleep 15
+            fatal=$(adb logcat -d | grep -c "FATAL EXCEPTION" || true)
+            if adb shell pidof com.evoq.transcripteur > /dev/null 2>&1 && [ "$fatal" -eq 0 ]; then
+              echo "OK : l'application tourne (PID $(adb shell pidof com.evoq.transcripteur)), aucune exception fatale."
+            else
+              echo "ÉCHEC : plantage au démarrage (exceptions fatales : $fatal)."
+              adb logcat -d | grep -iE 'AndroidRuntime|FATAL|com.evoq.transcripteur|Capacitor' | head -80 || true
+              exit 1
+            fi
 
       # ── Publication ──────────────────────────────────────────────────────
       - name: Upload APK as artifact
