@@ -126,19 +126,9 @@ jobs:
           force-avd-creation: false
           emulator-options: -no-snapshot -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect
           disable-animations: true
-          script: |
-            adb install -r transcripteur-vocal/android/app/build/outputs/apk/debug/app-debug.apk
-            adb logcat -c
-            adb shell am start -n com.evoq.transcripteur/.MainActivity
-            sleep 15
-            fatal=$(adb logcat -d | grep -c "FATAL EXCEPTION" || true)
-            if adb shell pidof com.evoq.transcripteur > /dev/null 2>&1 && [ "$fatal" -eq 0 ]; then
-              echo "OK : l'application tourne (PID $(adb shell pidof com.evoq.transcripteur)), aucune exception fatale."
-            else
-              echo "ÉCHEC : plantage au démarrage (exceptions fatales : $fatal)."
-              adb logcat -d | grep -iE 'AndroidRuntime|FATAL|com.evoq.transcripteur|Capacitor' | head -80 || true
-              exit 1
-            fi
+          # Une seule ligne : chaque ligne de « script » tourne dans un shell
+          # distinct, donc la logique est dans le fichier appelé.
+          script: bash transcripteur-vocal/scripts/smoke-test.sh
 
       # ── Publication ──────────────────────────────────────────────────────
       - name: Upload APK as artifact
