@@ -6,7 +6,7 @@
     "androidScheme": "https"
   },
   "android": {
-    "backgroundColor": "#fff6e0"
+    "backgroundColor": "#ffffff"
   },
   "plugins": {
     "CapacitorHttp": {

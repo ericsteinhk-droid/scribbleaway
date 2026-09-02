@@ -40,6 +40,8 @@ let recordedMime = 'audio/webm'
 let audioDuration = 0 // secondes, sert à décider du découpage
 let timerInterval = null
 let elapsed = 0
+let recStartedAt = 0   // horodatage réel du début de capture (Date.now)
+let recordError = ''   // message si la capture a été interrompue
 let audioCtx = null
 let analyser = null
 let rafId = null
@@ -82,9 +84,30 @@ function getPromptHint () {
 
 // ── Statut ──────────────────────────────────────────────────────────────
 function setStatus (msg, kind = '') {
+  if (!statusEl) return
   statusEl.textContent = msg
   statusEl.className = 'status' + (kind ? ' ' + kind : '')
 }
+
+// ── Garde-fou global ────────────────────────────────────────────────────────
+// Sur l'appareil il n'y a pas de console : une exception hors des blocs try
+// laissait l'interface figée sans explication. On l'affiche dans la barre de
+// statut et on rétablit les boutons pour que l'appli reste utilisable.
+function reportFatal (what, detail) {
+  setStatus(`Erreur interne (${what}) : ${detail || 'cause inconnue'}`, 'error')
+  try {
+    btnTranscribe.disabled = !recordedBlob
+    setBusy(false)
+  } catch (_) {}
+}
+window.addEventListener('error', (e) => {
+  if (!e || !e.message) return // ignore les erreurs de chargement de ressources
+  reportFatal('script', e.message)
+})
+window.addEventListener('unhandledrejection', (e) => {
+  const r = e && e.reason
+  reportFatal('promesse', (r && (r.message || String(r))) || '')
+})
 
 // ── Verrou de réveil ────────────────────────────────────────────────────────
 // Empêche l'écran de s'éteindre pendant un enregistrement ou une transcription :
@@ -114,17 +137,31 @@ function fmt (sec) {
   const s = String(sec % 60).padStart(2, '0')
   return `${m}:${s}`
 }
+// La durée est calculée sur l'horloge (Date.now) et non en comptant les tics :
+// Android bride les minuteurs JavaScript quand l'appli n'est pas au premier plan
+// ou que l'économie de batterie s'active. Un compteur de tics sous-estime alors
+// la durée réelle, ce qui faussait à la fois l'affichage et la décision de
+// découpage (un enregistrement trop long partait en une seule requête → 400).
+function recSeconds () {
+  return recStartedAt ? Math.max(0, (Date.now() - recStartedAt) / 1000) : 0
+}
 function startTimer () {
+  recStartedAt = Date.now()
   elapsed = 0
   timerEl.textContent = '00:00'
   timerInterval = setInterval(() => {
-    elapsed++
+    elapsed = Math.floor(recSeconds())
     timerEl.textContent = fmt(elapsed)
-  }, 1000)
+  }, 500)
 }
 function stopTimer () {
   clearInterval(timerInterval)
   timerInterval = null
+  // Fige la durée réelle avant que « onstop » ne s'exécute (il arrive plus tard).
+  if (recStartedAt) audioDuration = recSeconds()
+  elapsed = Math.floor(audioDuration)
+  recStartedAt = 0
+  timerEl.textContent = fmt(elapsed)
 }
 
 // ── Vumètre ────────────────────────────────────────────────────────────────
@@ -196,20 +233,42 @@ async function startRecording () {
   }
   recordedMime = mediaRecorder.mimeType || mime || 'audio/webm'
   chunks = []
+  recordError = ''
 
   mediaRecorder.ondataavailable = (e) => { if (e.data && e.data.size) chunks.push(e.data) }
   mediaRecorder.onstop = () => {
     recordedBlob = new Blob(chunks, { type: recordedMime })
-    audioDuration = elapsed // la minuterie donne une durée fiable pour un enregistrement
+    // audioDuration a été figée par stopTimer() sur l'horloge réelle.
     const url = URL.createObjectURL(recordedBlob)
     playback.src = url
     playback.hidden = false
-    btnTranscribe.disabled = false
+    btnTranscribe.disabled = recordedBlob.size === 0
     const kb = Math.round(recordedBlob.size / 1024)
-    setStatus(`Enregistrement prêt (${kb} Ko). Appuyez sur « Transcrire ».`, 'ok')
+    if (recordedBlob.size === 0) {
+      setStatus(recordError || "Aucun son n'a été capté. Vérifiez l'autorisation du micro et réessayez.", 'error')
+    } else if (recordError) {
+      setStatus(`${recordError} Audio partiel conservé (${kb} Ko, ${fmt(elapsed)}).`, 'error')
+    } else {
+      setStatus(`Enregistrement prêt (${kb} Ko, ${fmt(elapsed)}). Appuyez sur « Transcrire ».`, 'ok')
+    }
   }
 
-  mediaRecorder.start()
+  // Interruption de la capture : le système, un appel entrant ou une autre appli
+  // peut reprendre le micro. Sans ces gardes, la minuterie continuait de tourner
+  // et le bouton affichait toujours « Arrêter » alors que plus rien n'était capté.
+  mediaRecorder.onerror = (e) => {
+    const name = (e && e.error && (e.error.name || e.error.message)) || 'erreur inconnue'
+    abortRecording(`Enregistrement interrompu (${name}).`)
+  }
+  const track = mediaStream.getAudioTracks()[0]
+  if (track) {
+    track.onended = () => abortRecording('Le micro a été libéré : enregistrement interrompu.')
+    track.onmute = () => abortRecording('Le micro a été coupé par le système (appel ou autre appli) : enregistrement interrompu.')
+  }
+
+  // start(timeslice) : les données arrivent par tranches de 5 s au lieu d'un seul
+  // bloc à la fin, ce qui borne la perte si le processus est tué en cours de route.
+  mediaRecorder.start(5000)
   startTimer()
   startMeter(mediaStream)
   setBusy(true) // garde l'écran allumé pendant la capture
@@ -221,9 +280,22 @@ async function startRecording () {
   playback.hidden = true
 }
 
+// Arrêt provoqué par une défaillance : conserve la cause, puis arrête proprement.
+// « onstop » affichera le message avec l'audio partiel éventuellement récupéré.
+function abortRecording (message) {
+  if (recordError) return // déjà signalé (onmute suivi de onended, p. ex.)
+  recordError = message
+  stopRecording()
+}
+
 function stopRecording () {
-  if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop()
-  if (mediaStream) mediaStream.getTracks().forEach(t => t.stop())
+  if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+    try { mediaRecorder.requestData() } catch (_) {} // vide la tranche en cours
+    mediaRecorder.stop()
+  }
+  if (mediaStream) {
+    mediaStream.getTracks().forEach(t => { t.onended = null; t.onmute = null; t.stop() })
+  }
   mediaStream = null
   stopTimer()
   stopMeter()
@@ -290,8 +362,24 @@ const MAX_DIRECT_SECONDS = 1380 // sous la limite de 1400 s de gpt-4o-transcribe
 const TARGET_RATE = 16000
 const CHUNK_SECONDS = 600 // 10 min → WAV mono 16 kHz ≈ 19 Mo par segment
 
-// Envoie un blob audio à l'API et renvoie { ok, status, detail, text }.
-async function requestTranscription (key, model, blob, filename, extraPrompt) {
+// ── Fiabilité réseau : délai d'attente + relances ──────────────────────────
+// Une requête sans délai d'attente peut rester suspendue indéfiniment (le statut
+// se figeait alors sur « Transcription du segment N… »). Les pannes passagères
+// (429, 5xx, coupure réseau) sont réessayées : sans cela, une seule erreur sur
+// un segment abandonnait tous les suivants.
+const RETRY_STATUSES = new Set([408, 409, 425, 429, 500, 502, 503, 504])
+const MAX_ATTEMPTS = 3
+const TIMEOUT_MIN_MS = 120000
+const TIMEOUT_MAX_MS = 600000
+
+function timeoutFor (bytes) {
+  // ~60 ms par Ko téléversé, borné entre 2 et 10 minutes.
+  return Math.min(TIMEOUT_MAX_MS, Math.max(TIMEOUT_MIN_MS, Math.round(bytes / 1024) * 60))
+}
+function sleep (ms) { return new Promise(r => setTimeout(r, ms)) }
+
+// Un seul envoi. Renvoie { ok, status, detail, text } ou lève en cas d'échec réseau.
+async function postTranscription (key, model, blob, filename, extraPrompt) {
   const form = new FormData()
   form.append('file', blob, filename)
   form.append('model', model)
@@ -299,18 +387,67 @@ async function requestTranscription (key, model, blob, filename, extraPrompt) {
   form.append('response_format', 'json')
   form.append('prompt', extraPrompt ? `${buildPrompt()} ${extraPrompt}` : buildPrompt())
 
-  const resp = await fetch('https://api.openai.com/v1/audio/transcriptions', {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${key}` },
-    body: form
+  const ms = timeoutFor(blob.size)
+  const controller = typeof AbortController !== 'undefined' ? new AbortController() : null
+  let timer = null
+  // On combine abort() et une course de promesses : CapacitorHttp ne garantit pas
+  // de respecter le signal, mais la course rend la main dans tous les cas.
+  const expiry = new Promise((_, reject) => {
+    timer = setTimeout(() => {
+      try { if (controller) controller.abort() } catch (_) {}
+      reject(new Error(`délai dépassé après ${Math.round(ms / 1000)} s`))
+    }, ms)
   })
-  if (!resp.ok) {
-    let detail = ''
-    try { const j = await resp.json(); detail = j.error?.message || '' } catch (_) {}
-    return { ok: false, status: resp.status, detail }
+
+  try {
+    const resp = await Promise.race([
+      fetch('https://api.openai.com/v1/audio/transcriptions', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${key}` },
+        body: form,
+        signal: controller ? controller.signal : undefined
+      }),
+      expiry
+    ])
+    if (!resp.ok) {
+      let detail = ''
+      try { const j = await resp.json(); detail = j.error?.message || '' } catch (_) {}
+      return { ok: false, status: resp.status, detail }
+    }
+    const data = await resp.json()
+    return { ok: true, text: (data.text || '').trim() }
+  } finally {
+    if (timer) clearTimeout(timer)
   }
-  const data = await resp.json()
-  return { ok: true, text: (data.text || '').trim() }
+}
+
+// Envoie un blob audio à l'API, avec relances. Renvoie { ok, status, detail, text }.
+// `label` sert à nommer la tâche dans les messages de relance.
+async function requestTranscription (key, model, blob, filename, extraPrompt, label = 'Transcription') {
+  let last = { ok: false, status: 0, detail: 'échec inconnu' }
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    try {
+      const r = await postTranscription(key, model, blob, filename, extraPrompt)
+      if (r.ok) return r
+      last = r
+    } catch (err) {
+      // Coupure réseau, DNS, délai dépassé, abandon : toujours réessayable.
+      last = { ok: false, status: 0, detail: (err && err.message) || 'échec réseau', retryable: true }
+    }
+    const retryable = last.retryable === true || RETRY_STATUSES.has(last.status)
+    if (!retryable || attempt === MAX_ATTEMPTS) return last
+    const wait = 2000 * Math.pow(2, attempt - 1) // 2 s, puis 4 s
+    setStatus(`${label} — échec ${last.status || 'réseau'}, nouvelle tentative dans ${wait / 1000} s (${attempt}/${MAX_ATTEMPTS - 1})…`, 'working')
+    await sleep(wait)
+  }
+  return last
+}
+
+// Message lisible pour un résultat en échec.
+function errorText (r) {
+  if (r.status === 401) return 'Clé API invalide ou expirée.'
+  if (r.status === 0) return 'Échec réseau : ' + (r.detail || 'requête interrompue')
+  return `Erreur ${r.status}${r.detail ? ' : ' + r.detail : ''}`
 }
 
 // Décode n'importe quel format supporté puis rééchantillonne en mono 16 kHz.
@@ -392,12 +529,13 @@ async function transcribeByChunks (key, model) {
     const start = c * chunkLen
     const end = Math.min(total, start + chunkLen)
     const wav = encodeWavRange(rendered, start, end)
+    const label = `Segment ${c + 1}/${numChunks}`
     setStatus(`Transcription du segment ${c + 1}/${numChunks}…`, 'working')
     // On passe la fin du segment précédent comme contexte pour la continuité.
     const tail = parts.length ? parts[parts.length - 1].slice(-200) : ''
-    const r = await requestTranscription(key, model, wav, `segment_${c + 1}.wav`, tail)
+    const r = await requestTranscription(key, model, wav, `segment_${c + 1}.wav`, tail, label)
     if (!r.ok) {
-      setStatus(`Erreur au segment ${c + 1}/${numChunks} (${r.status})${r.detail ? ' : ' + r.detail : ''}`, 'error')
+      setStatus(`${label} — ${errorText(r)}`, 'error')
       if (parts.length) { transcriptEl.value = parts.join(' '); finishTranscript(transcriptEl.value) }
       return false
     }
@@ -450,8 +588,7 @@ async function transcribe () {
       await transcribeByChunks(key, model)
       return
     }
-    setStatus(r.status === 401 ? 'Clé API invalide ou expirée.'
-      : `Erreur ${r.status}${r.detail ? ' : ' + r.detail : ''}`, 'error')
+    setStatus(errorText(r), 'error')
   } catch (err) {
     const detail = (err && err.message) ? err.message : 'erreur inconnue'
     setStatus('Échec de la requête : ' + detail, 'error')
