@@ -1,0 +1,41 @@
+// Signature et numérotation des versions, appliquées au projet « app ».
+//
+// Ce fichier est copié dans le projet Android généré puis rattaché par une
+// ligne « apply from » ajoutée à la fin de app/build.gradle. Il ne modifie donc
+// pas un fichier produit par Capacitor, qui serait réécrit à chaque build.
+
+android {
+    defaultConfig {
+        // Un numéro croissant par build : sans cela, tous les APK annoncent la
+        // version 1 et aucun mécanisme de mise à jour ne peut les distinguer.
+        versionCode = (System.getenv('BUILD_NUMBER') ?: '1') as Integer
+        versionName = System.getenv('BUILD_VERSION_NAME') ?: '1.0'
+    }
+}
+
+// Le keystore n'est présent que si le secret correspondant est configuré.
+// Sans lui, on laisse le build par défaut : le workflow produira alors un APK
+// debug, comme avant.
+def ksFile = file('release.keystore')
+if (ksFile.exists()) {
+    android {
+        signingConfigs {
+            release {
+                storeFile ksFile
+                storePassword System.getenv('ANDROID_KEYSTORE_PASSWORD')
+                keyAlias System.getenv('ANDROID_KEY_ALIAS')
+                keyPassword System.getenv('ANDROID_KEY_PASSWORD')
+            }
+        }
+        buildTypes {
+            release {
+                signingConfig signingConfigs.release
+                minifyEnabled false
+                shrinkResources false
+            }
+        }
+    }
+    println "signing.gradle : keystore trouvé, build release signé (versionCode ${android.defaultConfig.versionCode})"
+} else {
+    println 'signing.gradle : aucun keystore, build debug conservé'
+}

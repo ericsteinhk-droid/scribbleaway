@@ -54,7 +54,10 @@ jobs:
       # processus pendant un enregistrement ou une transcription.
       - name: Apply native sources
         working-directory: transcripteur-vocal
-        run: cp -R android-src/. android/
+        run: |
+          cp -R android-src/. android/
+          # Rattache signing.gradle sans toucher au build.gradle généré.
+          echo "apply from: 'signing.gradle'" >> android/app/build.gradle
 
       # ── Icône + écran de démarrage ────────────────────────────────────────
       # Remplace les mipmaps par défaut par nos densités (icône « Onde sonore »)
@@ -102,9 +105,50 @@ jobs:
         working-directory: transcripteur-vocal/android
         run: chmod +x gradlew
 
-      - name: Build debug APK
+      # ── Signature ─────────────────────────────────────────────────────────
+      # Les builds debug sont signés avec un keystore que Gradle régénère à
+      # chaque exécution : deux builds n'ont donc jamais la même signature et
+      # ne peuvent pas se remplacer sur un appareil. Avec le keystore de
+      # production en secret, on produit un release signé d'une clé stable,
+      # installable par-dessus le précédent. Sans le secret, rien ne change.
+      - name: Decode release keystore (si le secret est configuré)
+        id: keystore
         working-directory: transcripteur-vocal/android
-        run: ./gradlew assembleDebug --no-daemon
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "${KEYSTORE_B64:-}" ]; then
+            printf '%s' "$KEYSTORE_B64" | base64 -d > app/release.keystore
+            echo "present=true" >> "$GITHUB_OUTPUT"
+            echo "Keystore de production décodé ($(stat -c%s app/release.keystore) octets)."
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "Aucun keystore : build debug, non installable par-dessus un build précédent."
+          fi
+
+      - name: Build APK
+        id: build
+        working-directory: transcripteur-vocal/android
+        env:
+          BUILD_NUMBER: ${{ github.run_number }}
+          BUILD_VERSION_NAME: 1.0.${{ github.run_number }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          if [ "${{ steps.keystore.outputs.present }}" = "true" ]; then
+            ./gradlew assembleRelease --no-daemon
+            APK=transcripteur-vocal/android/app/build/outputs/apk/release/app-release.apk
+          else
+            ./gradlew assembleDebug --no-daemon
+            APK=transcripteur-vocal/android/app/build/outputs/apk/debug/app-debug.apk
+          fi
+          cd "$GITHUB_WORKSPACE"
+          if [ ! -f "$APK" ]; then
+            echo "APK introuvable à $APK"; find transcripteur-vocal/android/app/build/outputs -name '*.apk' || true; exit 1
+          fi
+          echo "apk=$APK" >> "$GITHUB_OUTPUT"
+          echo "APK produit : $APK ($(stat -c%s "$APK") octets)"
 
       # ── Test de démarrage (barrière avant publication) ────────────────────
       # Le seul bogue vraiment coûteux de ce projet a été un plantage natif au
@@ -128,31 +172,36 @@ jobs:
           disable-animations: true
           # Une seule ligne : chaque ligne de « script » tourne dans un shell
           # distinct, donc la logique est dans le fichier appelé.
-          script: bash transcripteur-vocal/scripts/smoke-test.sh
+          script: bash transcripteur-vocal/scripts/smoke-test.sh "${{ steps.build.outputs.apk }}"
 
       # ── Publication ──────────────────────────────────────────────────────
       - name: Upload APK as artifact
         uses: actions/upload-artifact@v4
         with:
-          name: transcripteur-vocal-debug-${{ github.run_number }}
-          path: transcripteur-vocal/android/app/build/outputs/apk/debug/app-debug.apk
+          name: transcripteur-vocal-${{ github.run_number }}
+          path: ${{ steps.build.outputs.apk }}
           retention-days: 30
 
       - name: Create GitHub Release with APK
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          if [ "${{ steps.keystore.outputs.present }}" = "true" ]; then
+            MAJ="Cette version s'installe **par-dessus** la précédente : vos réglages et votre transcription sont conservés."
+          else
+            MAJ="> Build debug, signé d'une clé différente à chaque build : il faut **désinstaller** la version précédente avant d'installer celle-ci, ce qui efface la clé API et la transcription enregistrées. Ajoutez le secret \`ANDROID_KEYSTORE_BASE64\` pour produire des versions signées et installables par-dessus."
+          fi
           gh release create "transcripteur-build-${{ github.run_number }}-${{ github.run_attempt }}" \
-            "transcripteur-vocal/android/app/build/outputs/apk/debug/app-debug.apk#Transcripteur-vocal-debug.apk" \
-            --title "Transcripteur vocal — Build ${{ github.run_number }}" \
-            --notes "## Transcripteur vocal — APK debug
+            "${{ steps.build.outputs.apk }}#Transcripteur-vocal.apk" \
+            --title "Transcripteur vocal — Build ${{ github.run_number }} (v1.0.${{ github.run_number }})" \
+            --notes "## Transcripteur vocal — v1.0.${{ github.run_number }}
 
           Transcription vocale haute qualité en **français canadien** → fichier texte.
 
           **Compilé depuis :** \`${{ github.ref_name }}\` @ \`${{ github.sha }}\`
 
           ### Installation sur Android
-          1. Téléchargez \`Transcripteur-vocal-debug.apk\`
+          1. Téléchargez \`Transcripteur-vocal.apk\`
           2. Sur l'appareil : Paramètres → Applications → Installer des applis inconnues → autorisez votre navigateur
           3. Ouvrez le fichier téléchargé pour installer
 
@@ -161,4 +210,4 @@ jobs:
           2. Enregistrez ou importez un audio, puis touchez « Transcrire »
           3. Corrigez au besoin, puis « Enregistrer .txt »
 
-          > Build debug. Pour une version de production, ajoutez un keystore de signature aux GitHub Secrets et utilisez \`assembleRelease\`."
+          $MAJ"

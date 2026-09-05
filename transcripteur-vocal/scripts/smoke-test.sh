@@ -7,7 +7,8 @@
 # distinct, ce qui coupe tout bloc if/then/fi et toute variable partagée.
 set -u
 
-APK=transcripteur-vocal/android/app/build/outputs/apk/debug/app-debug.apk
+# Chemin de l'APK en argument : debug ou release selon la présence du keystore.
+APK=${1:-transcripteur-vocal/android/app/build/outputs/apk/debug/app-debug.apk}
 PKG=com.evoq.transcripteur
 
 adb install -r "$APK"
