@@ -495,9 +495,112 @@ function extFor (mime) {
 
 function buildPrompt () {
   // Amorce pour orienter le modèle vers un français québécois soigné.
+  // Elle reste courte et fixe : plus l'amorce est longue, plus le modèle risque
+  // de la recracher en sortie ou de partir en boucle.
   const base = "Transcription en français canadien (Québec), avec une orthographe et une ponctuation soignées."
   const hint = getPromptHint().trim()
   return hint ? `${base} ${hint}` : base
+}
+
+// ── Répétitions ─────────────────────────────────────────────────────────────
+// Les modèles de transcription bouclent parfois : une phrase, ou un groupe de
+// mots, revient à l'identique plusieurs fois de suite. On ne supprime que des
+// répétitions immédiates et littérales — jamais une reformulation — pour ne pas
+// effacer de la parole réelle.
+
+function normWords (s) {
+  return String(s || '')
+    .toLowerCase()
+    .replace(/[.,;:!?…"'’«»()[\]-]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+// « A B C A B C D » → « A B C D » (groupes de 3 mots ou plus).
+function collapseInSentence (sentence) {
+  const words = sentence.split(/\s+/).filter(Boolean)
+  const out = []
+  let i = 0
+  while (i < words.length) {
+    let done = false
+    // Le plus long groupe d'abord, pour ne pas fractionner une longue boucle.
+    const maxK = Math.min(12, Math.floor((words.length - i) / 2))
+    for (let k = maxK; k >= 3; k--) {
+      const a = normWords(words.slice(i, i + k).join(' '))
+      const b = normWords(words.slice(i + k, i + 2 * k).join(' '))
+      if (a && a === b) {
+        out.push(...words.slice(i, i + k))
+        i += k
+        while (normWords(words.slice(i, i + k).join(' ')) === a) i += k
+        done = true
+        break
+      }
+    }
+    if (!done) { out.push(words[i]); i++ }
+  }
+  return out.join(' ')
+}
+
+function splitSentences (text) {
+  return (text.match(/[^.!?…]+[.!?…]*\s*/g) || []).map(s => s.trim()).filter(Boolean)
+}
+
+// Renvoie { text, removed } : le texte nettoyé et le nombre de suppressions.
+function collapseRepetitions (text) {
+  if (!text || !text.trim()) return { text: text || '', removed: 0 }
+  let removed = 0
+
+  const sentences = splitSentences(text).map(s => {
+    const c = collapseInSentence(s)
+    if (c !== s) removed++
+    return c
+  })
+
+  const kept = []
+  for (const s of sentences) {
+    const n = normWords(s)
+    const count = n ? n.split(' ').length : 0
+    let skip = false
+
+    if (kept.length) {
+      const prev = kept[kept.length - 1]
+      const pn = normWords(prev)
+      const pCount = pn ? pn.split(' ').length : 0
+      // Une phrase entièrement contenue au début ou à la fin de sa voisine est
+      // un fragment de boucle : on ne garde que la plus complète des deux.
+      const dansPrec = count >= 4 && (pn.startsWith(n + ' ') || pn.endsWith(' ' + n))
+      const precDans = pCount >= 4 && (n.startsWith(pn + ' ') || n.endsWith(' ' + pn))
+
+      if (count >= 3 && n === pn) {
+        skip = true                                   // phrase identique à la précédente
+      } else if (dansPrec) {
+        skip = true                                   // fragment de la précédente
+      } else if (precDans) {
+        kept[kept.length - 1] = s                     // la précédente n'était qu'un fragment
+        removed++
+        continue
+      }
+    }
+    // Phrase longue réapparaissant à l'identique dans les trois précédentes.
+    if (!skip && count >= 6) {
+      for (let j = kept.length - 1; j >= Math.max(0, kept.length - 3); j--) {
+        if (normWords(kept[j]) === n) { skip = true; break }
+      }
+    }
+
+    if (skip) { removed++; continue }
+    kept.push(s)
+  }
+
+  return { text: kept.join(' ').replace(/\s+/g, ' ').trim(), removed }
+}
+
+// Le modèle renvoie parfois l'amorce elle-même en tête de sortie.
+function stripPromptEcho (text, prompt) {
+  const t = String(text || '').trimStart()
+  const p = String(prompt || '').trim()
+  if (p && t.toLowerCase().startsWith(p.toLowerCase())) return t.slice(p.length).trimStart()
+  return text
 }
 
 // ── Découpage des longs enregistrements ────────────────────────────────────
@@ -529,13 +632,14 @@ function timeoutFor (bytes) {
 function sleep (ms) { return new Promise(r => setTimeout(r, ms)) }
 
 // Un seul envoi. Renvoie { ok, status, detail, text } ou lève en cas d'échec réseau.
-async function postTranscription (key, model, blob, filename, extraPrompt) {
+async function postTranscription (key, model, blob, filename) {
+  const prompt = buildPrompt()
   const form = new FormData()
   form.append('file', blob, filename)
   form.append('model', model)
   form.append('language', 'fr')
   form.append('response_format', 'json')
-  form.append('prompt', extraPrompt ? `${buildPrompt()} ${extraPrompt}` : buildPrompt())
+  form.append('prompt', prompt)
 
   const ms = timeoutFor(blob.size)
   const controller = typeof AbortController !== 'undefined' ? new AbortController() : null
@@ -565,7 +669,7 @@ async function postTranscription (key, model, blob, filename, extraPrompt) {
       return { ok: false, status: resp.status, detail }
     }
     const data = await resp.json()
-    return { ok: true, text: (data.text || '').trim() }
+    return { ok: true, text: stripPromptEcho((data.text || '').trim(), prompt) }
   } finally {
     if (timer) clearTimeout(timer)
   }
@@ -573,11 +677,11 @@ async function postTranscription (key, model, blob, filename, extraPrompt) {
 
 // Envoie un blob audio à l'API, avec relances. Renvoie { ok, status, detail, text }.
 // `label` sert à nommer la tâche dans les messages de relance.
-async function requestTranscription (key, model, blob, filename, extraPrompt, label = 'Transcription') {
+async function requestTranscription (key, model, blob, filename, label = 'Transcription') {
   let last = { ok: false, status: 0, detail: 'échec inconnu' }
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
     try {
-      const r = await postTranscription(key, model, blob, filename, extraPrompt)
+      const r = await postTranscription(key, model, blob, filename)
       if (r.ok) return r
       last = r
     } catch (err) {
@@ -726,9 +830,9 @@ async function transcribeByChunks (key, resume = null) {
     const wav = encodeWavRange(seg, 0, seg.length)
     seg = null // libère le segment rééchantillonné avant l'envoi
     setStatus(`Transcription du segment ${c + 1}/${numChunks}…`, 'working')
-    // On passe la fin du segment précédent comme contexte pour la continuité.
-    const tail = parts.length ? parts[parts.length - 1].slice(-200) : ''
-    const r = await requestTranscription(key, MODEL, wav, `segment_${c + 1}.wav`, tail, label)
+    // Aucune amorce tirée du segment précédent : la lui donner poussait le
+    // modèle à la recracher, puis à boucler sur cette phrase.
+    const r = await requestTranscription(key, MODEL, wav, `segment_${c + 1}.wav`, label)
     if (!r.ok) {
       failAt(`${label} — ${errorText(r)}`)
       return false
@@ -738,10 +842,10 @@ async function transcribeByChunks (key, resume = null) {
     saveDraft(transcriptEl.value) // à chaque segment, contre un arrêt du processus
   }
 
-  const full = parts.join(' ')
+  const { text: full, removed } = collapseRepetitions(parts.join(' '))
   transcriptEl.value = full
   hideResume()
-  finishTranscript(full, numChunks)
+  finishTranscript(full, numChunks, removed)
   clearRecordingCache() // le texte est sauvegardé ; l'audio en cache n'a plus d'utilité
   return true
 }
@@ -776,8 +880,9 @@ async function transcribe () {
     setStatus('Transcription en cours…', 'working')
     const r = await requestTranscription(key, MODEL, recordedBlob, `audio.${extFor(recordedMime)}`)
     if (r.ok) {
-      transcriptEl.value = r.text
-      finishTranscript(r.text)
+      const { text, removed } = collapseRepetitions(r.text)
+      transcriptEl.value = text
+      finishTranscript(text, 0, removed)
       clearRecordingCache()
       return
     }
@@ -804,12 +909,15 @@ function enableExports () {
   btnShare.disabled = !has
 }
 
-function finishTranscript (text, segments) {
+function finishTranscript (text, segments, removed) {
   enableExports()
   saveDraft(text)
   if (!text.trim()) { setStatus('Aucune parole détectée.', 'error'); return }
-  setStatus(segments && segments > 1
-    ? `Transcription terminée (${segments} segments recollés).`
+  const bits = []
+  if (segments && segments > 1) bits.push(`${segments} segments recollés`)
+  if (removed) bits.push(`${removed} répétition${removed > 1 ? 's' : ''} supprimée${removed > 1 ? 's' : ''}`)
+  setStatus(bits.length
+    ? `Transcription terminée (${bits.join(', ')}).`
     : 'Transcription terminée.', 'ok')
 }
 
